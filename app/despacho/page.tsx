@@ -11,7 +11,7 @@ export default function DespachoPage() {
       <div className="flex flex-1 flex-col overflow-hidden">
         <TopHeader />
 
-        <main className="flex flex-1 flex-col overflow-hidden p-4 gap-3">
+        <main className="flex flex-1 flex-col overflow-hidden p-4 gap-3 bg-content">
           <DashboardHeader />
 
           <div className="flex-1 min-h-0">

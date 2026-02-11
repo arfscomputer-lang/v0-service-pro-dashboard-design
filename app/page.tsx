@@ -39,7 +39,7 @@ export default function DashboardPage() {
       <div className="flex flex-1 flex-col overflow-hidden">
         <TopHeader />
 
-        <main className="flex-1 overflow-y-auto p-6 gap-6 flex flex-col">
+        <main className="flex-1 overflow-y-auto p-6 gap-6 flex flex-col bg-content">
           {/* Welcome header */}
           <div>
             <h1 className="text-2xl font-bold text-foreground">

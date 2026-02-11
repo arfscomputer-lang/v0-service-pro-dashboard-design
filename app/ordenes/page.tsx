@@ -52,7 +52,7 @@ export default function OrdenesPage() {
       <div className="flex flex-1 flex-col overflow-hidden">
         <TopHeader />
 
-        <main className="flex flex-1 flex-col overflow-hidden p-4 gap-4">
+        <main className="flex flex-1 flex-col overflow-hidden p-4 gap-4 bg-content">
           {/* Page header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">

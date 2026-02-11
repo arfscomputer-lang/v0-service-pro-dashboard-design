@@ -8,7 +8,7 @@ export default function FacturasPage() {
       <SidebarNav />
       <div className="flex flex-1 flex-col overflow-hidden">
         <TopHeader />
-        <main className="flex flex-1 flex-col items-center justify-center gap-4 p-8">
+        <main className="flex flex-1 flex-col items-center justify-center gap-4 p-8 bg-content">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
             <FileText className="h-8 w-8 text-primary" />
           </div>
