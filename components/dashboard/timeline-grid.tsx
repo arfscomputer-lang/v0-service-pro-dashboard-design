@@ -3,10 +3,11 @@
 import React from "react"
 
 import { useRef, useState, useCallback } from "react"
+import Link from "next/link"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
-import { X } from "lucide-react"
+import { X, ExternalLink } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { Technician, ScheduledBlock, WorkOrder } from "./dispatch-calendar"
 
@@ -213,10 +214,17 @@ export function TimelineGrid({
                         style={{ left, width: Math.max(width, 48) }}
                         title={`${block.orderId} - ${block.customer}`}
                       >
-                        <div className="min-w-0 flex-1 overflow-hidden">
-                          <p className="text-xs font-semibold truncate">{block.orderId}</p>
+                        <Link
+                          href={`/orden/${block.orderId}`}
+                          className="min-w-0 flex-1 overflow-hidden hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <p className="text-xs font-semibold truncate flex items-center gap-1">
+                            {block.orderId}
+                            <ExternalLink className="h-2.5 w-2.5 opacity-0 group-hover:opacity-70 transition-opacity" />
+                          </p>
                           <p className="text-[10px] opacity-80 truncate">{block.customer} - {block.type}</p>
-                        </div>
+                        </Link>
                         <button
                           type="button"
                           onClick={() => onRemoveBlock(block.id)}

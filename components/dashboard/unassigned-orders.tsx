@@ -2,6 +2,7 @@
 
 import React from "react"
 
+import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -91,9 +92,13 @@ export function UnassignedOrders({ orders, onDragStart, onDragEnd }: UnassignedO
                   <div className="pl-3">
                     {/* Header row */}
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[11px] font-mono text-muted-foreground">
+                      <Link
+                        href={`/orden/${order.id}`}
+                        className="text-[11px] font-mono text-primary hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         {order.id}
-                      </span>
+                      </Link>
                       <Badge
                         variant="outline"
                         className={cn("text-[10px] px-1.5 py-0 h-5", priority.className)}
