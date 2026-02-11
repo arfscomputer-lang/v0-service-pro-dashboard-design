@@ -1,6 +1,6 @@
 "use client"
 
-import { Search, Plus, Bell, HelpCircle } from "lucide-react"
+import { Search, Plus, Bell, HelpCircle, Radio } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -22,6 +22,12 @@ export function TopHeader() {
 
       {/* Actions */}
       <div className="flex items-center gap-3">
+        {/* Live status indicator */}
+        <div className="hidden md:flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 border border-emerald-200">
+          <Radio className="h-3 w-3 text-emerald-600 animate-pulse" />
+          <span className="text-[11px] font-medium text-emerald-700">En Vivo</span>
+        </div>
+
         <Button size="sm" className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
           <Plus className="h-4 w-4" />
           <span className="hidden sm:inline">Nueva Orden</span>

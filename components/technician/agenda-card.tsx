@@ -1,7 +1,6 @@
 "use client"
 
-import React from "react"
-
+import React, { useState, useRef, useEffect } from "react"
 import {
   Navigation,
   LogIn,
@@ -13,17 +12,18 @@ import {
   ChevronDown,
   ChevronUp,
   AlertTriangle,
+  Camera,
+  ImagePlus,
+  Timer,
+  Play,
+  Square,
+  X,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { useState } from "react"
 
-export type JobStatus =
-  | "pendiente"
-  | "en_viaje"
-  | "en_sitio"
-  | "completado"
+export type JobStatus = "pendiente" | "en_viaje" | "en_sitio" | "completado"
 
 export interface AgendaJob {
   id: string
@@ -45,7 +45,10 @@ interface AgendaCardProps {
   isActive: boolean
 }
 
-const priorityConfig: Record<string, { label: string; className: string; icon?: React.ReactNode }> = {
+const priorityConfig: Record<
+  string,
+  { label: string; className: string; icon?: React.ReactNode }
+> = {
   alta: {
     label: "Urgente",
     className: "bg-red-100 text-red-700 border-red-200",
@@ -87,11 +90,74 @@ const statusConfig: Record<
   },
 }
 
+// ── Elapsed Timer Hook ─────────────────────────────────────
+
+function useElapsedTimer(running: boolean) {
+  const [seconds, setSeconds] = useState(0)
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => {
+    if (running) {
+      intervalRef.current = setInterval(() => setSeconds((s) => s + 1), 1000)
+    } else if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+      intervalRef.current = null
+    }
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current)
+    }
+  }, [running])
+
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = seconds % 60
+  const display = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
+
+  return { seconds, display, reset: () => setSeconds(0) }
+}
+
+// ── Component ──────────────────────────────────────────────
+
 export function AgendaCard({ job, onAction, isActive }: AgendaCardProps) {
   const [expanded, setExpanded] = useState(isActive)
+  const [photos, setPhotos] = useState<string[]>([])
+  const [timerRunning, setTimerRunning] = useState(false)
+  const [totalTime, setTotalTime] = useState<string | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const timer = useElapsedTimer(timerRunning)
+
   const pr = priorityConfig[job.priority]
   const st = statusConfig[job.status]
   const isCompleted = job.status === "completado"
+  const isOnSite = job.status === "en_sitio"
+
+  function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files
+    if (!files) return
+    for (const file of Array.from(files)) {
+      const reader = new FileReader()
+      reader.onload = (ev) => {
+        if (ev.target?.result) {
+          setPhotos((prev) => [...prev, ev.target!.result as string])
+        }
+      }
+      reader.readAsDataURL(file)
+    }
+    // reset input
+    if (fileRef.current) fileRef.current.value = ""
+  }
+
+  function handleRemovePhoto(index: number) {
+    setPhotos((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  function handleComplete() {
+    if (timerRunning) {
+      setTimerRunning(false)
+      setTotalTime(timer.display)
+    }
+    onAction(job.id, "complete")
+  }
 
   return (
     <div
@@ -131,13 +197,20 @@ export function AgendaCard({ job, onAction, isActive }: AgendaCardProps) {
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className="font-mono text-xs text-muted-foreground">{job.orderId}</span>
-            <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0", pr.className)}>
+            <span className="font-mono text-xs text-muted-foreground">
+              {job.orderId}
+            </span>
+            <Badge
+              variant="outline"
+              className={cn("text-[10px] px-1.5 py-0", pr.className)}
+            >
               {pr.icon}
               {pr.label}
             </Badge>
           </div>
-          <p className="text-sm font-semibold text-foreground truncate">{job.customer}</p>
+          <p className="text-sm font-semibold text-foreground truncate">
+            {job.customer}
+          </p>
           <p className="text-xs text-muted-foreground truncate flex items-center gap-1 mt-0.5">
             <Wrench className="h-3 w-3 shrink-0" />
             {job.type}
@@ -146,8 +219,18 @@ export function AgendaCard({ job, onAction, isActive }: AgendaCardProps) {
 
         {/* Status + chevron */}
         <div className="flex flex-col items-end gap-1.5 shrink-0">
-          <div className={cn("flex items-center gap-1.5 text-xs font-medium", st.className)}>
-            <span className={cn("h-2 w-2 rounded-full animate-pulse", st.dotColor)} />
+          <div
+            className={cn(
+              "flex items-center gap-1.5 text-xs font-medium",
+              st.className
+            )}
+          >
+            <span
+              className={cn(
+                "h-2 w-2 rounded-full animate-pulse",
+                st.dotColor
+              )}
+            />
             {st.label}
           </div>
           {expanded ? (
@@ -179,8 +262,127 @@ export function AgendaCard({ job, onAction, isActive }: AgendaCardProps) {
           {/* Notes */}
           {job.notes && (
             <div className="rounded-lg bg-muted/60 px-3 py-2 mb-3">
-              <p className="text-xs text-muted-foreground font-medium mb-0.5">Notas:</p>
+              <p className="text-xs text-muted-foreground font-medium mb-0.5">
+                Notas:
+              </p>
               <p className="text-sm text-foreground">{job.notes}</p>
+            </div>
+          )}
+
+          {/* Timer (visible when on site or completed) */}
+          {(isOnSite || isCompleted) && (
+            <div className="rounded-xl bg-muted/50 border border-border p-3 mb-3">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                  <Timer className="h-4 w-4 text-primary" />
+                  Registro de Tiempo
+                </div>
+                {isOnSite && (
+                  <button
+                    type="button"
+                    onClick={() => setTimerRunning(!timerRunning)}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-colors",
+                      timerRunning
+                        ? "bg-red-100 text-red-700"
+                        : "bg-primary/10 text-primary"
+                    )}
+                  >
+                    {timerRunning ? (
+                      <>
+                        <Square className="h-3 w-3" /> Detener
+                      </>
+                    ) : (
+                      <>
+                        <Play className="h-3 w-3" /> Iniciar
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center justify-center">
+                <div
+                  className={cn(
+                    "font-mono text-3xl font-bold tabular-nums tracking-wider",
+                    timerRunning ? "text-primary" : "text-foreground"
+                  )}
+                >
+                  {totalTime || timer.display}
+                </div>
+              </div>
+              {isCompleted && totalTime && (
+                <p className="text-center text-xs text-muted-foreground mt-1">
+                  Tiempo total registrado
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Photo upload (visible when on site or completed) */}
+          {(isOnSite || isCompleted) && (
+            <div className="rounded-xl bg-muted/50 border border-border p-3 mb-3">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                  <Camera className="h-4 w-4 text-primary" />
+                  Evidencia Fotografica
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {photos.length} foto{photos.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+
+              {/* Photo grid */}
+              {photos.length > 0 && (
+                <div className="grid grid-cols-3 gap-2 mb-2">
+                  {photos.map((photo, i) => (
+                    <div
+                      key={`photo-${i}`}
+                      className="relative aspect-square rounded-lg overflow-hidden bg-muted"
+                    >
+                      <img
+                        src={photo || "/placeholder.svg"}
+                        alt={`Evidencia ${i + 1}`}
+                        className="h-full w-full object-cover"
+                        crossOrigin="anonymous"
+                      />
+                      {isOnSite && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePhoto(i)}
+                          className="absolute top-1 right-1 h-5 w-5 rounded-full bg-foreground/60 text-background flex items-center justify-center hover:bg-foreground/80 transition-colors"
+                          aria-label={`Eliminar foto ${i + 1}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Upload button */}
+              {isOnSite && (
+                <>
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    multiple
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                    aria-label="Subir foto"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border py-4 text-sm font-medium text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+                  >
+                    <ImagePlus className="h-5 w-5" />
+                    Tomar o Subir Foto
+                  </button>
+                </>
+              )}
             </div>
           )}
 
@@ -211,7 +413,7 @@ export function AgendaCard({ job, onAction, isActive }: AgendaCardProps) {
                 <Button
                   size="lg"
                   className="w-full h-14 text-base font-semibold gap-3 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg shadow-emerald-600/25"
-                  onClick={() => onAction(job.id, "complete")}
+                  onClick={handleComplete}
                 >
                   <CheckCircle2 className="h-5 w-5" />
                   Completar Trabajo
@@ -235,9 +437,19 @@ export function AgendaCard({ job, onAction, isActive }: AgendaCardProps) {
 
           {/* Completed state */}
           {isCompleted && (
-            <div className="flex items-center justify-center gap-2 py-3 text-emerald-600">
-              <CheckCircle2 className="h-5 w-5" />
+            <div className="flex flex-col items-center gap-1 py-3 text-emerald-600">
+              <CheckCircle2 className="h-6 w-6" />
               <span className="text-sm font-semibold">Trabajo completado</span>
+              {totalTime && (
+                <span className="text-xs text-muted-foreground">
+                  Tiempo: {totalTime}
+                </span>
+              )}
+              {photos.length > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  {photos.length} foto{photos.length !== 1 ? "s" : ""} de evidencia
+                </span>
+              )}
             </div>
           )}
         </div>
