@@ -1,6 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 import {
   LayoutDashboard,
   CalendarClock,
@@ -19,19 +21,30 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 const navItems = [
-  { icon: LayoutDashboard, label: "Panel Principal", active: true },
-  { icon: CalendarClock, label: "Agenda (Despacho)", active: false },
-  { icon: ClipboardList, label: "Ordenes de Trabajo", active: false },
-  { icon: Users, label: "Tecnicos", active: false },
-  { icon: UserCircle, label: "Clientes", active: false },
-  { icon: Package, label: "Inventario", active: false },
-  { icon: FileText, label: "Facturas", active: false },
-  { icon: Settings, label: "Configuracion", active: false },
+  { icon: LayoutDashboard, label: "Panel Principal", href: "/" },
+  { icon: CalendarClock, label: "Agenda (Despacho)", href: "/despacho" },
+  { icon: ClipboardList, label: "Ordenes de Trabajo", href: "/ordenes" },
+  { icon: Users, label: "Tecnicos", href: "/tecnicos" },
+  { icon: UserCircle, label: "Clientes", href: "/clientes" },
+  { icon: Package, label: "Inventario", href: "/inventario" },
+  { icon: FileText, label: "Facturas", href: "/facturas" },
+  { icon: Settings, label: "Configuracion", href: "/configuracion" },
 ]
 
 export function SidebarNav() {
   const [collapsed, setCollapsed] = useState(false)
-  const [activeIndex, setActiveIndex] = useState(0)
+  const pathname = usePathname()
+
+  function isActive(href: string) {
+    if (href === "/") {
+      return pathname === "/"
+    }
+    // /orden/[id] should highlight "Ordenes de Trabajo"
+    if (href === "/ordenes" && pathname.startsWith("/orden")) {
+      return true
+    }
+    return pathname.startsWith(href)
+  }
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -43,36 +56,35 @@ export function SidebarNav() {
       >
         {/* Logo */}
         <div className="flex items-center gap-3 px-4 py-5 border-b border-sidebar-border">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary">
+          <Link href="/" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary">
             <Wrench className="h-5 w-5 text-sidebar-primary-foreground" />
-          </div>
+          </Link>
           {!collapsed && (
-            <span className="text-lg font-bold tracking-tight text-sidebar-primary-foreground">
+            <Link href="/" className="text-lg font-bold tracking-tight text-sidebar-primary-foreground">
               ServicePro
-            </span>
+            </Link>
           )}
         </div>
 
         {/* Navigation */}
         <nav className="flex-1 space-y-1 px-3 py-4">
-          {navItems.map((item, index) => {
-            const isActive = index === activeIndex
+          {navItems.map((item) => {
+            const active = isActive(item.href)
             return (
               <Tooltip key={item.label}>
                 <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() => setActiveIndex(index)}
+                  <Link
+                    href={item.href}
                     className={cn(
                       "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                      isActive
+                      active
                         ? "bg-sidebar-accent text-sidebar-accent-foreground"
                         : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
                     )}
                   >
                     <item.icon className="h-5 w-5 shrink-0" />
                     {!collapsed && <span>{item.label}</span>}
-                  </button>
+                  </Link>
                 </TooltipTrigger>
                 {collapsed && (
                   <TooltipContent side="right" className="bg-foreground text-background">
