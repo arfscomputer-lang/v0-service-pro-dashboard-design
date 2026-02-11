@@ -58,6 +58,7 @@ interface Notification {
   body: string
   time: string
   read: boolean
+  href: string
 }
 
 const INITIAL_NOTIFICATIONS: Notification[] = [
@@ -68,6 +69,7 @@ const INITIAL_NOTIFICATIONS: Notification[] = [
     body: "Tecnico sin llegar al sitio despues de 45 min.",
     time: "Hace 5 min",
     read: false,
+    href: "/orden/OT-1042",
   },
   {
     id: "n2",
@@ -76,6 +78,7 @@ const INITIAL_NOTIFICATIONS: Notification[] = [
     body: "Carlos Mendez finalizo la instalacion en Polanco.",
     time: "Hace 12 min",
     read: false,
+    href: "/orden/OT-1038",
   },
   {
     id: "n3",
@@ -84,6 +87,7 @@ const INITIAL_NOTIFICATIONS: Notification[] = [
     body: "Ana Garcia fue reasignada a OT-1045 por proximidad.",
     time: "Hace 28 min",
     read: false,
+    href: "/orden/OT-1045",
   },
   {
     id: "n4",
@@ -92,6 +96,7 @@ const INITIAL_NOTIFICATIONS: Notification[] = [
     body: "Grupo Ferretero del Sur se agrego al sistema.",
     time: "Hace 1 hr",
     read: true,
+    href: "/clientes",
   },
   {
     id: "n5",
@@ -100,6 +105,7 @@ const INITIAL_NOTIFICATIONS: Notification[] = [
     body: "Filtro HEPA 14x20 tiene solo 2 unidades en almacen.",
     time: "Hace 2 hr",
     read: true,
+    href: "/inventario",
   },
 ]
 
@@ -428,10 +434,13 @@ export function TopHeader() {
                   const Icon = typeIcon[n.type]
                   const color = typeColor[n.type]
                   return (
-                    <button
-                      type="button"
+                    <Link
                       key={n.id}
-                      onClick={() => markRead(n.id)}
+                      href={n.href}
+                      onClick={() => {
+                        markRead(n.id)
+                        setNotifOpen(false)
+                      }}
                       className={cn(
                         "flex items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50 border-b border-border last:border-0",
                         !n.read && "bg-primary/[0.03]"
@@ -448,9 +457,12 @@ export function TopHeader() {
                           {!n.read && <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />}
                         </div>
                         <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">{n.body}</p>
-                        <p className="text-[10px] text-muted-foreground/60 mt-1">{n.time}</p>
+                        <div className="flex items-center justify-between mt-1">
+                          <p className="text-[10px] text-muted-foreground/60">{n.time}</p>
+                          <span className="text-[10px] text-primary font-medium">Ver detalle</span>
+                        </div>
                       </div>
-                    </button>
+                    </Link>
                   )
                 })}
               </div>
