@@ -32,6 +32,8 @@ export interface Customer {
   phone: string
   address: string
   city: string
+  lat: number | null
+  lng: number | null
   type: CustomerType
   tags: CustomerTag[]
   nps: number | null // 0-10
@@ -55,6 +57,8 @@ export const customerSeed: Customer[] = [
     phone: "+52 55 1234 0001",
     address: "Av. Insurgentes Sur 1234, Col. Del Valle",
     city: "CDMX",
+    lat: 19.3715,
+    lng: -99.1707,
     type: "residencial",
     tags: ["VIP", "frecuente"],
     nps: 9,
@@ -84,6 +88,8 @@ export const customerSeed: Customer[] = [
     phone: "+52 55 9876 5432",
     address: "Paseo de la Reforma 505, Piso 14",
     city: "CDMX",
+    lat: 19.4284,
+    lng: -99.1676,
     type: "comercial",
     tags: ["corporativo", "VIP"],
     nps: 8,
@@ -111,6 +117,8 @@ export const customerSeed: Customer[] = [
     phone: "+52 55 2345 6789",
     address: "Calle Maple 56, Col. Santa Fe",
     city: "CDMX",
+    lat: 19.3659,
+    lng: -99.2614,
     type: "residencial",
     tags: ["nuevo"],
     nps: 7,
@@ -136,6 +144,8 @@ export const customerSeed: Customer[] = [
     phone: "+52 55 3456 7890",
     address: "Blvd. Miguel de Cervantes 200",
     city: "CDMX",
+    lat: 19.4326,
+    lng: -99.1332,
     type: "comercial",
     tags: ["frecuente", "corporativo"],
     nps: 10,
@@ -163,6 +173,8 @@ export const customerSeed: Customer[] = [
     phone: "+52 55 4567 8901",
     address: "Priv. Los Pinos 12, Coyoacan",
     city: "CDMX",
+    lat: 19.3500,
+    lng: -99.1620,
     type: "residencial",
     tags: ["frecuente"],
     nps: 6,
@@ -189,6 +201,8 @@ export const customerSeed: Customer[] = [
     phone: "+52 55 5678 9012",
     address: "Plaza de la Constitucion 1, Tlalpan",
     city: "CDMX",
+    lat: 19.2887,
+    lng: -99.1700,
     type: "gobierno",
     tags: ["corporativo"],
     nps: 8,
@@ -214,6 +228,8 @@ export const customerSeed: Customer[] = [
     phone: "+52 55 6789 0123",
     address: "Calle 16 de Septiembre 78, Centro",
     city: "CDMX",
+    lat: 19.4320,
+    lng: -99.1410,
     type: "comercial",
     tags: ["frecuente"],
     nps: 9,
@@ -239,6 +255,8 @@ export const customerSeed: Customer[] = [
     phone: "+52 55 7890 1234",
     address: "Cerrada Lilas 5, Col. Jardines",
     city: "CDMX",
+    lat: 19.3800,
+    lng: -99.1900,
     type: "residencial",
     tags: ["moroso"],
     nps: 4,
@@ -265,6 +283,8 @@ export const customerSeed: Customer[] = [
     phone: "+52 55 8901 2345",
     address: "Av. Chapultepec 340, Col. Condesa",
     city: "CDMX",
+    lat: 19.4130,
+    lng: -99.1710,
     type: "comercial",
     tags: ["VIP", "corporativo"],
     nps: 9,
@@ -290,6 +310,8 @@ export const customerSeed: Customer[] = [
     phone: "+52 55 0123 4567",
     address: "Calle Roble 89, Col. Florida",
     city: "CDMX",
+    lat: 19.3560,
+    lng: -99.1780,
     type: "residencial",
     tags: ["nuevo"],
     nps: null,

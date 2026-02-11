@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { SidebarNav } from "@/components/dashboard/sidebar-nav"
 import { TopHeader } from "@/components/dashboard/top-header"
 import { CustomerFormDialog } from "@/components/customers/customer-form-dialog"
+import { EditableGeoMap } from "@/components/customers/editable-geo-map"
 import { useCustomers } from "@/lib/context/customers-context"
 import type { Customer, InteractionType, InteractionDirection, CustomerTag } from "@/lib/data/customers"
 
@@ -541,18 +542,14 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                   </CardContent>
                 </Card>
 
-                {/* Map placeholder */}
-                <Card className="border border-border shadow-sm overflow-hidden">
-                  <div className="h-[180px] bg-gradient-to-br from-muted to-secondary flex flex-col items-center justify-center gap-2 relative">
-                    <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 19px, currentColor 19px, currentColor 20px), repeating-linear-gradient(90deg, transparent, transparent 19px, currentColor 19px, currentColor 20px)" }} />
-                    <MapPin className="h-8 w-8 text-destructive animate-bounce" />
-                    <p className="text-xs font-medium text-muted-foreground">Google Maps</p>
-                  </div>
-                  <CardContent className="p-3">
-                    <p className="text-xs text-muted-foreground">{c.address}</p>
-                    <p className="text-xs text-muted-foreground">{c.city}</p>
-                  </CardContent>
-                </Card>
+                {/* Editable Geolocation Map */}
+                <EditableGeoMap
+                  lat={c.lat}
+                  lng={c.lng}
+                  address={c.address}
+                  city={c.city}
+                  onSave={(newLat, newLng) => updateCustomer(c.id, { lat: newLat, lng: newLng })}
+                />
 
                 {/* Quick actions */}
                 <div className="gap-2 flex flex-col">

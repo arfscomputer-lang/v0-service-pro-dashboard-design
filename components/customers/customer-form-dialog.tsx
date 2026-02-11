@@ -9,8 +9,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { X } from "lucide-react"
+import { X, LocateFixed, Loader2 } from "lucide-react"
 import type { Customer, CustomerType, CustomerTag } from "@/lib/data/customers"
+import { GeoFields } from "@/components/customers/geo-fields" // Import GeoFields component
 
 const customerTypes: { value: CustomerType; label: string }[] = [
   { value: "residencial", label: "Residencial" },
@@ -35,6 +36,8 @@ function getEmpty(): Omit<Customer, "id" | "initials"> {
     phone: "",
     address: "",
     city: "CDMX",
+    lat: null,
+    lng: null,
     type: "residencial",
     tags: ["nuevo"],
     nps: null,
@@ -136,6 +139,9 @@ export function CustomerFormDialog({ open, onClose, onSave, initialData }: Props
                 <Input value={form.city} onChange={(e) => set("city", e.target.value)} placeholder="CDMX" />
               </div>
             </div>
+
+            {/* Geolocation */}
+            <GeoFields lat={form.lat} lng={form.lng} onChangeLat={(v) => set("lat", v)} onChangeLng={(v) => set("lng", v)} />
 
             {/* Schedule */}
             <div className="flex flex-col gap-1.5">
