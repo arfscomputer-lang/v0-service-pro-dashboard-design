@@ -17,6 +17,7 @@ import {
   Wrench,
   Smartphone,
   BarChart3,
+  PieChart,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -28,6 +29,7 @@ const navItems = [
   { icon: ClipboardList, label: "Ordenes de Trabajo", href: "/ordenes" },
   { icon: Users, label: "Tecnicos", href: "/tecnicos" },
   { icon: UserCircle, label: "Clientes", href: "/clientes" },
+  { icon: PieChart, label: "Reportes CRM", href: "/clientes/reportes" },
   { icon: Package, label: "Inventario", href: "/inventario" },
   { icon: BarChart3, label: "Reportes", href: "/reportes" },
   { icon: FileText, label: "Facturas", href: "/facturas" },
