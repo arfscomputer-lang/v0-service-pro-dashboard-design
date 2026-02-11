@@ -46,9 +46,10 @@ function generateEvent(): LiveEvent {
 }
 
 export function useRealtimeStatus(maxEvents = 8) {
+  // Initialize empty to avoid hydration mismatch (Math.random / new Date differ server vs client)
   const [events, setEvents] = useState<LiveEvent[]>([])
   const [isConnected, setIsConnected] = useState(true)
-  const [lastPing, setLastPing] = useState<Date>(new Date())
+  const [lastPing, setLastPing] = useState<Date | null>(null)
 
   const addEvent = useCallback(
     (event: LiveEvent) => {
@@ -59,19 +60,17 @@ export function useRealtimeStatus(maxEvents = 8) {
   )
 
   useEffect(() => {
-    // Simulate real-time events arriving via WebSocket/polling
-    const interval = setInterval(() => {
-      if (isConnected) {
-        addEvent(generateEvent())
-      }
-    }, 4000 + Math.random() * 6000) // every 4-10 seconds
-
-    // Generate 3 initial events
+    // Seed initial events only on the client after mount
     const initial: LiveEvent[] = Array.from({ length: 3 }, () => generateEvent())
     setEvents(initial)
+    setLastPing(new Date())
+
+    const interval = setInterval(() => {
+      addEvent(generateEvent())
+    }, 4000 + Math.random() * 6000)
 
     return () => clearInterval(interval)
-  }, [isConnected, addEvent])
+  }, [addEvent])
 
   return {
     events,

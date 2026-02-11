@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useMemo } from "react"
+import { useState, useCallback, useMemo, useEffect } from "react"
 import { MobileHeader } from "@/components/technician/mobile-header"
 import { DaySummary } from "@/components/technician/day-summary"
 import { AgendaCard, type AgendaJob, type JobStatus } from "@/components/technician/agenda-card"
@@ -124,12 +124,17 @@ export default function TechnicianAgendaPage() {
   const upcomingJobs = jobs.filter((j) => j.status !== "completado")
   const completedJobs = jobs.filter((j) => j.status === "completado")
 
-  const today = new Date()
-  const formattedDate = today.toLocaleDateString("es-MX", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  })
+  const [formattedDate, setFormattedDate] = useState("")
+
+  useEffect(() => {
+    setFormattedDate(
+      new Date().toLocaleDateString("es-MX", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+      })
+    )
+  }, [])
 
   return (
     <div className="flex min-h-screen flex-col bg-background">

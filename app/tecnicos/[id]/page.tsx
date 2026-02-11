@@ -1,6 +1,6 @@
 "use client"
 
-import React, { use, useState, useCallback } from "react"
+import React, { use, useState, useCallback, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { SidebarNav } from "@/components/dashboard/sidebar-nav"
@@ -96,15 +96,23 @@ export default function TechnicianDetailPage({ params }: { params: Promise<{ id:
   const [activeTab, setActiveTab] = useState<"info" | "historial" | "rendimiento">("info")
   const [formOpen, setFormOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [yearsWorking, setYearsWorking] = useState(1)
+  const [clientNow, setClientNow] = useState<number | null>(null)
+  const [mounted, setMounted] = useState(false)
 
-  function handleFullEdit(data: TechFormData) {
-    updateTech(id, data)
-  }
+  useEffect(() => {
+    setMounted(true)
+    setClientNow(Date.now())
+    if (tech) {
+      setYearsWorking(Math.max(1, new Date().getFullYear() - new Date(tech.joinDate).getFullYear()))
+    }
+  }, [tech])
 
-  function handleDelete() {
-    deleteTech(id)
-    router.push("/tecnicos")
-  }
+  const tabs = [
+    { key: "info" as const, label: "Informacion" },
+    { key: "historial" as const, label: "Historial de Tareas" },
+    { key: "rendimiento" as const, label: "Rendimiento" },
+  ]
 
   if (!tech) {
     return (
@@ -129,13 +137,15 @@ export default function TechnicianDetailPage({ params }: { params: Promise<{ id:
   }
 
   const st = statusConfig[tech.status]
-  const yearsWorking = Math.max(1, new Date().getFullYear() - new Date(tech.joinDate).getFullYear())
 
-  const tabs = [
-    { key: "info" as const, label: "Informacion" },
-    { key: "historial" as const, label: "Historial de Tareas" },
-    { key: "rendimiento" as const, label: "Rendimiento" },
-  ]
+  function handleFullEdit(data: TechFormData) {
+    updateTech(id, data)
+  }
+
+  function handleDelete() {
+    deleteTech(id)
+    router.push("/tecnicos")
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -384,7 +394,7 @@ function InfoTab({ tech, onUpdateTech, onAddSpecialty, onRemoveSpecialty, onAddC
               <div>
                 <p className="text-xs text-muted-foreground">Fecha de Ingreso</p>
                 <p className="text-sm font-medium text-foreground">
-                  {new Date(tech.joinDate).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })}
+                    {tech.joinDate}
                 </p>
               </div>
             </div>
@@ -440,8 +450,8 @@ function InfoTab({ tech, onUpdateTech, onAddSpecialty, onRemoveSpecialty, onAddC
             <div className="flex flex-col gap-3">
               {tech.certifications.map((cert) => {
                 const expires = new Date(cert.expires)
-                const now = new Date()
-                const daysLeft = Math.ceil((expires.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+                const refNow = window.clientNow ?? expires.getTime() // safe fallback for SSR
+                const daysLeft = Math.ceil((expires.getTime() - refNow) / (1000 * 60 * 60 * 24))
                 const isExpiring = daysLeft < 90
                 return (
                   <div key={cert.name} className="flex items-center justify-between rounded-xl border border-border p-4 group">
@@ -457,10 +467,10 @@ function InfoTab({ tech, onUpdateTech, onAddSpecialty, onRemoveSpecialty, onAddC
                     <div className="flex items-center gap-3">
                       <div className="text-right">
                         <p className="text-xs text-muted-foreground">Vence</p>
-                        <p className={cn("text-sm font-medium", isExpiring ? "text-amber-600" : "text-foreground")}>
-                          {expires.toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" })}
+                        <p className={cn("text-sm font-medium", window.mounted && isExpiring ? "text-amber-600" : "text-foreground")}>
+                          {cert.expires}
                         </p>
-                        {isExpiring && <p className="text-[10px] text-amber-500 font-semibold mt-0.5">{daysLeft} dias restantes</p>}
+                        {window.mounted && isExpiring && <p className="text-[10px] text-amber-500 font-semibold mt-0.5">{daysLeft} dias restantes</p>}
                       </div>
                       <Button
                         variant="ghost"
@@ -678,7 +688,7 @@ function HistoryTab() {
                   <td className="px-4 py-3"><Link href={`/orden/${job.id}`} className="font-mono text-xs text-primary hover:underline">{job.id}</Link></td>
                   <td className="px-4 py-3 text-foreground">{job.customer}</td>
                   <td className="px-4 py-3 text-muted-foreground">{job.type}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{new Date(job.date).toLocaleDateString("es-MX", { day: "numeric", month: "short" })}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{job.date}</td>
                   <td className="px-4 py-3 text-center">
                     <div className="flex items-center justify-center gap-0.5">
                       {Array.from({ length: 5 }).map((_, i) => (

@@ -2,7 +2,7 @@
 
 import React from "react"
 
-import { useRef, useState, useCallback } from "react"
+import { useRef, useState, useCallback, useEffect } from "react"
 import Link from "next/link"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -56,11 +56,20 @@ export function TimelineGrid({
 }: TimelineGridProps) {
   const [dropTarget, setDropTarget] = useState<{ techId: string; hour: number } | null>(null)
   const gridRef = useRef<HTMLDivElement>(null)
+  const [currentHour, setCurrentHour] = useState<number | null>(null)
 
-  const now = new Date()
-  const currentHour = now.getHours() + now.getMinutes() / 60
-  const nowX = hourToX(currentHour)
-  const showNowLine = currentHour >= HOURS[0] && currentHour <= HOURS[HOURS.length - 1] + 1
+  useEffect(() => {
+    function tick() {
+      const n = new Date()
+      setCurrentHour(n.getHours() + n.getMinutes() / 60)
+    }
+    tick()
+    const id = setInterval(tick, 60_000)
+    return () => clearInterval(id)
+  }, [])
+
+  const nowX = currentHour != null ? hourToX(currentHour) : 0
+  const showNowLine = currentHour != null && currentHour >= HOURS[0] && currentHour <= HOURS[HOURS.length - 1] + 1
 
   const handleDragOver = useCallback(
     (e: React.DragEvent, techId: string) => {
