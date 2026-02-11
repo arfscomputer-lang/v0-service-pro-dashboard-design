@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
 } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
@@ -169,6 +170,7 @@ export function SearchCommand({ open, onOpenChange }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="p-0 gap-0 max-w-lg overflow-hidden">
+        <DialogTitle className="sr-only">Buscar en ServicePro</DialogTitle>
         {/* Search input */}
         <div className="flex items-center gap-3 px-4 border-b border-border">
           <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
