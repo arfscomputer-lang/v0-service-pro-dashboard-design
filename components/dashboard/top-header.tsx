@@ -48,6 +48,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
+import { SearchCommand } from "./search-command"
 
 /* ─── Notifications data ─── */
 interface Notification {
@@ -137,6 +138,7 @@ const helpLinks = [
 
 /* ─── Component ─── */
 export function TopHeader() {
+  const [searchOpen, setSearchOpen] = useState(false)
   const [orderOpen, setOrderOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
@@ -152,6 +154,10 @@ export function TopHeader() {
   /* Keyboard shortcuts */
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault()
+        setSearchOpen(true)
+      }
       if ((e.ctrlKey || e.metaKey) && e.key === "n") {
         e.preventDefault()
         setOrderOpen(true)
@@ -171,17 +177,19 @@ export function TopHeader() {
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6">
-      {/* Search */}
-      <div className="relative w-full max-w-md">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Buscar Orden #, Cliente o Tecnico..."
-          className="pl-10 pr-16 bg-secondary border-border"
-        />
-        <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 hidden select-none items-center gap-1 rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground sm:flex">
+      {/* Search trigger */}
+      <button
+        type="button"
+        onClick={() => setSearchOpen(true)}
+        className="relative w-full max-w-md flex items-center rounded-md border border-border bg-secondary px-3 py-2 text-sm text-muted-foreground hover:bg-muted/70 transition-colors cursor-pointer"
+      >
+        <Search className="h-4 w-4 mr-3 shrink-0" />
+        <span className="flex-1 text-left truncate">Buscar Orden #, Cliente o Tecnico...</span>
+        <kbd className="hidden sm:inline-flex items-center gap-1 rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground ml-4 shrink-0">
           <span className="text-xs">{"Ctrl"}</span>K
         </kbd>
-      </div>
+      </button>
+      <SearchCommand open={searchOpen} onOpenChange={setSearchOpen} />
 
       {/* Actions */}
       <div className="flex items-center gap-3">
