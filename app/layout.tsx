@@ -1,6 +1,7 @@
 import React from "react"
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
+import { TechniciansProvider } from "@/lib/context/technicians-context"
 
 import './globals.css'
 
@@ -22,7 +23,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
-      <body className="font-sans antialiased">{children}</body>
+      <body className="font-sans antialiased">
+        <TechniciansProvider>{children}</TechniciansProvider>
+      </body>
     </html>
   )
 }
