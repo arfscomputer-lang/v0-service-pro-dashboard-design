@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import { TechniciansProvider } from "@/lib/context/technicians-context"
 import { CustomersProvider } from "@/lib/context/customers-context"
+import { InventoryProvider } from "@/lib/context/inventory-context"
 
 import './globals.css'
 
@@ -26,7 +27,9 @@ export default function RootLayout({
     <html lang="es">
       <body className="font-sans antialiased">
         <TechniciansProvider>
-          <CustomersProvider>{children}</CustomersProvider>
+          <CustomersProvider>
+            <InventoryProvider>{children}</InventoryProvider>
+          </CustomersProvider>
         </TechniciansProvider>
       </body>
     </html>
