@@ -1,9 +1,7 @@
 import { SidebarNav } from "@/components/dashboard/sidebar-nav"
 import { TopHeader } from "@/components/dashboard/top-header"
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
-import { KpiCards } from "@/components/dashboard/kpi-cards"
-import { DispatchBoard } from "@/components/dashboard/dispatch-board"
-import { TechnicianStatus } from "@/components/dashboard/technician-status"
+import { DispatchCalendar } from "@/components/dashboard/dispatch-calendar"
 
 export default function DashboardPage() {
   return (
@@ -17,23 +15,13 @@ export default function DashboardPage() {
         <TopHeader />
 
         {/* Dashboard Content */}
-        <main className="flex-1 overflow-y-auto p-6">
-          <div className="mx-auto max-w-7xl space-y-6">
-            {/* Dashboard Header */}
-            <DashboardHeader />
+        <main className="flex flex-1 flex-col overflow-hidden p-4 gap-3">
+          {/* Dashboard Header */}
+          <DashboardHeader />
 
-            {/* KPI Cards */}
-            <KpiCards />
-
-            {/* Split View: Dispatch Board + Technician Status */}
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-              <div className="lg:col-span-2">
-                <DispatchBoard />
-              </div>
-              <div className="lg:col-span-1">
-                <TechnicianStatus />
-              </div>
-            </div>
+          {/* Full-width Calendar View */}
+          <div className="flex-1 min-h-0">
+            <DispatchCalendar />
           </div>
         </main>
       </div>
