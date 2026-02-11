@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { useState } from "react"
 
 import {
   CalendarDays,
@@ -21,7 +21,24 @@ interface TimelineEvent {
   completed: boolean
 }
 
-const orderInfo = {
+interface OrderInfo {
+  type: string
+  category: string
+  scheduledDate: string
+  scheduledTime: string
+  estimatedDuration: string
+  slaDeadline: string
+  equipment: string
+  serialNumber: string
+  warranty: string
+}
+
+interface TabDetailsProps {
+  orderInfo?: OrderInfo
+  description?: string
+}
+
+const defaultOrderInfo: OrderInfo = {
   type: "Reparacion HVAC",
   category: "Climatizacion",
   scheduledDate: "11 de Febrero, 2026",
@@ -33,10 +50,10 @@ const orderInfo = {
   warranty: "Vigente hasta Mar 2027",
 }
 
-const description =
+const defaultDescription =
   "El cliente reporta que la unidad central de aire acondicionado no enfria adecuadamente. La temperatura del termostato no coincide con la temperatura real de la habitacion. Se escucha un ruido inusual al encender el compresor. Ultima revision realizada hace 8 meses."
 
-const checklist: { label: string; done: boolean }[] = [
+const initialChecklist: { label: string; done: boolean }[] = [
   { label: "Confirmacion de cita con el cliente", done: true },
   { label: "Verificacion de refacciones necesarias", done: true },
   { label: "Revision del equipo de seguridad", done: true },
@@ -85,7 +102,19 @@ const timeline: TimelineEvent[] = [
   },
 ]
 
-export function TabDetails() {
+export function TabDetails({ orderInfo: infoProp, description: descProp }: TabDetailsProps) {
+  const info = infoProp ?? defaultOrderInfo
+  const desc = descProp ?? defaultDescription
+  const [checklist, setChecklist] = useState(initialChecklist)
+
+  const toggleCheck = (idx: number) => {
+    setChecklist((prev) =>
+      prev.map((item, i) => (i === idx ? { ...item, done: !item.done } : item))
+    )
+  }
+
+  const completedCount = checklist.filter((c) => c.done).length
+
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       {/* Left column */}
@@ -97,12 +126,12 @@ export function TabDetails() {
             Informacion de la Orden
           </h3>
           <div className="grid grid-cols-2 gap-4">
-            <InfoField icon={<Wrench className="h-3.5 w-3.5" />} label="Tipo de Servicio" value={orderInfo.type} />
-            <InfoField icon={<Wrench className="h-3.5 w-3.5" />} label="Categoria" value={orderInfo.category} />
-            <InfoField icon={<CalendarDays className="h-3.5 w-3.5" />} label="Fecha Programada" value={orderInfo.scheduledDate} />
-            <InfoField icon={<Clock className="h-3.5 w-3.5" />} label="Horario" value={orderInfo.scheduledTime} />
-            <InfoField icon={<Clock className="h-3.5 w-3.5" />} label="Duracion Estimada" value={orderInfo.estimatedDuration} />
-            <InfoField icon={<AlertTriangle className="h-3.5 w-3.5" />} label="Limite SLA" value={orderInfo.slaDeadline} />
+            <InfoField icon={<Wrench className="h-3.5 w-3.5" />} label="Tipo de Servicio" value={info.type} />
+            <InfoField icon={<Wrench className="h-3.5 w-3.5" />} label="Categoria" value={info.category} />
+            <InfoField icon={<CalendarDays className="h-3.5 w-3.5" />} label="Fecha Programada" value={info.scheduledDate} />
+            <InfoField icon={<Clock className="h-3.5 w-3.5" />} label="Horario" value={info.scheduledTime} />
+            <InfoField icon={<Clock className="h-3.5 w-3.5" />} label="Duracion Estimada" value={info.estimatedDuration} />
+            <InfoField icon={<AlertTriangle className="h-3.5 w-3.5" />} label="Limite SLA" value={info.slaDeadline} />
           </div>
 
           <Separator className="my-4" />
@@ -112,11 +141,11 @@ export function TabDetails() {
             Equipo
           </h4>
           <div className="rounded-lg bg-secondary p-3 flex flex-col gap-1.5">
-            <p className="text-sm font-medium text-foreground">{orderInfo.equipment}</p>
+            <p className="text-sm font-medium text-foreground">{info.equipment}</p>
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <span>N/S: {orderInfo.serialNumber}</span>
+              <span>N/S: {info.serialNumber}</span>
               <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">
-                {orderInfo.warranty}
+                {info.warranty}
               </Badge>
             </div>
           </div>
@@ -128,7 +157,7 @@ export function TabDetails() {
             <FileText className="h-4 w-4 text-primary" />
             Descripcion del Problema
           </h3>
-          <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
+          <p className="text-sm leading-relaxed text-muted-foreground">{desc}</p>
         </section>
 
         {/* Checklist */}
@@ -139,24 +168,31 @@ export function TabDetails() {
               Lista de Verificacion
             </h3>
             <span className="text-xs text-muted-foreground">
-              {checklist.filter((c) => c.done).length}/{checklist.length} completados
+              {completedCount}/{checklist.length} completados
             </span>
           </div>
           {/* Progress bar */}
           <div className="mb-4 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
             <div
               className="h-full rounded-full bg-primary transition-all"
-              style={{ width: `${(checklist.filter((c) => c.done).length / checklist.length) * 100}%` }}
+              style={{ width: `${(completedCount / checklist.length) * 100}%` }}
             />
           </div>
           <ul className="flex flex-col gap-2">
-            {checklist.map((item) => (
+            {checklist.map((item, idx) => (
               <li key={item.label} className="flex items-center gap-3 text-sm">
-                {item.done ? (
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
-                ) : (
-                  <Circle className="h-4 w-4 shrink-0 text-border" />
-                )}
+                <button
+                  type="button"
+                  onClick={() => toggleCheck(idx)}
+                  className="shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm"
+                  aria-label={`${item.done ? "Desmarcar" : "Marcar"} ${item.label}`}
+                >
+                  {item.done ? (
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                  ) : (
+                    <Circle className="h-4 w-4 text-border hover:text-muted-foreground transition-colors" />
+                  )}
+                </button>
                 <span className={item.done ? "text-muted-foreground line-through" : "text-foreground"}>
                   {item.label}
                 </span>

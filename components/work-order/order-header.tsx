@@ -17,6 +17,8 @@ interface OrderHeaderProps {
   status: "pendiente" | "en_progreso" | "completada" | "cancelada"
   priority: "alta" | "media" | "baja"
   createdAt: string
+  onEdit: () => void
+  onStatusChange?: (status: "pendiente" | "en_progreso" | "completada" | "cancelada") => void
 }
 
 const statusConfig: Record<string, { label: string; className: string }> = {
@@ -53,18 +55,22 @@ const priorityConfig: Record<string, { label: string; className: string }> = {
   },
 }
 
-export function OrderHeader({ orderId, status, priority, createdAt }: OrderHeaderProps) {
+export function OrderHeader({ orderId, status, priority, createdAt, onEdit, onStatusChange }: OrderHeaderProps) {
   const st = statusConfig[status]
   const pr = priorityConfig[priority]
+
+  const handlePrint = () => {
+    window.print()
+  }
 
   return (
     <div className="flex items-center justify-between border-b border-border bg-card px-6 py-4">
       {/* Left side */}
       <div className="flex items-center gap-4">
-        <Link href="/">
+        <Link href="/ordenes">
           <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-5 w-5" />
-            <span className="sr-only">Volver al despacho</span>
+            <span className="sr-only">Volver a ordenes</span>
           </Button>
         </Link>
 
@@ -89,11 +95,21 @@ export function OrderHeader({ orderId, status, priority, createdAt }: OrderHeade
 
       {/* Right side actions */}
       <div className="flex items-center gap-2">
-        <Button variant="outline" size="sm" className="gap-2 text-muted-foreground bg-transparent">
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2 text-muted-foreground bg-transparent"
+          onClick={onEdit}
+        >
           <Edit2 className="h-4 w-4" />
           Editar
         </Button>
-        <Button variant="outline" size="sm" className="gap-2 text-muted-foreground bg-transparent">
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2 text-muted-foreground bg-transparent"
+          onClick={handlePrint}
+        >
           <Printer className="h-4 w-4" />
           Imprimir
         </Button>
@@ -105,11 +121,25 @@ export function OrderHeader({ orderId, status, priority, createdAt }: OrderHeade
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem>Duplicar Orden</DropdownMenuItem>
-            <DropdownMenuItem>Enviar al Cliente</DropdownMenuItem>
-            <DropdownMenuItem>Exportar PDF</DropdownMenuItem>
+            <DropdownMenuItem onClick={onEdit}>Editar Orden</DropdownMenuItem>
+            <DropdownMenuItem onClick={handlePrint}>Imprimir</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">Cancelar Orden</DropdownMenuItem>
+            {onStatusChange && status !== "completada" && (
+              <DropdownMenuItem onClick={() => onStatusChange("completada")}>
+                Marcar como Completada
+              </DropdownMenuItem>
+            )}
+            {onStatusChange && status !== "cancelada" && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive"
+                  onClick={() => onStatusChange("cancelada")}
+                >
+                  Cancelar Orden
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
