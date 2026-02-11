@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Wrench,
+  Smartphone,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -28,6 +29,7 @@ const navItems = [
   { icon: UserCircle, label: "Clientes", href: "/clientes" },
   { icon: Package, label: "Inventario", href: "/inventario" },
   { icon: FileText, label: "Facturas", href: "/facturas" },
+  { icon: Smartphone, label: "Vista Tecnico", href: "/tecnico/agenda" },
   { icon: Settings, label: "Configuracion", href: "/configuracion" },
 ]
 
