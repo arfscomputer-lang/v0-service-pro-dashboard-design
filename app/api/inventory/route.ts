@@ -1,40 +1,69 @@
+import { sql } from "@vercel/postgres"
 import { NextResponse } from "next/server"
-import { inventorySeed, type InventoryItem } from "@/lib/data/inventory"
-
-// In-memory store — replace with DB in production
-const items: InventoryItem[] = [...inventorySeed]
 
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url)
-  const q = searchParams.get("q")?.toLowerCase() ?? ""
-  const category = searchParams.get("category") ?? ""
-  const location = searchParams.get("location") ?? ""
-  const lowStock = searchParams.get("lowStock") === "true"
+  try {
+    const { searchParams } = new URL(req.url)
+    const q = searchParams.get("q")?.toLowerCase() ?? ""
+    const category = searchParams.get("category") ?? ""
+    const lowStock = searchParams.get("lowStock") === "true"
 
-  let result = items
+    let query = "SELECT * FROM inventory_items WHERE 1=1"
+    const params: any[] = []
 
-  if (q) {
-    result = result.filter(
-      (i) =>
-        i.name.toLowerCase().includes(q) ||
-        i.sku.toLowerCase().includes(q) ||
-        i.barcode.toLowerCase().includes(q)
-    )
+    if (q) {
+      query += ` AND (name ILIKE $${params.length + 1} OR sku ILIKE $${params.length + 1})`
+      params.push(`%${q}%`, `%${q}%`)
+    }
+
+    if (category) {
+      query += ` AND category = $${params.length + 1}`
+      params.push(category)
+    }
+
+    if (lowStock) {
+      query += ` AND total_stock <= min_threshold`
+    }
+
+    query += " ORDER BY name ASC"
+
+    const result = await sql.query(query, params)
+    return NextResponse.json({ items: result.rows, total: result.rows.length })
+  } catch (error) {
+    console.error("[v0] Get inventory error:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
-  if (category) result = result.filter((i) => i.category === category)
-  if (location) result = result.filter((i) => i.locations.some((l) => l.name.toLowerCase().includes(location.toLowerCase())))
-  if (lowStock) result = result.filter((i) => i.stockTotal <= i.minStock)
-
-  return NextResponse.json({ items: result, total: result.length })
 }
 
 export async function POST(req: Request) {
-  const body = await req.json()
-  const newItem: InventoryItem = {
-    ...body,
-    id: `INV-${String(items.length + 1).padStart(3, "0")}`,
-    movements: [],
+  try {
+    const body = await req.json()
+    const { sku, name, category, description, unit_cost, min_threshold } = body
+
+    if (!sku || !name || !category || !unit_cost) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      )
+    }
+
+    const result = await sql`
+      INSERT INTO inventory_items (sku, name, category, description, unit_cost, min_threshold)
+      VALUES (${sku}, ${name}, ${category}, ${description || null}, ${unit_cost}, ${min_threshold || 10})
+      RETURNING *
+    `
+
+    return NextResponse.json({ item: result.rows[0] }, { status: 201 })
+  } catch (error: any) {
+    console.error("[v0] Create inventory error:", error)
+
+    if (error.message?.includes("duplicate")) {
+      return NextResponse.json(
+        { error: "SKU already exists" },
+        { status: 409 }
+      )
+    }
+
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
-  items.push(newItem)
-  return NextResponse.json(newItem, { status: 201 })
 }
