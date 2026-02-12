@@ -80,7 +80,7 @@ export function SidebarNav() {
   }
 
   return (
-    <TooltipProvider delayDuration={0}>
+    <TooltipProvider delayDuration={300}>
       <aside
         className={cn(
           "flex h-screen flex-col bg-sidebar text-sidebar-foreground transition-all duration-300 border-r border-sidebar-border",
@@ -93,9 +93,9 @@ export function SidebarNav() {
             <Wrench className="h-5 w-5 text-sidebar-primary-foreground" />
           </Link>
           {!collapsed && (
-            <Link href={user ? "/" : "/login"} className="text-lg font-bold tracking-tight text-sidebar-primary-foreground">
+            <span className="text-lg font-bold tracking-tight text-sidebar-primary-foreground">
               ServicePro
-            </Link>
+            </span>
           )}
         </div>
 
@@ -103,6 +103,23 @@ export function SidebarNav() {
         <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
           {visibleItems.map((item) => {
             const active = isActive(item.href)
+            if (!collapsed) {
+              return (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className={cn(
+                    "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                    active
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                  )}
+                >
+                  <item.icon className="h-5 w-5 shrink-0" />
+                  <span>{item.label}</span>
+                </Link>
+              )
+            }
             return (
               <Tooltip key={item.label}>
                 <TooltipTrigger asChild>
@@ -116,7 +133,6 @@ export function SidebarNav() {
                     )}
                   >
                     <item.icon className="h-5 w-5 shrink-0" />
-                    {!collapsed && <span>{item.label}</span>}
                   </Link>
                 </TooltipTrigger>
                 {collapsed && (
@@ -160,26 +176,31 @@ export function SidebarNav() {
               </div>
             )}
           </div>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={handleLogout}
-                className={cn(
-                  "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/60 hover:bg-destructive/20 hover:text-destructive transition-colors",
-                  collapsed && "justify-center"
-                )}
-              >
-                <LogOut className="h-4 w-4 shrink-0" />
-                {!collapsed && <span>Cerrar Sesion</span>}
-              </button>
-            </TooltipTrigger>
-            {collapsed && (
+          {collapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="flex w-full items-center justify-center rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/60 hover:bg-destructive/20 hover:text-destructive transition-colors"
+                >
+                  <LogOut className="h-4 w-4 shrink-0" />
+                </button>
+              </TooltipTrigger>
               <TooltipContent side="right" className="bg-foreground text-background">
                 Cerrar Sesion
               </TooltipContent>
-            )}
-          </Tooltip>
+            </Tooltip>
+          ) : (
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/60 hover:bg-destructive/20 hover:text-destructive transition-colors"
+            >
+              <LogOut className="h-4 w-4 shrink-0" />
+              <span>Cerrar Sesion</span>
+            </button>
+          )}
         </div>
       </aside>
     </TooltipProvider>
