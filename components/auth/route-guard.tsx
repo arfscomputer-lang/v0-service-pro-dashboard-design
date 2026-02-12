@@ -17,8 +17,10 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isLoading) return
 
-    // /login is always public
-    if (pathname === "/login") {
+    const publicRoutes = ["/login", "/auth/login"]
+
+    // Public routes - if logged in, redirect to home
+    if (publicRoutes.includes(pathname)) {
       if (user) {
         router.replace(getHomeRoute(user.role))
       }
@@ -27,7 +29,7 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
 
     // Not logged in -> go to login
     if (!user) {
-      router.replace("/login")
+      router.replace("/auth/login")
       return
     }
 
@@ -49,10 +51,10 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
     )
   }
 
-  // On /login, always render
-  if (pathname === "/login") return <>{children}</>
+  // Public routes - always render
+  if (pathname === "/login" || pathname === "/auth/login") return <>{children}</>
 
-  // Not logged in and not on /login — will redirect, show nothing
+  // Not logged in and not on public route — will redirect, show nothing
   if (!user) return null
 
   // Logged in but no access — will redirect, show nothing
