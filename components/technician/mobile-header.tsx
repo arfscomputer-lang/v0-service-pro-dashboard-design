@@ -1,21 +1,24 @@
 "use client"
 
 import { useState } from "react"
-import { Bell, Menu, X } from "lucide-react"
+import { Bell, Menu, X, LogOut } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
+import { useAuth } from "@/lib/context/auth-context"
 
 const quickLinks = [
   { label: "Mi Agenda", href: "/tecnico/agenda" },
-  { label: "Panel Admin", href: "/" },
-  { label: "Mis Ordenes", href: "/ordenes" },
+  { label: "Historial", href: "/tecnico/historial" },
+  { label: "Mensajes", href: "/tecnico/mensajes" },
+  { label: "Mi Perfil", href: "/tecnico/perfil" },
 ]
 
 export function MobileHeader() {
+  const { user, logout } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
+  const initials = user ? `${user.name.split(" ")[0][0]}${user.name.split(" ").slice(-1)[0][0]}` : "SP"
 
   return (
     <>
@@ -46,7 +49,7 @@ export function MobileHeader() {
           </Button>
           <Avatar className="h-8 w-8">
             <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
-              LH
+              {initials}
             </AvatarFallback>
           </Avatar>
         </div>
@@ -62,6 +65,12 @@ export function MobileHeader() {
         )}
       >
         <nav className="flex flex-col p-3 gap-1">
+          {user && (
+            <div className="px-4 py-2 mb-1 border-b border-border">
+              <p className="text-sm font-semibold text-foreground">{user.name}</p>
+              <p className="text-[11px] text-muted-foreground">{user.email}</p>
+            </div>
+          )}
           {quickLinks.map((link) => (
             <Link
               key={link.href}
@@ -72,6 +81,19 @@ export function MobileHeader() {
               {link.label}
             </Link>
           ))}
+          <div className="border-t border-border mt-1 pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false)
+                logout()
+              }}
+              className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
+            >
+              <LogOut className="h-4 w-4" />
+              Cerrar Sesion
+            </button>
+          </div>
         </nav>
       </div>
 
