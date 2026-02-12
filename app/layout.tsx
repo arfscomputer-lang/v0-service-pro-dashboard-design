@@ -1,6 +1,8 @@
 import React from "react"
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
+import { AuthProvider } from "@/lib/context/auth-context"
+import { RouteGuard } from "@/components/auth/route-guard"
 import { TechniciansProvider } from "@/lib/context/technicians-context"
 import { CustomersProvider } from "@/lib/context/customers-context"
 import { InventoryProvider } from "@/lib/context/inventory-context"
@@ -26,11 +28,15 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className="font-sans antialiased">
-        <TechniciansProvider>
-          <CustomersProvider>
-            <InventoryProvider>{children}</InventoryProvider>
-          </CustomersProvider>
-        </TechniciansProvider>
+        <AuthProvider>
+          <RouteGuard>
+            <TechniciansProvider>
+              <CustomersProvider>
+                <InventoryProvider>{children}</InventoryProvider>
+              </CustomersProvider>
+            </TechniciansProvider>
+          </RouteGuard>
+        </AuthProvider>
       </body>
     </html>
   )

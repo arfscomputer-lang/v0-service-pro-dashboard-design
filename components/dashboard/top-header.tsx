@@ -49,6 +49,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import { SearchCommand } from "./search-command"
+import { useAuth } from "@/lib/context/auth-context"
 
 /* ─── Notifications data ─── */
 interface Notification {
@@ -144,6 +145,7 @@ const helpLinks = [
 
 /* ─── Component ─── */
 export function TopHeader() {
+  const { user } = useAuth()
   const [searchOpen, setSearchOpen] = useState(false)
   const [orderOpen, setOrderOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
@@ -205,7 +207,8 @@ export function TopHeader() {
           <span className="text-[11px] font-medium text-emerald-700">En Vivo</span>
         </div>
 
-        {/* ── Nueva Orden (Sheet) ── */}
+      {/* ── Nueva Orden (Sheet) — only admin/supervisor/cliente ── */}
+      {user && (user.role === "admin" || user.role === "supervisor" || user.role === "cliente") && (
         <Button
           size="sm"
           className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
@@ -214,6 +217,7 @@ export function TopHeader() {
           <Plus className="h-4 w-4" />
           <span className="hidden sm:inline">Nueva Orden</span>
         </Button>
+      )}
 
         <Sheet open={orderOpen} onOpenChange={setOrderOpen}>
           <SheetContent side="right" className="w-full sm:max-w-lg p-0 flex flex-col">
