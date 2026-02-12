@@ -1,38 +1,36 @@
-import { sql } from "@vercel/postgres"
 import { NextResponse } from "next/server"
+import { listCustomers, createCustomer } from "@/lib/db"
 
-// GET /api/customers — List all customers from database
+// GET /api/customers
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url)
     const type = searchParams.get("type")
     const q = searchParams.get("q")?.toLowerCase()
 
-    let query = "SELECT * FROM customers WHERE 1=1"
-    const params: any[] = []
+    let customers = await listCustomers()
 
     if (type) {
-      query += ` AND type = $${params.length + 1}`
-      params.push(type)
+      customers = customers.filter((c: any) => c.type === type)
     }
 
     if (q) {
-      query += ` AND (name ILIKE $${params.length + 1} OR email ILIKE $${params.length + 1} OR phone ILIKE $${params.length + 1})`
-      params.push(`%${q}%`, `%${q}%`, `%${q}%`)
+      customers = customers.filter(
+        (c: any) =>
+          c.name?.toLowerCase().includes(q) ||
+          c.email?.toLowerCase().includes(q) ||
+          c.phone?.includes(q)
+      )
     }
 
-    query += " ORDER BY name ASC"
-
-    const result = await sql.query(query, params)
-
-    return NextResponse.json({ customers: result.rows, total: result.rows.length })
+    return NextResponse.json({ customers, total: customers.length })
   } catch (error) {
     console.error("[v0] Get customers error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
 
-// POST /api/customers — Create a new customer in database
+// POST /api/customers
 export async function POST(req: Request) {
   try {
     const body = await req.json()
@@ -45,14 +43,18 @@ export async function POST(req: Request) {
       )
     }
 
-    const result = await sql`
-      INSERT INTO customers (name, email, phone, address, city, lat, lng, type)
-      VALUES (${name}, ${email}, ${phone || null}, ${address || null}, ${city || null}, 
-              ${lat || null}, ${lng || null}, ${type})
-      RETURNING *
-    `
+    const customer = await createCustomer({
+      name,
+      email,
+      phone,
+      address,
+      city,
+      lat,
+      lng,
+      type,
+    })
 
-    return NextResponse.json({ customer: result.rows[0] }, { status: 201 })
+    return NextResponse.json({ customer }, { status: 201 })
   } catch (error: any) {
     console.error("[v0] Create customer error:", error)
 

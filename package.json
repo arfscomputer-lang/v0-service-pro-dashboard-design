@@ -38,6 +38,7 @@
     "@radix-ui/react-toggle-group": "1.1.1",
     "@radix-ui/react-tooltip": "1.1.6",
     "@vercel/postgres": "^0.8.1",
+    "@neondatabase/serverless": "^0.12.0",
     "autoprefixer": "^10.4.20",
     "barcode-detector": "^3.0.8",
     "bcryptjs": "^2.4.3",

@@ -1,5 +1,5 @@
-import { sql } from "@vercel/postgres"
 import { NextResponse } from "next/server"
+import { getCustomerById, updateCustomer, deleteCustomer } from "@/lib/db"
 
 // GET /api/customers/:id
 export async function GET(
@@ -8,20 +8,20 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    const result = await sql`SELECT * FROM customers WHERE id = ${id}`
+    const customer = await getCustomerById(id)
 
-    if (result.rows.length === 0) {
+    if (!customer) {
       return NextResponse.json({ error: "Customer not found" }, { status: 404 })
     }
 
-    return NextResponse.json({ customer: result.rows[0] })
+    return NextResponse.json({ customer })
   } catch (error) {
     console.error("[v0] Get customer error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
 
-// PUT /api/customers/:id — Update customer
+// PUT /api/customers/:id
 export async function PUT(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -29,29 +29,14 @@ export async function PUT(
   try {
     const { id } = await params
     const body = await req.json()
-    const { name, email, phone, address, city, lat, lng, nps_score, rating } =
-      body
 
-    const result = await sql`
-      UPDATE customers
-      SET name = COALESCE(${name}, name),
-          email = COALESCE(${email}, email),
-          phone = COALESCE(${phone}, phone),
-          address = COALESCE(${address}, address),
-          city = COALESCE(${city}, city),
-          lat = COALESCE(${lat}, lat),
-          lng = COALESCE(${lng}, lng),
-          nps_score = COALESCE(${nps_score}, nps_score),
-          rating = COALESCE(${rating}, rating)
-      WHERE id = ${id}
-      RETURNING *
-    `
+    const customer = await updateCustomer(id, body)
 
-    if (result.rows.length === 0) {
+    if (!customer) {
       return NextResponse.json({ error: "Customer not found" }, { status: 404 })
     }
 
-    return NextResponse.json({ customer: result.rows[0] })
+    return NextResponse.json({ customer })
   } catch (error) {
     console.error("[v0] Update customer error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
@@ -65,7 +50,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
-    await sql`DELETE FROM customers WHERE id = ${id}`
+    await deleteCustomer(id)
     return NextResponse.json({ success: true, id })
   } catch (error) {
     console.error("[v0] Delete customer error:", error)

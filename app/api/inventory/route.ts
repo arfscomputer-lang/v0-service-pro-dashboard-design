@@ -1,5 +1,5 @@
-import { sql } from "@vercel/postgres"
 import { NextResponse } from "next/server"
+import { listInventoryItems, createInventoryItem, query } from "@/lib/db"
 
 export async function GET(req: Request) {
   try {
@@ -8,27 +8,25 @@ export async function GET(req: Request) {
     const category = searchParams.get("category") ?? ""
     const lowStock = searchParams.get("lowStock") === "true"
 
-    let query = "SELECT * FROM inventory_items WHERE 1=1"
-    const params: any[] = []
+    let items = await listInventoryItems()
 
     if (q) {
-      query += ` AND (name ILIKE $${params.length + 1} OR sku ILIKE $${params.length + 1})`
-      params.push(`%${q}%`, `%${q}%`)
+      items = items.filter(
+        (i: any) =>
+          i.name?.toLowerCase().includes(q) ||
+          i.sku?.toLowerCase().includes(q)
+      )
     }
 
     if (category) {
-      query += ` AND category = $${params.length + 1}`
-      params.push(category)
+      items = items.filter((i: any) => i.category === category)
     }
 
     if (lowStock) {
-      query += ` AND total_stock <= min_threshold`
+      items = items.filter((i: any) => (i.total_stock || 0) <= (i.min_threshold || 10))
     }
 
-    query += " ORDER BY name ASC"
-
-    const result = await sql.query(query, params)
-    return NextResponse.json({ items: result.rows, total: result.rows.length })
+    return NextResponse.json({ items, total: items.length })
   } catch (error) {
     console.error("[v0] Get inventory error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
@@ -47,13 +45,16 @@ export async function POST(req: Request) {
       )
     }
 
-    const result = await sql`
-      INSERT INTO inventory_items (sku, name, category, description, unit_cost, min_threshold)
-      VALUES (${sku}, ${name}, ${category}, ${description || null}, ${unit_cost}, ${min_threshold || 10})
-      RETURNING *
-    `
+    const item = await createInventoryItem({
+      sku,
+      name,
+      category,
+      description,
+      unit_cost,
+      min_threshold,
+    })
 
-    return NextResponse.json({ item: result.rows[0] }, { status: 201 })
+    return NextResponse.json({ item }, { status: 201 })
   } catch (error: any) {
     console.error("[v0] Create inventory error:", error)
 

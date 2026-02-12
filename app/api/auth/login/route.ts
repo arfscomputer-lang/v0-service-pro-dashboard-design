@@ -1,6 +1,6 @@
-import { sql } from "@vercel/postgres"
 import bcrypt from "bcryptjs"
 import { NextResponse } from "next/server"
+import { getUserByEmail } from "@/lib/db"
 
 export async function POST(request: Request) {
   try {
@@ -14,11 +14,7 @@ export async function POST(request: Request) {
     }
 
     // Get user from database
-    const result = await sql`
-      SELECT id, email, password_hash, name, role, status FROM users WHERE email = ${email}
-    `
-
-    const user = result.rows[0]
+    const user = await getUserByEmail(email)
 
     if (!user) {
       return NextResponse.json(
@@ -27,8 +23,8 @@ export async function POST(request: Request) {
       )
     }
 
-    // Check password (using bcryptjs for client-side hashing in demo; in production use argon2)
-    const passwordMatch = await bcrypt.compare(password, user.password_hash)
+    // Check password
+    const passwordMatch = await bcrypt.compare(password, (user as any).password_hash)
 
     if (!passwordMatch) {
       return NextResponse.json(
@@ -37,20 +33,13 @@ export async function POST(request: Request) {
       )
     }
 
-    if (user.status !== "activo") {
-      return NextResponse.json(
-        { error: "User account is inactive" },
-        { status: 403 }
-      )
-    }
-
-    // Return user data (in production, use JWT tokens)
+    // Return user data
     return NextResponse.json({
       user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
+        id: (user as any).id,
+        email: (user as any).email,
+        name: (user as any).name,
+        role: (user as any).role,
       },
     })
   } catch (error) {
