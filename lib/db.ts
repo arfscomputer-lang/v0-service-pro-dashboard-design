@@ -148,6 +148,123 @@ export async function recordStockMovement(data: {
 }
 
 // ============================================
+// TECHNICIANS
+// ============================================
+
+export async function listTechnicians() {
+  const rows = await getMany<any>(`SELECT * FROM technicians ORDER BY name ASC`)
+  return rows.map(normalizeTechnician)
+}
+
+export async function getTechnicianById(id: string) {
+  const row = await getOne<any>(`SELECT * FROM technicians WHERE id = $1`, [id])
+  return row ? normalizeTechnician(row) : null
+}
+
+export async function createTechnician(data: {
+  name: string; email: string; phone?: string; role?: string; status?: string;
+  specialties?: string[]; certifications?: any[]; address?: string;
+  lat?: number; lng?: number; avg_response_min?: number;
+}) {
+  const initials = data.name.split(" ").filter(Boolean).map(w => w[0]?.toUpperCase() ?? "").slice(0, 2).join("")
+  const result = await query(
+    `INSERT INTO technicians (name, email, phone, role, status, specialties, certifications, address, lat, lng, avg_response_min, initials, join_date)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CURRENT_DATE) RETURNING *`,
+    [
+      data.name, data.email, data.phone || null, data.role || "junior",
+      data.status || "disponible", JSON.stringify(data.specialties || []),
+      JSON.stringify(data.certifications || []), data.address || null,
+      data.lat || null, data.lng || null, data.avg_response_min || 0, initials,
+    ]
+  )
+  return normalizeTechnician(result.rows[0])
+}
+
+export async function updateTechnician(id: string, data: Record<string, any>) {
+  // Build dynamic SET clause from provided fields
+  const allowedFields: Record<string, string> = {
+    name: "name", email: "email", phone: "phone", role: "role",
+    status: "status", address: "address", lat: "lat", lng: "lng",
+    avg_response_min: "avg_response_min", average_rating: "average_rating",
+    total_jobs: "total_jobs",
+  }
+  const sets: string[] = []
+  const values: any[] = []
+  let idx = 1
+
+  for (const [key, col] of Object.entries(allowedFields)) {
+    if (data[key] !== undefined) {
+      sets.push(`${col} = $${idx}`)
+      values.push(data[key])
+      idx++
+    }
+  }
+  // Handle JSON fields separately
+  if (data.specialties !== undefined) {
+    sets.push(`specialties = $${idx}`)
+    values.push(JSON.stringify(data.specialties))
+    idx++
+  }
+  if (data.certifications !== undefined) {
+    sets.push(`certifications = $${idx}`)
+    values.push(JSON.stringify(data.certifications))
+    idx++
+  }
+  if (data.name) {
+    const initials = data.name.split(" ").filter(Boolean).map((w: string) => w[0]?.toUpperCase() ?? "").slice(0, 2).join("")
+    sets.push(`initials = $${idx}`)
+    values.push(initials)
+    idx++
+  }
+
+  if (sets.length === 0) return getTechnicianById(id)
+
+  sets.push(`updated_at = NOW()`)
+  values.push(id)
+  const result = await query(
+    `UPDATE technicians SET ${sets.join(", ")} WHERE id = $${idx} RETURNING *`,
+    values
+  )
+  return result.rows[0] ? normalizeTechnician(result.rows[0]) : null
+}
+
+export async function deleteTechnician(id: string) {
+  await query(`DELETE FROM technician_availability WHERE technician_id = $1`, [id])
+  await query(`DELETE FROM technicians WHERE id = $1`, [id])
+}
+
+/** Normalise a technician row from DB into the shape the frontend expects */
+function normalizeTechnician(row: any) {
+  let specialties = row.specialties || "[]"
+  if (typeof specialties === "string") {
+    try { specialties = JSON.parse(specialties) } catch { specialties = [] }
+  }
+  let certifications = row.certifications || "[]"
+  if (typeof certifications === "string") {
+    try { certifications = JSON.parse(certifications) } catch { certifications = [] }
+  }
+  return {
+    id: row.id,
+    name: row.name || "",
+    email: row.email || "",
+    phone: row.phone || "",
+    role: row.role || "junior",
+    status: row.status || "disponible",
+    specialties: Array.isArray(specialties) ? specialties : [],
+    certifications: Array.isArray(certifications) ? certifications : [],
+    rating: row.average_rating ?? 0,
+    completedJobs: row.total_jobs ?? 0,
+    avgResponseMin: row.avg_response_min ?? 0,
+    latitude: row.lat ?? null,
+    longitude: row.lng ?? null,
+    address: row.address || "",
+    initials: row.initials || "",
+    joinDate: row.join_date || "",
+    availability: { days: ["lun", "mar", "mie", "jue", "vie"], startTime: "08:00", endTime: "18:00" },
+  }
+}
+
+// ============================================
 // NOTIFICATIONS
 // ============================================
 
