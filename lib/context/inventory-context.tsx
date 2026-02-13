@@ -28,44 +28,17 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
 
   // Fetch inventory from database on mount
   const refreshItems = useCallback(async () => {
+    setIsLoading(true)
     try {
-      setIsLoading(true)
       const response = await fetch("/api/inventory")
-      if (response.ok) {
-        const data = await response.json()
-        // Map DB format to InventoryItem type
-        const mappedItems: InventoryItem[] = data.items.map((i: any) => ({
-          id: i.id,
-          sku: i.sku,
-          name: i.name,
-          category: i.category as ItemCategory,
-          description: i.description || "",
-          barcode: i.barcode || "",
-          stockTotal: i.total_stock || 0,
-          minStock: i.min_threshold || 10,
-          maxStock: i.max_threshold || 100,
-          costUnit: i.unit_cost || 0,
-          priceUnit: i.unit_price || 0,
-          locations: [],
-          supplier: {
-            name: i.supplier_name || "N/A",
-            contact: "",
-            leadTime: 0,
-            apiEndpoint: "",
-            costPerUnit: i.unit_cost || 0,
-          },
-          movements: [],
-          reorderPoint: i.min_threshold || 10,
-          reorderQty: 50,
-          lastRestockDate: i.last_restock || null,
-          nextRestockDate: null,
-          isActive: i.is_active !== false,
-        }))
-        setItems(mappedItems)
-        console.log("[v0] Loaded inventory from database:", mappedItems.length)
-      }
+      if (!response.ok) throw new Error("Failed to fetch inventory")
+      const data = await response.json()
+      setItems(data.items || [])
     } catch (error) {
-      console.error("[v0] Error loading inventory:", error)
+      console.error("[v0] Error fetching inventory, using seed data:", error)
+      // Fallback to seed data if API fails
+      const { inventorySeed } = await import("@/lib/data/inventory")
+      setItems(inventorySeed)
     } finally {
       setIsLoading(false)
     }

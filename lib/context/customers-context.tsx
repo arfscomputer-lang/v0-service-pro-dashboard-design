@@ -38,36 +38,17 @@ export function CustomersProvider({ children }: { children: React.ReactNode }) {
 
   // Fetch customers from database on mount
   const refreshCustomers = useCallback(async () => {
+    setIsLoading(true)
     try {
-      setIsLoading(true)
       const response = await fetch("/api/customers")
-      if (response.ok) {
-        const data = await response.json()
-        // Map DB format to Customer type
-        const mappedCustomers: Customer[] = data.customers.map((c: any) => ({
-          id: c.id,
-          name: c.name,
-          initials: makeInitials(c.name),
-          email: c.email,
-          phone: c.phone || "",
-          address: c.address || "",
-          city: c.city || "CDMX",
-          type: c.type as CustomerType,
-          tags: c.tags || [],
-          nps: c.nps_score,
-          preferredSchedule: c.preferred_schedule || "",
-          notes: c.notes || "",
-          createdAt: c.created_at?.split("T")[0] || new Date().toISOString().slice(0, 10),
-          interactions: [],
-          services: [],
-          totalSpent: 0,
-          lifetimeValue: 0,
-        }))
-        setCustomers(mappedCustomers)
-        console.log("[v0] Loaded customers from database:", mappedCustomers.length)
-      }
+      if (!response.ok) throw new Error("Failed to fetch customers")
+      const data = await response.json()
+      setCustomers(data.customers || [])
     } catch (error) {
-      console.error("[v0] Error loading customers:", error)
+      console.error("[v0] Error fetching customers, using seed data:", error)
+      // Fallback to seed data if API fails
+      const { customerSeed } = await import("@/lib/data/customers")
+      setCustomers(customerSeed)
     } finally {
       setIsLoading(false)
     }
