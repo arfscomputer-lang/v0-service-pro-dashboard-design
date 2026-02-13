@@ -149,7 +149,8 @@ export function CustomersProvider({ children }: { children: React.ReactNode }) {
     setCustomers((prev) =>
       prev.map((c) => {
         if (c.id !== customerId) return c
-        return { ...c, interactions: [{ ...interaction, id }, ...c.interactions] }
+        const interactions = c.interactions || []
+        return { ...c, interactions: [{ ...interaction, id }, ...interactions] }
       })
     )
   }, [])
@@ -158,7 +159,8 @@ export function CustomersProvider({ children }: { children: React.ReactNode }) {
     setCustomers((prev) =>
       prev.map((c) => {
         if (c.id !== customerId) return c
-        return { ...c, interactions: c.interactions.filter((i) => i.id !== interactionId) }
+        const interactions = c.interactions || []
+        return { ...c, interactions: interactions.filter((i) => i.id !== interactionId) }
       })
     )
   }, [])
@@ -167,12 +169,15 @@ export function CustomersProvider({ children }: { children: React.ReactNode }) {
     setCustomers((prev) =>
       prev.map((c) => {
         if (c.id !== customerId) return c
-        const newTotal = c.totalSpent + service.amount
+        const services = c.services || []
+        const totalSpent = c.totalSpent || 0
+        const lifetimeValue = c.lifetimeValue || 0
+        const newTotal = totalSpent + service.amount
         return {
           ...c,
-          services: [service, ...c.services],
+          services: [service, ...services],
           totalSpent: newTotal,
-          lifetimeValue: Math.max(c.lifetimeValue, newTotal),
+          lifetimeValue: Math.max(lifetimeValue, newTotal),
         }
       })
     )
@@ -181,8 +186,10 @@ export function CustomersProvider({ children }: { children: React.ReactNode }) {
   const addTag = useCallback((customerId: string, tag: CustomerTag) => {
     setCustomers((prev) =>
       prev.map((c) => {
-        if (c.id !== customerId || c.tags.includes(tag)) return c
-        return { ...c, tags: [...c.tags, tag] }
+        if (c.id !== customerId) return c
+        const tags = c.tags || []
+        if (tags.includes(tag)) return c
+        return { ...c, tags: [...tags, tag] }
       })
     )
   }, [])
@@ -191,7 +198,8 @@ export function CustomersProvider({ children }: { children: React.ReactNode }) {
     setCustomers((prev) =>
       prev.map((c) => {
         if (c.id !== customerId) return c
-        return { ...c, tags: c.tags.filter((t) => t !== tag) }
+        const tags = c.tags || []
+        return { ...c, tags: tags.filter((t) => t !== tag) }
       })
     )
   }, [])
@@ -200,9 +208,11 @@ export function CustomersProvider({ children }: { children: React.ReactNode }) {
     setCustomers((prev) =>
       prev.map((c) => {
         if (c.id !== customerId) return c
-        const completed = c.services.filter((s) => s.status === "completado").length
-        if (completed >= 3 && !c.tags.includes("VIP")) {
-          return { ...c, tags: [...c.tags, "VIP"] }
+        const services = c.services || []
+        const tags = c.tags || []
+        const completed = services.filter((s) => s.status === "completado").length
+        if (completed >= 3 && !tags.includes("VIP")) {
+          return { ...c, tags: [...tags, "VIP"] }
         }
         return c
       })
