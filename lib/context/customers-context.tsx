@@ -1,21 +1,22 @@
 "use client"
 
-import React, { createContext, useContext, useState, useCallback } from "react"
+import React, { createContext, useContext, useState, useCallback, useEffect } from "react"
 import type { Customer, CustomerType, CustomerTag, Interaction, ServiceRecord } from "@/lib/data/customers"
-import { customerSeed } from "@/lib/data/customers"
 
 interface CustomersContextValue {
   customers: Customer[]
+  isLoading: boolean
   getCustomer: (id: string) => Customer | undefined
-  addCustomer: (data: Omit<Customer, "id" | "initials">) => Customer
-  updateCustomer: (id: string, patch: Partial<Customer>) => void
-  deleteCustomer: (id: string) => void
+  addCustomer: (data: Omit<Customer, "id" | "initials">) => Promise<Customer>
+  updateCustomer: (id: string, patch: Partial<Customer>) => Promise<void>
+  deleteCustomer: (id: string) => Promise<void>
+  refreshCustomers: () => Promise<void>
   addInteraction: (customerId: string, interaction: Omit<Interaction, "id">) => void
   deleteInteraction: (customerId: string, interactionId: string) => void
   addService: (customerId: string, service: ServiceRecord) => void
   addTag: (customerId: string, tag: CustomerTag) => void
   removeTag: (customerId: string, tag: CustomerTag) => void
-  autoVip: (customerId: string) => void // auto-promote to VIP if >= 3 services
+  autoVip: (customerId: string) => void
 }
 
 const CustomersContext = createContext<CustomersContextValue | null>(null)
@@ -29,39 +30,139 @@ function makeInitials(name: string): string {
     .join("")
 }
 
-let nextId = 200
 let nextIntId = 500
 
 export function CustomersProvider({ children }: { children: React.ReactNode }) {
-  const [customers, setCustomers] = useState<Customer[]>(() => [...customerSeed])
+  const [customers, setCustomers] = useState<Customer[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Fetch customers from database on mount
+  const refreshCustomers = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch("/api/customers")
+      if (response.ok) {
+        const data = await response.json()
+        // Map DB format to Customer type
+        const mappedCustomers: Customer[] = data.customers.map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          initials: makeInitials(c.name),
+          email: c.email,
+          phone: c.phone || "",
+          address: c.address || "",
+          city: c.city || "CDMX",
+          type: c.type as CustomerType,
+          tags: c.tags || [],
+          nps: c.nps_score,
+          preferredSchedule: c.preferred_schedule || "",
+          notes: c.notes || "",
+          createdAt: c.created_at?.split("T")[0] || new Date().toISOString().slice(0, 10),
+          interactions: [],
+          services: [],
+          totalSpent: 0,
+          lifetimeValue: 0,
+        }))
+        setCustomers(mappedCustomers)
+        console.log("[v0] Loaded customers from database:", mappedCustomers.length)
+      }
+    } catch (error) {
+      console.error("[v0] Error loading customers:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    refreshCustomers()
+  }, [refreshCustomers])
 
   const getCustomer = useCallback(
     (id: string) => customers.find((c) => c.id === id),
     [customers]
   )
 
-  const addCustomer = useCallback((data: Omit<Customer, "id" | "initials">) => {
-    const id = `cli-${String(++nextId).padStart(3, "0")}`
-    const newCust: Customer = { ...data, id, initials: makeInitials(data.name) }
-    setCustomers((prev) => [...prev, newCust])
-    return newCust
-  }, [])
-
-  const updateCustomer = useCallback((id: string, patch: Partial<Customer>) => {
-    setCustomers((prev) =>
-      prev.map((c) => {
-        if (c.id !== id) return c
-        const updated = { ...c, ...patch }
-        if (patch.name) updated.initials = makeInitials(patch.name)
-        return updated
+  const addCustomer = useCallback(async (data: Omit<Customer, "id" | "initials">) => {
+    try {
+      const response = await fetch("/api/customers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          address: data.address,
+          city: data.city,
+          type: data.type,
+        }),
       })
-    )
+
+      if (response.ok) {
+        const result = await response.json()
+        const newCustomer: Customer = {
+          ...data,
+          id: result.customer.id,
+          initials: makeInitials(data.name),
+        }
+        setCustomers((prev) => [...prev, newCustomer])
+        console.log("[v0] Added customer to database:", newCustomer.id)
+        return newCustomer
+      }
+      throw new Error("Failed to create customer")
+    } catch (error) {
+      console.error("[v0] Error adding customer:", error)
+      throw error
+    }
   }, [])
 
-  const deleteCustomer = useCallback((id: string) => {
-    setCustomers((prev) => prev.filter((c) => c.id !== id))
+  const updateCustomer = useCallback(async (id: string, patch: Partial<Customer>) => {
+    try {
+      const response = await fetch(`/api/customers/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: patch.name,
+          email: patch.email,
+          phone: patch.phone,
+          address: patch.address,
+          city: patch.city,
+          nps_score: patch.nps,
+          rating: patch.nps,
+        }),
+      })
+
+      if (response.ok) {
+        setCustomers((prev) =>
+          prev.map((c) => {
+            if (c.id !== id) return c
+            const updated = { ...c, ...patch }
+            if (patch.name) updated.initials = makeInitials(patch.name)
+            return updated
+          })
+        )
+        console.log("[v0] Updated customer in database:", id)
+      }
+    } catch (error) {
+      console.error("[v0] Error updating customer:", error)
+    }
   }, [])
 
+  const deleteCustomer = useCallback(async (id: string) => {
+    try {
+      const response = await fetch(`/api/customers/${id}`, {
+        method: "DELETE",
+      })
+
+      if (response.ok) {
+        setCustomers((prev) => prev.filter((c) => c.id !== id))
+        console.log("[v0] Deleted customer from database:", id)
+      }
+    } catch (error) {
+      console.error("[v0] Error deleting customer:", error)
+    }
+  }, [])
+
+  // Local-only operations (not yet persisted to DB)
   const addInteraction = useCallback((customerId: string, interaction: Omit<Interaction, "id">) => {
     const id = `int-${String(++nextIntId).padStart(3, "0")}`
     setCustomers((prev) =>
@@ -114,7 +215,6 @@ export function CustomersProvider({ children }: { children: React.ReactNode }) {
     )
   }, [])
 
-  // If customer has >= 3 completed services and is not VIP, promote them
   const autoVip = useCallback((customerId: string) => {
     setCustomers((prev) =>
       prev.map((c) => {
@@ -132,10 +232,12 @@ export function CustomersProvider({ children }: { children: React.ReactNode }) {
     <CustomersContext.Provider
       value={{
         customers,
+        isLoading,
         getCustomer,
         addCustomer,
         updateCustomer,
         deleteCustomer,
+        refreshCustomers,
         addInteraction,
         deleteInteraction,
         addService,
