@@ -39,20 +39,40 @@ import type { TechnicianProfile, TechStatus, TechSpecialty } from "@/lib/data/te
 
 // ── Helpers ──────────────────────────────────────────────────
 
-const statusConfig: Record<TechStatus, { label: string; dot: string; bg: string }> = {
+const statusConfig: Record<string, { label: string; dot: string; bg: string }> = {
   disponible: { label: "Disponible", dot: "bg-emerald-500", bg: "bg-emerald-50 text-emerald-700" },
   ocupado: { label: "Ocupado", dot: "bg-amber-500", bg: "bg-amber-50 text-amber-700" },
   en_viaje: { label: "En Viaje", dot: "bg-blue-500", bg: "bg-blue-50 text-blue-700" },
+  en_ruta: { label: "En Ruta", dot: "bg-blue-500", bg: "bg-blue-50 text-blue-700" },
+  en_sitio: { label: "En Sitio", dot: "bg-violet-500", bg: "bg-violet-50 text-violet-700" },
   desconectado: { label: "Desconectado", dot: "bg-gray-400", bg: "bg-gray-100 text-gray-500" },
+  descuento: { label: "Descanso", dot: "bg-gray-400", bg: "bg-gray-100 text-gray-500" },
+  inactivo: { label: "Inactivo", dot: "bg-red-400", bg: "bg-red-50 text-red-600" },
 }
+const defaultStatus = { label: "Desconocido", dot: "bg-gray-400", bg: "bg-gray-100 text-gray-500" }
 
-const specialtyIcons: Record<TechSpecialty, React.ReactNode> = {
+const specialtyIcons: Record<string, React.ReactNode> = {
   HVAC: <Wind className="h-3 w-3" />,
   Electricidad: <Zap className="h-3 w-3" />,
   Plomeria: <Droplets className="h-3 w-3" />,
   Gas: <Flame className="h-3 w-3" />,
   Solar: <Sun className="h-3 w-3" />,
   General: <Wrench className="h-3 w-3" />,
+  refrigeracion: <Wind className="h-3 w-3" />,
+  aire_acondicionado: <Wind className="h-3 w-3" />,
+  calefaccion: <Flame className="h-3 w-3" />,
+  electricidad: <Zap className="h-3 w-3" />,
+  plomeria: <Droplets className="h-3 w-3" />,
+  gas: <Flame className="h-3 w-3" />,
+  paneles_solares: <Sun className="h-3 w-3" />,
+}
+
+const specialtyLabels: Record<string, string> = {
+  refrigeracion: "Refrigeracion", aire_acondicionado: "Aire Acondicionado",
+  calefaccion: "Calefaccion", electricidad: "Electricidad",
+  plomeria: "Plomeria", gas: "Gas", paneles_solares: "Paneles Solares",
+  HVAC: "HVAC", Electricidad: "Electricidad", Plomeria: "Plomeria",
+  Gas: "Gas", Solar: "Solar", General: "General",
 }
 
 type SortKey = "name" | "status" | "rating" | "completedJobs" | "avgResponseMin"
@@ -144,7 +164,7 @@ export function TechTable({ technicians, onEdit, onDelete, onStatusChange }: Tec
                   : "bg-card text-muted-foreground border-border hover:bg-muted"
               )}
             >
-              {s === "todos" ? "Todos" : statusConfig[s].label}
+              {s === "todos" ? "Todos" : (statusConfig[s] || defaultStatus).label}
               <span className="ml-1 opacity-70">({counts[s] || 0})</span>
             </button>
           ))}
@@ -210,7 +230,7 @@ export function TechTable({ technicians, onEdit, onDelete, onStatusChange }: Tec
             </thead>
             <tbody>
               {filtered.map((tech) => {
-                const st = statusConfig[tech.status]
+                const st = statusConfig[tech.status] || defaultStatus
                 return (
                   <tr key={tech.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                     <td className="px-4 py-3">
@@ -230,7 +250,7 @@ export function TechTable({ technicians, onEdit, onDelete, onStatusChange }: Tec
                       <div className="flex flex-wrap gap-1">
                         {(tech.specialties || []).map((sp) => (
                           <Badge key={sp} variant="outline" className="gap-1 text-[10px] px-1.5 py-0 border-border text-muted-foreground">
-                            {specialtyIcons[sp]} {sp}
+                            {specialtyIcons[sp] || <Wrench className="h-3 w-3" />} {specialtyLabels[sp] || sp}
                           </Badge>
                         ))}
                       </div>

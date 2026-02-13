@@ -55,23 +55,42 @@ import {
 
 // ── Config ────────────────────────────────────────────────────
 
-const statusConfig: Record<TechStatus, { label: string; dot: string; bg: string }> = {
+const statusConfig: Record<string, { label: string; dot: string; bg: string }> = {
   disponible: { label: "Disponible", dot: "bg-emerald-500", bg: "bg-emerald-50 text-emerald-700" },
   ocupado: { label: "Ocupado", dot: "bg-amber-500", bg: "bg-amber-50 text-amber-700" },
   en_viaje: { label: "En Viaje", dot: "bg-blue-500", bg: "bg-blue-50 text-blue-700" },
+  en_ruta: { label: "En Ruta", dot: "bg-blue-500", bg: "bg-blue-50 text-blue-700" },
+  en_sitio: { label: "En Sitio", dot: "bg-violet-500", bg: "bg-violet-50 text-violet-700" },
   desconectado: { label: "Desconectado", dot: "bg-gray-400", bg: "bg-gray-100 text-gray-500" },
+  descuento: { label: "Descanso", dot: "bg-gray-400", bg: "bg-gray-100 text-gray-500" },
+  inactivo: { label: "Inactivo", dot: "bg-red-400", bg: "bg-red-50 text-red-600" },
 }
+const defaultStatus = { label: "Desconocido", dot: "bg-gray-400", bg: "bg-gray-100 text-gray-500" }
 
-const specialtyIcons: Record<TechSpecialty, React.ReactNode> = {
+const specialtyIcons: Record<string, React.ReactNode> = {
   HVAC: <Wind className="h-4 w-4" />,
   Electricidad: <Zap className="h-4 w-4" />,
   Plomeria: <Droplets className="h-4 w-4" />,
   Gas: <Flame className="h-4 w-4" />,
   Solar: <Sun className="h-4 w-4" />,
   General: <Wrench className="h-4 w-4" />,
+  refrigeracion: <Wind className="h-4 w-4" />,
+  aire_acondicionado: <Wind className="h-4 w-4" />,
+  calefaccion: <Flame className="h-4 w-4" />,
+  electricidad: <Zap className="h-4 w-4" />,
+  plomeria: <Droplets className="h-4 w-4" />,
+  gas: <Flame className="h-4 w-4" />,
+  paneles_solares: <Sun className="h-4 w-4" />,
 }
 
-const ALL_SPECIALTIES: TechSpecialty[] = ["HVAC", "Electricidad", "Plomeria", "Gas", "Solar", "General"]
+const specialtyLabels: Record<string, string> = {
+  refrigeracion: "Refrigeracion", aire_acondicionado: "Aire Acondicionado",
+  calefaccion: "Calefaccion", electricidad: "Electricidad",
+  plomeria: "Plomeria", gas: "Gas", paneles_solares: "Paneles Solares",
+  HVAC: "HVAC", Electricidad: "Electricidad", Plomeria: "Plomeria",
+  Gas: "Gas", Solar: "Solar", General: "General",
+}
+const ALL_SPECIALTIES: string[] = ["refrigeracion", "aire_acondicionado", "calefaccion", "electricidad", "plomeria", "gas", "paneles_solares"]
 const ALL_DAYS = ["Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom"]
 
 const jobHistory = [
@@ -136,7 +155,7 @@ export default function TechnicianDetailPage({ params }: { params: Promise<{ id:
     )
   }
 
-  const st = statusConfig[tech.status]
+  const st = statusConfig[tech.status] || defaultStatus
 
   function handleFullEdit(data: TechFormData) {
     updateTech(id, data)
@@ -423,10 +442,10 @@ function InfoTab({ tech, onUpdateTech, onAddSpecialty, onRemoveSpecialty, onAddC
                     )}
                   >
                     <div className={cn("flex h-9 w-9 items-center justify-center rounded-lg", active ? "bg-primary/10" : "bg-muted")}>
-                      {specialtyIcons[sp]}
+                      {specialtyIcons[sp] || <Wrench className="h-4 w-4" />}
                     </div>
                     <div className="text-left">
-                      <p className="text-sm font-semibold">{sp}</p>
+                      <p className="text-sm font-semibold">{specialtyLabels[sp] || sp}</p>
                       <p className="text-[10px] opacity-70">{active ? "Activa -- clic para quitar" : "Clic para agregar"}</p>
                     </div>
                   </button>
