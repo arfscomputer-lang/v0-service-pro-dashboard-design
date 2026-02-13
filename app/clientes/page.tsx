@@ -149,13 +149,17 @@ export default function ClientesPage() {
 
   // Save handler
   const handleSave = useCallback(
-    (data: Omit<Customer, "id" | "initials">) => {
-      if (editTarget) {
-        updateCustomer(editTarget.id, data)
-      } else {
-        addCustomer(data)
+    async (data: Omit<Customer, "id" | "initials">) => {
+      try {
+        if (editTarget) {
+          await updateCustomer(editTarget.id, data)
+        } else {
+          await addCustomer(data)
+        }
+        setEditTarget(null)
+      } catch (err) {
+        console.error("[v0] Error saving customer:", err)
       }
-      setEditTarget(null)
     },
     [editTarget, addCustomer, updateCustomer]
   )

@@ -54,6 +54,7 @@ export async function POST(req: Request) {
       type,
     })
 
+    console.log("[v0] Created customer result:", JSON.stringify(customer))
     return NextResponse.json({ customer }, { status: 201 })
   } catch (error: any) {
     console.error("[v0] Create customer error:", error)

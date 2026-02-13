@@ -98,18 +98,18 @@ export function CustomersProvider({ children }: { children: React.ReactNode }) {
         }),
       })
 
-      if (response.ok) {
-        const result = await response.json()
+      const result = await response.json()
+      console.log("[v0] addCustomer API response:", response.status, JSON.stringify(result))
+      if (response.ok && result.customer) {
         const newCustomer: Customer = {
           ...data,
           id: result.customer.id,
           initials: makeInitials(data.name),
         }
         setCustomers((prev) => [...prev, newCustomer])
-        console.log("[v0] Added customer to database:", newCustomer.id)
         return newCustomer
       }
-      throw new Error("Failed to create customer")
+      throw new Error(result.error || "Failed to create customer")
     } catch (error) {
       console.error("[v0] Error adding customer:", error)
       throw error

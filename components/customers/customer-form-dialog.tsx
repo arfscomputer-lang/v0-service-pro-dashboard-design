@@ -25,7 +25,7 @@ const allTags: CustomerTag[] = ["VIP", "nuevo", "frecuente", "moroso", "corporat
 interface Props {
   open: boolean
   onClose: () => void
-  onSave: (data: Omit<Customer, "id" | "initials">) => void
+  onSave: (data: Omit<Customer, "id" | "initials">) => void | Promise<void>
   initialData?: Customer | null
 }
 
