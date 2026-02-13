@@ -1,9 +1,43 @@
-import { neon } from "@neondatabase/serverless"
+// Neon HTTP SQL API — zero dependencies
+// Uses the Neon serverless driver protocol over HTTP/fetch
 
-function getSql() {
+function getConnectionInfo() {
   const url = process.env.DATABASE_URL
   if (!url) throw new Error("DATABASE_URL is not set")
-  return neon(url)
+  // Parse postgres://user:password@host/dbname?sslmode=require
+  const parsed = new URL(url)
+  const host = parsed.hostname
+  const user = parsed.username
+  const password = decodeURIComponent(parsed.password)
+  const database = parsed.pathname.slice(1)
+  return { host, user, password, database }
+}
+
+async function neonQuery(text: string, params?: any[]) {
+  const { host, user, password, database } = getConnectionInfo()
+  const apiUrl = `https://${host}/sql`
+
+  const response = await fetch(apiUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Neon-Connection-String": process.env.DATABASE_URL!,
+    },
+    body: JSON.stringify({
+      query: text,
+      params: params || [],
+    }),
+  })
+
+  if (!response.ok) {
+    const err = await response.text()
+    console.error("[v0] Neon HTTP error:", err)
+    throw new Error(`Database query failed: ${response.status}`)
+  }
+
+  const data = await response.json()
+  // Neon returns { rows, fields, ... }
+  return data
 }
 
 // ============================================
@@ -11,10 +45,23 @@ function getSql() {
 // ============================================
 
 export async function query(text: string, params?: any[]) {
-  const sql = getSql()
   try {
-    const rows = await sql(text, params)
-    return { rows, rowCount: rows.length }
+    const data = await neonQuery(text, params)
+    const rows = data.rows || []
+    // Convert array rows to objects using field names
+    const fields = data.fields || []
+    const fieldNames = fields.map((f: any) => f.name)
+    const objectRows = rows.map((row: any[]) => {
+      if (Array.isArray(row)) {
+        const obj: any = {}
+        fieldNames.forEach((name: string, i: number) => {
+          obj[name] = row[i]
+        })
+        return obj
+      }
+      return row // already an object
+    })
+    return { rows: objectRows, rowCount: objectRows.length }
   } catch (error) {
     console.error("[v0] Database query error:", error)
     throw error
