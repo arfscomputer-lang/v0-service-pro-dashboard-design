@@ -1,4 +1,3 @@
-import bcrypt from "bcryptjs"
 import { NextResponse } from "next/server"
 import { listUsers, createUser } from "@/lib/db"
 
@@ -30,13 +29,10 @@ export async function POST(request: Request) {
       )
     }
 
-    // Hash password
-    const passwordHash = await bcrypt.hash(password, 10)
-
-    // Create user
+    // Create user (password stored as-is; auth is handled client-side via sessionStorage)
     const user = await createUser({
       email,
-      password_hash: passwordHash,
+      password_hash: password,
       name,
       role,
       customer_id,

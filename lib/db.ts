@@ -1,16 +1,9 @@
-import { Pool } from "@neondatabase/serverless"
+import { neon } from "@neondatabase/serverless"
 
-let pool: Pool | null = null
-
-function getPool(): Pool {
-  if (!pool) {
-    const connectionString = process.env.DATABASE_URL
-    if (!connectionString) {
-      throw new Error("DATABASE_URL environment variable is not set")
-    }
-    pool = new Pool({ connectionString })
-  }
-  return pool
+function getSql() {
+  const url = process.env.DATABASE_URL
+  if (!url) throw new Error("DATABASE_URL is not set")
+  return neon(url)
 }
 
 // ============================================
@@ -18,12 +11,10 @@ function getPool(): Pool {
 // ============================================
 
 export async function query(text: string, params?: any[]) {
-  const db = getPool()
-  const start = Date.now()
+  const sql = getSql()
   try {
-    const result = await db.query(text, params)
-    const duration = Date.now() - start
-    return result
+    const rows = await sql(text, params)
+    return { rows, rowCount: rows.length }
   } catch (error) {
     console.error("[v0] Database query error:", error)
     throw error
