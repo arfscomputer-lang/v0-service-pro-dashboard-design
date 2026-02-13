@@ -57,17 +57,17 @@ export default function CrmReportesPage() {
 
   const stats = useMemo(() => {
     const total = customers.length
-    const vips = customers.filter((c) => c.tags.includes("VIP")).length
-    const nuevos = customers.filter((c) => c.tags.includes("nuevo")).length
-    const morosos = customers.filter((c) => c.tags.includes("moroso")).length
+    const vips = customers.filter((c) => (c.tags || []).includes("VIP")).length
+    const nuevos = customers.filter((c) => (c.tags || []).includes("nuevo")).length
+    const morosos = customers.filter((c) => (c.tags || []).includes("moroso")).length
     const withNps = customers.filter((c) => c.nps != null)
     const avgNps = withNps.length ? withNps.reduce((a, c) => a + (c.nps ?? 0), 0) / withNps.length : 0
-    const totalRevenue = customers.reduce((a, c) => a + c.totalSpent, 0)
-    const totalClv = customers.reduce((a, c) => a + c.lifetimeValue, 0)
+    const totalRevenue = customers.reduce((a, c) => a + (c.totalSpent ?? 0), 0)
+    const totalClv = customers.reduce((a, c) => a + (c.lifetimeValue ?? 0), 0)
     const avgClv = total ? totalClv / total : 0
 
     // Retention: customers with > 1 service / total
-    const retained = customers.filter((c) => c.services.length > 1).length
+    const retained = customers.filter((c) => (c.services || []).length > 1).length
     const retentionRate = total ? (retained / total) * 100 : 0
 
     // Churn: morosos / total
@@ -302,7 +302,7 @@ export default function CrmReportesPage() {
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium text-foreground truncate">{c.name}</p>
-                        <p className="text-[10px] text-muted-foreground">{c.services.length} servicios</p>
+                        <p className="text-[10px] text-muted-foreground">{(c.services || []).length} servicios</p>
                       </div>
                       <span className="text-xs font-bold text-foreground">{formatCurrency(c.totalSpent)}</span>
                     </Link>

@@ -127,7 +127,17 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
     )
   }
 
-  const c = customer
+  const c = {
+    ...customer,
+    tags: customer.tags || [],
+    interactions: customer.interactions || [],
+    services: customer.services || [],
+    totalSpent: customer.totalSpent ?? 0,
+    lifetimeValue: customer.lifetimeValue ?? 0,
+    createdAt: customer.createdAt ?? "",
+    preferredSchedule: customer.preferredSchedule ?? "",
+    notes: customer.notes ?? "",
+  }
   const completedServices = c.services.filter((s) => s.status === "completado").length
   const avgRating = c.services.filter((s) => s.rating != null).reduce((a, s) => a + (s.rating ?? 0), 0) / (c.services.filter((s) => s.rating != null).length || 1)
 
@@ -170,7 +180,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                 <div className="flex items-center gap-3 flex-wrap">
                   <h1 className="text-xl font-bold text-foreground">{c.name}</h1>
                   <Badge variant="outline" className="text-xs">{typeLabels[c.type]}</Badge>
-                  {c.tags.map((tag) => (
+                  {(c.tags || []).map((tag) => (
                     <Badge key={tag} variant="outline" className={cn("text-[10px]", tagColors[tag])}>
                       {tag}
                     </Badge>
@@ -274,7 +284,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                         <CardContent>
                           <div className="flex flex-wrap gap-2">
                             {(["VIP", "nuevo", "frecuente", "moroso", "corporativo"] as CustomerTag[]).map((tag) => {
-                              const active = c.tags.includes(tag)
+                              const active = (c.tags || []).includes(tag)
                               return (
                                 <button
                                   key={tag}
@@ -460,8 +470,8 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                               <p className="text-sm font-semibold text-foreground">Recordatorio de Pago</p>
                               <p className="text-xs text-muted-foreground">Notificacion automatica a los 15, 30 y 45 dias de factura pendiente.</p>
                             </div>
-                            <Badge variant="outline" className={cn("ml-auto text-[10px]", c.tags.includes("moroso") ? "bg-red-50 text-red-700 border-red-300" : "bg-muted text-muted-foreground border-border")}>
-                              {c.tags.includes("moroso") ? "Activo" : "Inactivo"}
+                            <Badge variant="outline" className={cn("ml-auto text-[10px]", (c.tags || []).includes("moroso") ? "bg-red-50 text-red-700 border-red-300" : "bg-muted text-muted-foreground border-border")}>
+                              {(c.tags || []).includes("moroso") ? "Activo" : "Inactivo"}
                             </Badge>
                           </div>
 

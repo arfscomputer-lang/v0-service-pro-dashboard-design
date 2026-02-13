@@ -74,7 +74,7 @@ export function CustomerFormDialog({ open, onClose, onSave, initialData }: Props
   const toggleTag = (tag: CustomerTag) => {
     setForm((p) => ({
       ...p,
-      tags: p.tags.includes(tag) ? p.tags.filter((t) => t !== tag) : [...p.tags, tag],
+      tags: (p.tags || []).includes(tag) ? (p.tags || []).filter((t) => t !== tag) : [...(p.tags || []), tag],
     }))
   }
 
@@ -154,7 +154,7 @@ export function CustomerFormDialog({ open, onClose, onSave, initialData }: Props
               <Label className="text-xs font-semibold text-muted-foreground">Etiquetas de Segmentacion</Label>
               <div className="flex flex-wrap gap-2">
                 {allTags.map((tag) => {
-                  const active = form.tags.includes(tag)
+                  const active = (form.tags || []).includes(tag)
                   return (
                     <button
                       key={tag}

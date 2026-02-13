@@ -22,6 +22,31 @@ const InventoryContext = createContext<InventoryContextValue | null>(null)
 
 let nextMovId = 200
 
+/* Normalise an inventory row from the DB so every array/number field the UI
+   relies on is never undefined */
+function normalizeItem(i: any): InventoryItem {
+  return {
+    ...i,
+    id: i.id ?? `INV-${Date.now()}`,
+    sku: i.sku ?? "",
+    barcode: i.barcode ?? i.sku ?? "",
+    name: i.name ?? "",
+    description: i.description ?? "",
+    category: i.category ?? "refaccion",
+    unit: i.unit ?? "pieza",
+    totalStock: i.totalStock ?? i.total_stock ?? 0,
+    minStock: i.minStock ?? i.min_threshold ?? 10,
+    maxStock: i.maxStock ?? i.max_stock ?? 100,
+    costUnit: i.costUnit ?? i.unit_cost ?? 0,
+    priceUnit: i.priceUnit ?? i.price_unit ?? 0,
+    locations: Array.isArray(i.locations) ? i.locations : [],
+    movements: Array.isArray(i.movements) ? i.movements : [],
+    supplier: i.supplier ?? { id: "", name: "", phone: "", email: "", leadTimeDays: 0, lastOrderDate: "" },
+    imageUrl: i.imageUrl ?? i.image_url ?? "",
+    isActive: i.isActive ?? i.is_active ?? true,
+  }
+}
+
 export function InventoryProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<InventoryItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -33,7 +58,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       const response = await fetch("/api/inventory")
       if (!response.ok) throw new Error("Failed to fetch inventory")
       const data = await response.json()
-      setItems(data.items || [])
+      setItems((data.items || []).map(normalizeItem))
     } catch (error) {
       console.error("[v0] Error fetching inventory, using seed data:", error)
       // Fallback to seed data if API fails

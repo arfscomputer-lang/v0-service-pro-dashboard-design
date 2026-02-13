@@ -409,7 +409,7 @@ function InfoTab({ tech, onUpdateTech, onAddSpecialty, onRemoveSpecialty, onAddC
           <CardContent>
             <div className="flex flex-wrap gap-2">
               {ALL_SPECIALTIES.map((sp) => {
-                const active = tech.specialties.includes(sp)
+                const active = (tech.specialties || []).includes(sp)
                 return (
                   <button
                     key={sp}
@@ -448,7 +448,7 @@ function InfoTab({ tech, onUpdateTech, onAddSpecialty, onRemoveSpecialty, onAddC
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-3">
-              {tech.certifications.map((cert) => {
+              {(tech.certifications || []).map((cert) => {
                 const expires = new Date(cert.expires)
                 const refNow = window.clientNow ?? expires.getTime() // safe fallback for SSR
                 const daysLeft = Math.ceil((expires.getTime() - refNow) / (1000 * 60 * 60 * 24))
@@ -515,7 +515,7 @@ function InfoTab({ tech, onUpdateTech, onAddSpecialty, onRemoveSpecialty, onAddC
                 </div>
               )}
 
-              {tech.certifications.length === 0 && !showCertForm && (
+              {(tech.certifications || []).length === 0 && !showCertForm && (
                 <p className="text-sm text-muted-foreground text-center py-4">Sin certificaciones registradas.</p>
               )}
             </div>

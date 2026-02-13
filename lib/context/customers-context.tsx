@@ -32,6 +32,24 @@ function makeInitials(name: string): string {
 
 let nextIntId = 500
 
+/* Normalise a customer row coming from the DB (or API) so that
+   every array/number field that the UI relies on is never undefined */
+function normalizeCustomer(c: any): Customer {
+  return {
+    ...c,
+    tags: Array.isArray(c.tags) ? c.tags : [],
+    interactions: Array.isArray(c.interactions) ? c.interactions : [],
+    services: Array.isArray(c.services) ? c.services : [],
+    totalSpent: c.totalSpent ?? c.total_spent ?? 0,
+    lifetimeValue: c.lifetimeValue ?? c.lifetime_value ?? 0,
+    nps: c.nps ?? c.nps_score ?? null,
+    initials: c.initials || (c.name ? c.name.split(" ").filter(Boolean).map((w: string) => w[0]?.toUpperCase() ?? "").slice(0, 2).join("") : "??"),
+    createdAt: c.createdAt ?? c.created_at ?? new Date().toISOString().slice(0, 10),
+    preferredSchedule: c.preferredSchedule ?? c.preferred_schedule ?? "",
+    notes: c.notes ?? "",
+  }
+}
+
 export function CustomersProvider({ children }: { children: React.ReactNode }) {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -43,7 +61,7 @@ export function CustomersProvider({ children }: { children: React.ReactNode }) {
       const response = await fetch("/api/customers")
       if (!response.ok) throw new Error("Failed to fetch customers")
       const data = await response.json()
-      setCustomers(data.customers || [])
+      setCustomers((data.customers || []).map(normalizeCustomer))
     } catch (error) {
       console.error("[v0] Error fetching customers, using seed data:", error)
       // Fallback to seed data if API fails

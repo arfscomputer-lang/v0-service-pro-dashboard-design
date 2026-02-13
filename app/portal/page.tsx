@@ -239,7 +239,7 @@ export default function ClientPortalPage() {
                     </div>
                     <Separator />
                     <div className="flex flex-wrap gap-1.5">
-                      {customer.tags.map((tag) => (
+                      {(customer.tags || []).map((tag) => (
                         <Badge key={tag} variant="outline" className="text-[10px]">{tag}</Badge>
                       ))}
                     </div>

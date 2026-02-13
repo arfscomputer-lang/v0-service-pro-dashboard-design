@@ -99,8 +99,8 @@ function techToForm(tech: TechnicianProfile): FormData {
     phone: tech.phone,
     role: tech.role,
     status: tech.status,
-    specialties: [...tech.specialties],
-    certifications: tech.certifications.map((c) => ({ ...c })),
+    specialties: [...(tech.specialties || [])],
+    certifications: (tech.certifications || []).map((c) => ({ ...c })),
     address: tech.address,
     latitude: tech.latitude,
     longitude: tech.longitude,
@@ -152,9 +152,9 @@ export function TechFormDialog({ open, onOpenChange, tech, onSave }: TechFormDia
   function toggleSpecialty(sp: TechSpecialty) {
     setForm((prev) => ({
       ...prev,
-      specialties: prev.specialties.includes(sp)
-        ? prev.specialties.filter((s) => s !== sp)
-        : [...prev.specialties, sp],
+      specialties: (prev.specialties || []).includes(sp)
+        ? (prev.specialties || []).filter((s) => s !== sp)
+        : [...(prev.specialties || []), sp],
     }))
   }
 
@@ -185,7 +185,7 @@ export function TechFormDialog({ open, onOpenChange, tech, onSave }: TechFormDia
   function removeCert(index: number) {
     setForm((prev) => ({
       ...prev,
-      certifications: prev.certifications.filter((_, i) => i !== index),
+      certifications: (prev.certifications || []).filter((_, i) => i !== index),
     }))
   }
 
@@ -196,8 +196,8 @@ export function TechFormDialog({ open, onOpenChange, tech, onSave }: TechFormDia
     if (!form.email.trim()) errs.email = "El correo es obligatorio"
     if (!form.phone.trim()) errs.phone = "El telefono es obligatorio"
     if (!form.role.trim()) errs.role = "El rol es obligatorio"
-    if (form.specialties.length === 0) errs.specialties = "Selecciona al menos una especialidad"
-    if (form.availability.days.length === 0) errs.days = "Selecciona al menos un dia"
+    if ((form.specialties || []).length === 0) errs.specialties = "Selecciona al menos una especialidad"
+    if ((form.availability?.days || []).length === 0) errs.days = "Selecciona al menos un dia"
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
@@ -355,7 +355,7 @@ export function TechFormDialog({ open, onOpenChange, tech, onSave }: TechFormDia
               {errors.specialties && <span className="text-[11px] text-destructive -mt-1">{errors.specialties}</span>}
               <div className="flex flex-wrap gap-2">
                 {ALL_SPECIALTIES.map((sp) => {
-                  const active = form.specialties.includes(sp)
+                  const active = (form.specialties || []).includes(sp)
                   return (
                     <button
                       key={sp}
@@ -382,9 +382,9 @@ export function TechFormDialog({ open, onOpenChange, tech, onSave }: TechFormDia
               <legend className="text-sm font-semibold text-foreground mb-1">Certificaciones</legend>
 
               {/* Existing certs */}
-              {form.certifications.length > 0 && (
+              {(form.certifications || []).length > 0 && (
                 <div className="flex flex-col gap-2">
-                  {form.certifications.map((cert, i) => (
+                  {(form.certifications || []).map((cert, i) => (
                     <div
                       key={`${cert.name}-${i}`}
                       className="flex items-center justify-between rounded-lg border border-border bg-card p-3"

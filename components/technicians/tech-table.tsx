@@ -96,7 +96,7 @@ export function TechTable({ technicians, onEdit, onDelete, onStatusChange }: Tec
       )
     }
     if (statusFilter !== "todos") list = list.filter((t) => t.status === statusFilter)
-    if (specialtyFilter !== "todas") list = list.filter((t) => t.specialties.includes(specialtyFilter))
+    if (specialtyFilter !== "todas") list = list.filter((t) => (t.specialties || []).includes(specialtyFilter))
     list.sort((a, b) => {
       let diff = 0
       switch (sortKey) {
@@ -228,7 +228,7 @@ export function TechTable({ technicians, onEdit, onDelete, onStatusChange }: Tec
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1">
-                        {tech.specialties.map((sp) => (
+                        {(tech.specialties || []).map((sp) => (
                           <Badge key={sp} variant="outline" className="gap-1 text-[10px] px-1.5 py-0 border-border text-muted-foreground">
                             {specialtyIcons[sp]} {sp}
                           </Badge>

@@ -114,7 +114,7 @@ export function SearchCommand({ open, onOpenChange }: Props) {
           category: "Tecnicos",
           id: t.id,
           label: t.name,
-          sub: `${t.role}  |  ${t.specialties.join(", ")}`,
+          sub: `${t.role}  |  ${(t.specialties || []).join(", ")}`,
           href: `/tecnicos/${t.id}`,
           icon: Wrench,
           meta: String(t.rating),

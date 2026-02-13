@@ -84,8 +84,10 @@ export function TechniciansProvider({ children }: { children: React.ReactNode })
   const addSpecialty = useCallback((id: string, specialty: TechSpecialty) => {
     setTechnicians((prev) =>
       prev.map((t) => {
-        if (t.id !== id || t.specialties.includes(specialty)) return t
-        return { ...t, specialties: [...t.specialties, specialty] }
+        if (t.id !== id) return t
+        const specialties = t.specialties || []
+        if (specialties.includes(specialty)) return t
+        return { ...t, specialties: [...specialties, specialty] }
       })
     )
   }, [])
@@ -94,7 +96,8 @@ export function TechniciansProvider({ children }: { children: React.ReactNode })
     setTechnicians((prev) =>
       prev.map((t) => {
         if (t.id !== id) return t
-        return { ...t, specialties: t.specialties.filter((s) => s !== specialty) }
+        const specialties = t.specialties || []
+        return { ...t, specialties: specialties.filter((s) => s !== specialty) }
       })
     )
   }, [])
@@ -112,7 +115,7 @@ export function TechniciansProvider({ children }: { children: React.ReactNode })
     setTechnicians((prev) =>
       prev.map((t) => {
         if (t.id !== id) return t
-        return { ...t, certifications: t.certifications.filter((c) => c.name !== certName) }
+        return { ...t, certifications: (t.certifications || []).filter((c) => c.name !== certName) }
       })
     )
   }, [])
@@ -123,7 +126,7 @@ export function TechniciansProvider({ children }: { children: React.ReactNode })
         if (t.id !== id) return t
         return {
           ...t,
-          certifications: t.certifications.map((c) => (c.name === oldName ? cert : c)),
+          certifications: (t.certifications || []).map((c) => (c.name === oldName ? cert : c)),
         }
       })
     )

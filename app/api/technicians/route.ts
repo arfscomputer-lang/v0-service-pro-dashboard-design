@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     }
 
     if (specialty) {
-      result = result.filter((t) => t.specialties.includes(specialty))
+      result = result.filter((t) => (t.specialties || []).includes(specialty))
     }
 
     if (query) {

@@ -45,7 +45,7 @@ export async function POST(request: Request) {
       // Filter by required specialties
       if (requiredSpecialties?.length) {
         candidates = candidates.filter((t) =>
-          requiredSpecialties.some((sp: string) => t.specialties.includes(sp as any))
+          requiredSpecialties.some((sp: string) => (t.specialties || []).includes(sp as any))
         )
       }
 

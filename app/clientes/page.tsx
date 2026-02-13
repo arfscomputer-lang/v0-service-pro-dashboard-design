@@ -102,7 +102,7 @@ export default function ClientesPage() {
       list = list.filter((c) => c.type === typeFilter)
     }
     if (tagFilter !== "all") {
-      list = list.filter((c) => c.tags.includes(tagFilter as CustomerTag))
+      list = list.filter((c) => (c.tags || []).includes(tagFilter as CustomerTag))
     }
 
     list.sort((a, b) => {
@@ -135,7 +135,7 @@ export default function ClientesPage() {
     const rows = filtered
       .map(
         (c) =>
-          `"${c.id}","${c.name}","${c.email}","${c.phone}","${c.type}","${c.tags.join(";")}",${c.nps ?? ""},${c.totalSpent},${c.lifetimeValue},"${c.address}","${c.city}","${c.createdAt}"`
+          `"${c.id}","${c.name}","${c.email}","${c.phone}","${c.type}","${(c.tags || []).join(";")}",${c.nps ?? ""},${c.totalSpent ?? 0},${c.lifetimeValue ?? 0},"${c.address ?? ""}","${c.city ?? ""}","${c.createdAt ?? ""}"`
       )
       .join("\n")
     const blob = new Blob([header + rows], { type: "text/csv;charset=utf-8;" })
@@ -162,7 +162,7 @@ export default function ClientesPage() {
 
   // Stats
   const totalClients = customers.length
-  const vipCount = customers.filter((c) => c.tags.includes("VIP")).length
+  const vipCount = customers.filter((c) => (c.tags || []).includes("VIP")).length
   const avgNps = customers.filter((c) => c.nps != null).reduce((a, c) => a + (c.nps ?? 0), 0) / (customers.filter((c) => c.nps != null).length || 1)
 
   return (
@@ -309,7 +309,7 @@ export default function ClientesPage() {
 
                     {/* Tags */}
                     <div className="flex flex-wrap gap-1">
-                      {c.tags.map((tag) => (
+                      {(c.tags || []).map((tag) => (
                         <Badge key={tag} variant="outline" className={cn("text-[10px] px-1.5 py-0", tagColors[tag])}>
                           {tag}
                         </Badge>
