@@ -233,7 +233,7 @@ export async function deleteTechnician(id: string) {
   await query(`DELETE FROM technicians WHERE id = $1`, [id])
 }
 
-/** Normalise a technician row from DB into the shape the frontend expects */
+/** Normalise a technician row from DB into the shape the frontend expects (TechnicianProfile) */
 function normalizeTechnician(row: any) {
   let specialties = row.specialties || "[]"
   if (typeof specialties === "string") {
@@ -243,24 +243,30 @@ function normalizeTechnician(row: any) {
   if (typeof certifications === "string") {
     try { certifications = JSON.parse(certifications) } catch { certifications = [] }
   }
+  // Map certification fields: DB uses {name, issuer, date, expiry} -> frontend uses {name, issuer, expires}
+  const mappedCerts = (Array.isArray(certifications) ? certifications : []).map((c: any) => ({
+    name: c.name || "",
+    issuer: c.issuer || "",
+    expires: c.expiry || c.expires || "",
+  }))
   return {
     id: row.id,
     name: row.name || "",
     email: row.email || "",
     phone: row.phone || "",
+    initials: row.initials || "",
     role: row.role || "junior",
     status: row.status || "disponible",
     specialties: Array.isArray(specialties) ? specialties : [],
-    certifications: Array.isArray(certifications) ? certifications : [],
+    certifications: mappedCerts,
     rating: row.average_rating ?? 0,
     completedJobs: row.total_jobs ?? 0,
     avgResponseMin: row.avg_response_min ?? 0,
-    latitude: row.lat ?? null,
-    longitude: row.lng ?? null,
+    latitude: row.lat ?? 0,
+    longitude: row.lng ?? 0,
     address: row.address || "",
-    initials: row.initials || "",
-    joinDate: row.join_date || "",
-    availability: { days: ["lun", "mar", "mie", "jue", "vie"], startTime: "08:00", endTime: "18:00" },
+    joinDate: row.join_date ? String(row.join_date).slice(0, 10) : "",
+    availability: { days: ["Lun", "Mar", "Mie", "Jue", "Vie"], startHour: 8, endHour: 18 },
   }
 }
 

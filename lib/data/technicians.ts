@@ -9,7 +9,7 @@ export type TechSpecialty =
   | "Solar"
   | "General"
 
-export type TechStatus = "disponible" | "ocupado" | "en_viaje" | "desconectado"
+export type TechStatus = "disponible" | "ocupado" | "en_viaje" | "en_ruta" | "en_sitio" | "desconectado" | "descuento" | "inactivo"
 
 export interface Certification {
   name: string
