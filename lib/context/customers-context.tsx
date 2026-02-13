@@ -92,6 +92,8 @@ export function CustomersProvider({ children }: { children: React.ReactNode }) {
           phone: data.phone,
           address: data.address,
           city: data.city,
+          lat: data.lat,
+          lng: data.lng,
           type: data.type,
         }),
       })
@@ -125,6 +127,8 @@ export function CustomersProvider({ children }: { children: React.ReactNode }) {
           phone: patch.phone,
           address: patch.address,
           city: patch.city,
+          lat: patch.lat,
+          lng: patch.lng,
           nps_score: patch.nps,
           rating: patch.nps,
         }),
