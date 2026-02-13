@@ -14,13 +14,13 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
 
+  const isPublicRoute = pathname === "/login" || pathname === "/auth/login"
+
   useEffect(() => {
     if (isLoading) return
 
-    const publicRoutes = ["/login", "/auth/login"]
-
     // Public routes - if logged in, redirect to home
-    if (publicRoutes.includes(pathname)) {
+    if (isPublicRoute) {
       if (user) {
         router.replace(getHomeRoute(user.role))
       }
@@ -37,9 +37,12 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
     if (!canAccess(pathname)) {
       router.replace(getHomeRoute(user.role))
     }
-  }, [user, isLoading, pathname, canAccess, router])
+  }, [user, isLoading, pathname, isPublicRoute, canAccess, router])
 
-  // Show nothing while deciding
+  // Public routes ALWAYS render immediately, even while loading
+  if (isPublicRoute) return <>{children}</>
+
+  // Show spinner while deciding on protected routes
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -50,9 +53,6 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
       </div>
     )
   }
-
-  // Public routes - always render
-  if (pathname === "/login" || pathname === "/auth/login") return <>{children}</>
 
   // Not logged in and not on public route — will redirect, show nothing
   if (!user) return null

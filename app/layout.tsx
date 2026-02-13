@@ -20,6 +20,16 @@ export const viewport: Viewport = {
   themeColor: '#2e4a9e',
 }
 
+function DataProviders({ children }: { children: React.ReactNode }) {
+  return (
+    <TechniciansProvider>
+      <CustomersProvider>
+        <InventoryProvider>{children}</InventoryProvider>
+      </CustomersProvider>
+    </TechniciansProvider>
+  )
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -30,11 +40,7 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         <AuthProvider>
           <RouteGuard>
-            <TechniciansProvider>
-              <CustomersProvider>
-                <InventoryProvider>{children}</InventoryProvider>
-              </CustomersProvider>
-            </TechniciansProvider>
+            <DataProviders>{children}</DataProviders>
           </RouteGuard>
         </AuthProvider>
       </body>
