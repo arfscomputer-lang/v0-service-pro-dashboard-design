@@ -37,7 +37,7 @@ const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Panel Principal", href: "/", roles: ["admin", "supervisor"] },
   { icon: CalendarClock, label: "Agenda (Despacho)", href: "/despacho", roles: ["admin", "supervisor"] },
   { icon: ClipboardList, label: "Ordenes de Trabajo", href: "/ordenes", roles: ["admin", "supervisor"] },
-  { icon: Users, label: "Tecnicos", href: "/tecnicos", roles: ["admin"] },
+  { icon: Users, label: "Tecnicos", href: "/tecnicos", roles: ["admin", "supervisor"] },
   { icon: UserCircle, label: "Clientes", href: "/clientes", roles: ["admin", "supervisor"] },
   { icon: PieChart, label: "Reportes CRM", href: "/clientes/reportes", roles: ["admin"] },
   { icon: Package, label: "Inventario", href: "/inventario", roles: ["admin", "supervisor"] },
