@@ -71,12 +71,20 @@ export default function CrearUsuarioPage() {
         body: JSON.stringify({ name, email, password, role }),
       })
 
-      const data = await response.json()
+      let data
+      try {
+        data = await response.json()
+      } catch (e) {
+        console.error("[v0] Failed to parse JSON response:", e)
+        data = { error: "Respuesta inválida del servidor" }
+      }
+
       console.log("[v0] Create user response:", { status: response.status, data })
 
       if (!response.ok) {
-        console.error("[v0] Create user error:", data)
-        setError(data.error || "Error al crear el usuario")
+        const errorMessage = data?.error || "Error al crear el usuario"
+        console.error("[v0] Create user error:", errorMessage)
+        setError(errorMessage)
         setIsLoading(false)
         return
       }
