@@ -101,15 +101,12 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
-        })
+        } as RequestInit)
 
         if (!response.ok) throw new Error('Failed to update work order')
 
         setWorkOrders((prev) =>
-          prev.map((wo) => {
-            if (wo.id !== id) return wo
-            return { ...wo, ...data }
-          })
+          prev.map((wo) => (wo.id !== id ? wo : { ...wo, ...data }))
         )
       } catch (error) {
         console.error('[v0] Error updating work order:', error)
