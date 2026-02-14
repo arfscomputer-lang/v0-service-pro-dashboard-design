@@ -354,8 +354,9 @@ export async function updateWorkOrder(id: string, data: Record<string, any>) {
 
   sets.push(`updated_at = NOW()`)
   values.push(id)
+  const idIdx = idx + 1
   const result = await query(
-    `UPDATE work_orders SET ${sets.join(", ")} WHERE id = $${idx} RETURNING *`,
+    `UPDATE work_orders SET ${sets.join(", ")} WHERE id = $${idIdx} RETURNING *`,
     values
   )
   return result.rows[0] ? normalizeWorkOrder(result.rows[0]) : null
