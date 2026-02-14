@@ -113,12 +113,14 @@ export default function WorkOrderDetailPage({
   const handleSave = async (data: OrderFormData) => {
     if (!workOrder) return
     try {
+      console.log("[v0] Saving work order:", workOrder.id, "with data:", JSON.stringify({type: data.type, description: data.description, status: data.status, priority: data.priority}))
       await updateWorkOrder(workOrder.id, {
         type: data.type,
         description: data.description,
         status: data.status,
         priority: data.priority,
       })
+      console.log("[v0] Work order saved successfully")
       setEditOpen(false)
     } catch (error) {
       console.error("[v0] Error saving work order:", error)
@@ -128,7 +130,9 @@ export default function WorkOrderDetailPage({
   const handleStatusChange = async (status: OrderFormData["status"]) => {
     if (!workOrder) return
     try {
+      console.log("[v0] Changing status to:", status)
       await updateWorkOrder(workOrder.id, { status })
+      console.log("[v0] Status changed successfully")
     } catch (error) {
       console.error("[v0] Error updating status:", error)
     }
