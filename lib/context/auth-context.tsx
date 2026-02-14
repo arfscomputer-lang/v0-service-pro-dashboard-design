@@ -160,10 +160,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(authUser)
       sessionStorage.setItem("sp_auth_user", JSON.stringify(authUser))
       
-      // Redirect based on role
-      const router = require('next/router').useRouter()
-      const homeRoute = getHomeRoute(data.user.role)
-      
       return { success: true }
     } catch (error) {
       console.error('[v0] Login error:', error)
