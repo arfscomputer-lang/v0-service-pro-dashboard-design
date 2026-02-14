@@ -35,8 +35,9 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
     const fetchWorkOrders = async () => {
       try {
         const response = await fetch('/api/work-orders')
-        const isOk = response.status >= 200 && response.status < 300
-        if (!isOk) throw new Error('Failed to fetch work orders')
+        if (response.status < 200 || response.status >= 300) {
+          throw new Error('Failed to fetch work orders')
+        }
         const json = await response.json()
         const list = json.data || json.workOrders || []
         setWorkOrders(Array.isArray(list) ? list : [])
@@ -69,8 +70,8 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
           }),
         })
 
-        const isOk = res.status >= 200 && res.status < 300
-        if (!isOk) throw new Error('Failed to create work order')
+        const isOk = res.status < 200 || res.status >= 300
+        if (isOk) throw new Error('Failed to create work order')
         const result = await res.json()
         const newWorkOrder = result.data || result.workOrder
         setWorkOrders((prev) => [...prev, newWorkOrder])
@@ -105,8 +106,8 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
           body: JSON.stringify(payload),
         })
 
-        const isOk = res.status >= 200 && res.status < 300
-        if (!isOk) {
+        const isError = res.status < 200 || res.status >= 300
+        if (isError) {
           throw new Error('Failed to update work order')
         }
 
