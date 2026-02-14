@@ -332,10 +332,12 @@ export function TopHeader() {
             </div>
 
             {/* Shortcuts */}
-            {helpSections.map((section) => (
+            {helpSections.map((section) => {
+              const SectionIcon = section.icon;
+              return (
               <div key={section.title} className="px-4 py-3 border-b border-border">
                 <div className="flex items-center gap-2 mb-2">
-                  <section.icon className="h-3.5 w-3.5 text-muted-foreground" />
+                  <SectionIcon className="h-3.5 w-3.5 text-muted-foreground" />
                   <h4 className="text-xs font-semibold text-muted-foreground">{section.title}</h4>
                 </div>
                 <div className="grid gap-1.5">
@@ -349,19 +351,23 @@ export function TopHeader() {
                   ))}
                 </div>
               </div>
-            ))}
+            )
+            })}
 
             {/* Links */}
             <div className="p-2 flex flex-col">
-              {helpLinks.map((link) => (
+              {helpLinks.map((link) => {
+                const LinkIcon = link.icon;
+                return (
                 <Button key={link.label} variant="ghost" size="sm" className="justify-start gap-2 text-xs text-muted-foreground h-8" asChild>
                   <a href={link.href}>
-                    <link.icon className="h-3.5 w-3.5" />
+                    <LinkIcon className="h-3.5 w-3.5" />
                     {link.label}
                     <ExternalLink className="h-3 w-3 ml-auto opacity-40" />
                   </a>
                 </Button>
-              ))}
+              )
+              })}
             </div>
           </PopoverContent>
         </Popover>
@@ -532,9 +538,7 @@ export function TopHeader() {
     </header>
   )
 }
-  {
-    id: "n1",
-    type: "alerta",
+
     title: "Alerta Critica - OT-1042",
     body: "Tecnico sin llegar al sitio despues de 45 min.",
     time: "Hace 5 min",
@@ -754,10 +758,12 @@ export function TopHeader() {
             </div>
 
             {/* Shortcuts */}
-            {helpSections.map((section) => (
+            {helpSections.map((section) => {
+              const SectionIcon = section.icon;
+              return (
               <div key={section.title} className="px-4 py-3 border-b border-border">
                 <div className="flex items-center gap-2 mb-2">
-                  <section.icon className="h-3.5 w-3.5 text-muted-foreground" />
+                  <SectionIcon className="h-3.5 w-3.5 text-muted-foreground" />
                   <h4 className="text-xs font-semibold text-muted-foreground">{section.title}</h4>
                 </div>
                 <div className="grid gap-1.5">
@@ -771,19 +777,23 @@ export function TopHeader() {
                   ))}
                 </div>
               </div>
-            ))}
+            )
+            })}
 
             {/* Links */}
             <div className="p-2 flex flex-col">
-              {helpLinks.map((link) => (
+              {helpLinks.map((link) => {
+                const LinkIcon = link.icon;
+                return (
                 <Button key={link.label} variant="ghost" size="sm" className="justify-start gap-2 text-xs text-muted-foreground h-8" asChild>
                   <a href={link.href}>
-                    <link.icon className="h-3.5 w-3.5" />
+                    <LinkIcon className="h-3.5 w-3.5" />
                     {link.label}
                     <ExternalLink className="h-3 w-3 ml-auto opacity-40" />
                   </a>
                 </Button>
-              ))}
+              )
+              })}
             </div>
           </PopoverContent>
         </Popover>
