@@ -118,21 +118,27 @@ export function CustomersProvider({ children }: { children: React.ReactNode }) {
 
   const updateCustomer = useCallback(async (id: string, patch: Partial<Customer>) => {
     try {
+      const payload = {
+        name: patch.name,
+        email: patch.email,
+        phone: patch.phone,
+        address: patch.address,
+        city: patch.city,
+        lat: patch.lat,
+        lng: patch.lng,
+        type: patch.type,
+        nps_score: patch.nps,
+        rating: patch.nps,
+      }
+      console.log("[v0] updateCustomer called with id:", id, "payload:", JSON.stringify(payload))
       const response = await fetch(`/api/customers/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: patch.name,
-          email: patch.email,
-          phone: patch.phone,
-          address: patch.address,
-          city: patch.city,
-          lat: patch.lat,
-          lng: patch.lng,
-          nps_score: patch.nps,
-          rating: patch.nps,
-        }),
+        body: JSON.stringify(payload),
       })
+
+      const result = await response.json()
+      console.log("[v0] updateCustomer API response:", response.status, JSON.stringify(result))
 
       if (response.ok) {
         setCustomers((prev) =>
@@ -143,7 +149,8 @@ export function CustomersProvider({ children }: { children: React.ReactNode }) {
             return updated
           })
         )
-        console.log("[v0] Updated customer in database:", id)
+      } else {
+        console.error("[v0] updateCustomer API error:", result.error)
       }
     } catch (error) {
       console.error("[v0] Error updating customer:", error)

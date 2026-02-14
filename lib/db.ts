@@ -98,13 +98,27 @@ export async function createCustomer(data: {
 
 export async function updateCustomer(
   id: string,
-  data: Partial<{ name: string; email: string; phone: string; address: string; city: string; lat: number; lng: number; nps_score: number; rating: number }>
+  data: Record<string, any>
 ) {
   const result = await query(
-    `UPDATE customers SET name = COALESCE($1, name), email = COALESCE($2, email), phone = COALESCE($3, phone),
-     address = COALESCE($4, address), city = COALESCE($5, city), lat = COALESCE($6, lat), lng = COALESCE($7, lng),
-     nps_score = COALESCE($8, nps_score), rating = COALESCE($9, rating) WHERE id = $10 RETURNING *`,
-    [data.name, data.email, data.phone, data.address, data.city, data.lat, data.lng, data.nps_score, data.rating, id]
+    `UPDATE customers SET
+       name = COALESCE($1, name),
+       email = COALESCE($2, email),
+       phone = COALESCE($3, phone),
+       address = COALESCE($4, address),
+       city = COALESCE($5, city),
+       lat = COALESCE($6, lat),
+       lng = COALESCE($7, lng),
+       nps_score = COALESCE($8, nps_score),
+       rating = COALESCE($9, rating),
+       type = COALESCE($10, type)
+     WHERE id = $11 RETURNING *`,
+    [
+      data.name ?? null, data.email ?? null, data.phone ?? null,
+      data.address ?? null, data.city ?? null, data.lat ?? null,
+      data.lng ?? null, data.nps_score ?? null, data.rating ?? null,
+      data.type ?? null, id,
+    ]
   )
   return result.rows[0]
 }

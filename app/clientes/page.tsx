@@ -151,6 +151,7 @@ export default function ClientesPage() {
   const handleSave = useCallback(
     async (data: Omit<Customer, "id" | "initials">) => {
       try {
+        console.log("[v0] handleSave called, editTarget:", editTarget?.id, "data.name:", data.name)
         if (editTarget) {
           await updateCustomer(editTarget.id, data)
         } else {
