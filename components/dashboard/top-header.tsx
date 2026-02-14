@@ -532,28 +532,6 @@ export function TopHeader() {
     </header>
   )
 }
-
-/* ─── Notifications data ─── */
-interface Notification {
-  id: string
-  type: "alerta" | "info" | "completado" | "asignacion"
-  title: string
-  body: string
-  time: string
-  read: boolean
-  href: string
-}
-
-const INITIAL_NOTIFICATIONS: Notification[] = [
-  {
-    id: "n1",
-    type: "alerta",
-    title: "Alerta Critica - OT-1042",
-    body: "Tecnico sin llegar al sitio despues de 45 min.",
-    time: "Hace 5 min",
-    read: false,
-    href: "/orden/OT-1042",
-  },
   {
     id: "n2",
     type: "completado",
