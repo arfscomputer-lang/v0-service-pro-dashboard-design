@@ -539,21 +539,6 @@ export function TopHeader() {
   )
 }
 
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)))
-
-  /* Keyboard shortcuts */
-  useEffect(() => {
-    function handleKey(e: KeyboardEvent) {
-      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
-        e.preventDefault()
-        setSearchOpen(true)
-      }
-    }
-    window.addEventListener("keydown", handleKey)
-    return () => window.removeEventListener("keydown", handleKey)
-  }, [])
-
-  return (
     <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6">
       {/* Search trigger */}
       <button
