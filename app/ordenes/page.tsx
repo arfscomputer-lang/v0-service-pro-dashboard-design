@@ -44,8 +44,22 @@ const priorityConfig: Record<string, { label: string; dot: string }> = {
 }
 
 export default function OrdenesPage() {
-  const { workOrders, updateWorkOrder, deleteWorkOrder } = useWorkOrders()
+  const { workOrders, addWorkOrder, updateWorkOrder, deleteWorkOrder } = useWorkOrders()
   const [searchTerm, setSearchTerm] = useState("")
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [createForm, setCreateForm] = useState<Omit<WorkOrder, 'id' | 'createdAt' | 'updatedAt'>>({
+    orderId: '',
+    type: '',
+    description: '',
+    status: 'pendiente',
+    priority: 'normal',
+    address: '',
+    city: '',
+    scheduledDate: new Date().toISOString().split('T')[0],
+    scheduledTime: '09:00',
+    customerId: null,
+    technicianId: null,
+  })
   const [editingOrder, setEditingOrder] = useState<WorkOrder | null>(null)
   const [editForm, setEditForm] = useState<Partial<WorkOrder>>({})
 
@@ -54,6 +68,41 @@ export default function OrdenesPage() {
       order.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.description.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  const handleCreateOpen = useCallback(() => {
+    setIsCreateOpen(true)
+  }, [])
+
+  const handleCreateClose = useCallback(() => {
+    setIsCreateOpen(false)
+    setCreateForm({
+      orderId: '',
+      type: '',
+      description: '',
+      status: 'pendiente',
+      priority: 'normal',
+      address: '',
+      city: '',
+      scheduledDate: new Date().toISOString().split('T')[0],
+      scheduledTime: '09:00',
+      customerId: null,
+      technicianId: null,
+    })
+  }, [])
+
+  const handleCreateSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault()
+      try {
+        console.log('[v0] Creating work order with data:', JSON.stringify(createForm))
+        await addWorkOrder(createForm)
+        handleCreateClose()
+      } catch (error) {
+        console.error('[v0] Error creating work order:', error)
+      }
+    },
+    [createForm, addWorkOrder, handleCreateClose]
   )
 
   const handleEditOpen = useCallback((order: WorkOrder) => {
@@ -104,7 +153,7 @@ export default function OrdenesPage() {
               </div>
               <h1 className="text-2xl font-bold text-foreground">Órdenes de Trabajo</h1>
             </div>
-            <Button className="gap-2" size="sm">
+            <Button className="gap-2" size="sm" onClick={handleCreateOpen}>
               <Plus className="h-4 w-4" />
               Nueva Orden
             </Button>
@@ -295,6 +344,130 @@ export default function OrdenesPage() {
                   Cancelar
                 </Button>
                 <Button type="submit">Guardar Cambios</Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Dialog */}
+      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Nueva Orden de Trabajo</DialogTitle>
+            <DialogDescription>Crea una nueva orden de trabajo en el sistema</DialogDescription>
+          </DialogHeader>
+          {isCreateOpen && (
+            <form onSubmit={handleCreateSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="orderId">ID Orden</Label>
+                <Input
+                  id="orderId"
+                  value={createForm.orderId}
+                  onChange={(e) => setCreateForm({ ...createForm, orderId: e.target.value })}
+                  placeholder="OT-1001"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="type">Tipo de Servicio</Label>
+                <Input
+                  id="type"
+                  value={createForm.type}
+                  onChange={(e) => setCreateForm({ ...createForm, type: e.target.value })}
+                  placeholder="Reparación HVAC"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="description">Descripción</Label>
+                <Textarea
+                  id="description"
+                  value={createForm.description}
+                  onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
+                  placeholder="Detalles del trabajo..."
+                  rows={3}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="status">Estado</Label>
+                  <Select value={createForm.status} onValueChange={(v) => setCreateForm({ ...createForm, status: v as any })}>
+                    <SelectTrigger id="status">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(statusConfig).map(([key, { label }]) => (
+                        <SelectItem key={key} value={key}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="priority">Prioridad</Label>
+                  <Select value={createForm.priority} onValueChange={(v) => setCreateForm({ ...createForm, priority: v as any })}>
+                    <SelectTrigger id="priority">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(priorityConfig).map(([key, { label }]) => (
+                        <SelectItem key={key} value={key}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="address">Dirección</Label>
+                <Input
+                  id="address"
+                  value={createForm.address}
+                  onChange={(e) => setCreateForm({ ...createForm, address: e.target.value })}
+                  placeholder="Calle Principal 123"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="city">Ciudad</Label>
+                <Input
+                  id="city"
+                  value={createForm.city}
+                  onChange={(e) => setCreateForm({ ...createForm, city: e.target.value })}
+                  placeholder="CDMX"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="scheduledDate">Fecha Programada</Label>
+                  <Input
+                    id="scheduledDate"
+                    type="date"
+                    value={createForm.scheduledDate}
+                    onChange={(e) => setCreateForm({ ...createForm, scheduledDate: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="scheduledTime">Hora Programada</Label>
+                  <Input
+                    id="scheduledTime"
+                    type="time"
+                    value={createForm.scheduledTime}
+                    onChange={(e) => setCreateForm({ ...createForm, scheduledTime: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button type="button" variant="outline" onClick={handleCreateClose}>
+                  Cancelar
+                </Button>
+                <Button type="submit">Crear Orden</Button>
               </div>
             </form>
           )}
