@@ -153,10 +153,6 @@ export default function OrdenesPage() {
               </div>
               <h1 className="text-2xl font-bold text-foreground">Órdenes de Trabajo</h1>
             </div>
-            <Button className="gap-2" size="sm" onClick={handleCreateOpen}>
-              <Plus className="h-4 w-4" />
-              Nueva Orden
-            </Button>
           </div>
 
           {/* Filters */}
