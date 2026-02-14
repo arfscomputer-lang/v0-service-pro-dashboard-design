@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Search, Bell, HelpCircle, Plus, Radio, AlertCircle } from 'lucide-react'
+import { Search, Bell, HelpCircle, Plus, Radio } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -22,7 +22,6 @@ import {
 } from '@/components/ui/select'
 
 export function TopHeader() {
-  const [searchOpen, setSearchOpen] = useState(false)
   const [orderDialogOpen, setOrderDialogOpen] = useState(false)
   const [formData, setFormData] = useState({
     customer: '',
@@ -50,7 +49,6 @@ export function TopHeader() {
       if (response.ok) {
         setOrderDialogOpen(false)
         setFormData({ customer: '', address: '', type: '', priority: 'media', description: '' })
-        // Refresh orders list or show success
         window.location.reload()
       } else {
         alert('Error al crear la orden')
