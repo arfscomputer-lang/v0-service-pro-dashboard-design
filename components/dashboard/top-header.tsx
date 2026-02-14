@@ -532,10 +532,7 @@ export function TopHeader() {
     </header>
   )
 }
-  {
-    id: "n2",
-    type: "completado",
-    title: "Trabajo Completado - OT-1038",
+
     body: "Carlos Mendez finalizo la instalacion en Polanco.",
     time: "Hace 12 min",
     read: false,
