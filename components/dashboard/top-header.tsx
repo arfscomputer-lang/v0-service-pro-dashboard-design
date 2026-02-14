@@ -533,6 +533,31 @@ export function TopHeader() {
   )
 }
 
+/* ─── Notifications data ─── */
+interface Notification {
+  id: string
+  type: "alerta" | "info" | "completado" | "asignacion"
+  title: string
+  body: string
+  time: string
+  read: boolean
+  href: string
+}
+
+const INITIAL_NOTIFICATIONS: Notification[] = [
+  {
+    id: "n1",
+    type: "alerta",
+    title: "Alerta Critica - OT-1042",
+    body: "Tecnico sin llegar al sitio despues de 45 min.",
+    time: "Hace 5 min",
+    read: false,
+    href: "/orden/OT-1042",
+  },
+  {
+    id: "n2",
+    type: "completado",
+    title: "Trabajo Completado - OT-1038",
     body: "Carlos Mendez finalizo la instalacion en Polanco.",
     time: "Hace 12 min",
     read: false,
@@ -650,15 +675,8 @@ export function TopHeader() {
           <span className="text-[11px] font-medium text-emerald-700">En Vivo</span>
         </div>
 
-        {/* Nueva Orden Button */}
-        <Button 
-          size="sm" 
-          className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
-          onClick={() => setOrderOpen(true)}
-        >
-          <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline">Nueva Orden</span>
-        </Button>
+        {/* Crear Usuario Button */}
+        <CreateUserDialog triggerSize="sm" /
 
         {/* ── Notifications (Popover) ── */}
         <Popover open={notifOpen} onOpenChange={setNotifOpen}>
