@@ -135,19 +135,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const login = useCallback(async (email: string, password: string) => {
-    // Simple authentication using seed data (temporary until DB is fully connected)
-    const found = SEED_USERS.find(
-      (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
-    )
-    
-    if (!found) {
-      return { success: false, error: "Correo o contraseña incorrectos" }
-    }
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
 
-    const { password: _, ...authUser } = found
-    setUser(authUser)
-    sessionStorage.setItem("sp_auth_user", JSON.stringify(authUser))
-    return { success: true }
+      if (!response.ok) {
+        const data = await response.json()
+        return { success: false, error: data.error || 'Error al iniciar sesión' }
+      }
+
+      const data = await response.json()
+      const authUser: AuthUser = {
+        id: data.user.id,
+        name: data.user.name,
+        email: data.user.email,
+        role: data.user.role,
+        initials: data.user.initials,
+        customerId: data.user.customerId,
+      }
+
+      setUser(authUser)
+      sessionStorage.setItem("sp_auth_user", JSON.stringify(authUser))
+      
+      // Redirect based on role
+      const router = require('next/router').useRouter()
+      const homeRoute = getHomeRoute(data.user.role)
+      
+      return { success: true }
+    } catch (error) {
+      console.error('[v0] Login error:', error)
+      return { success: false, error: 'Error de conexión. Intente nuevamente.' }
+    }
   }, [])
 
   const logout = useCallback(() => {

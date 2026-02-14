@@ -11,31 +11,27 @@ import { useAuth } from "@/lib/context/auth-context"
 
 const DEMO_USERS = [
   {
-    role: "admin",
     email: "admin@servicepro.mx",
     password: "admin123",
     name: "Administrador Sistema",
-    description: "Acceso completo al sistema",
+    description: "Acceso completo",
   },
   {
-    role: "supervisor",
     email: "supervisor@servicepro.mx",
     password: "super123",
     name: "Supervisor General",
-    description: "Gestión de órdenes y clientes",
+    description: "Gestión de órdenes",
   },
   {
-    role: "tecnico",
     email: "tecnico@servicepro.mx",
     password: "tecnico123",
-    name: "Luis Hernández",
-    description: "Vista móvil de técnico",
+    name: "Técnico",
+    description: "Vista móvil",
   },
   {
-    role: "cliente",
     email: "cliente@empresaalfa.mx",
     password: "cliente123",
-    name: "Empresa Alfa",
+    name: "Cliente",
     description: "Portal del cliente",
   },
 ]
@@ -62,7 +58,7 @@ export default function LoginPage() {
         return
       }
 
-      // Router.push is handled by auth context based on role
+      // Login successful - redirect is handled by auth context
     } catch (err) {
       console.error("[v0] Login error:", err)
       setError("Error de conexión. Intente nuevamente.")
@@ -93,7 +89,7 @@ export default function LoginPage() {
           <div className="space-y-4 mt-4">
             <h2 className="text-2xl font-semibold">Gestiona tus servicios de manera eficiente</h2>
             <p className="text-muted-foreground leading-relaxed">
-              Plataforma integral para administración de órdenes de trabajo, técnicos, clientes e inventario.
+              Plataforma integral para administración de órdenes de trabajo, técnicos, clientes e inventario con autenticación segura.
             </p>
           </div>
 
@@ -105,7 +101,7 @@ export default function LoginPage() {
             <div className="grid gap-2">
               {DEMO_USERS.map((user) => (
                 <button
-                  key={user.role}
+                  key={user.email}
                   type="button"
                   onClick={() => handleQuickLogin(user)}
                   className="text-left p-3 rounded-lg border border-border bg-card hover:bg-accent transition-colors group"
@@ -185,7 +181,7 @@ export default function LoginPage() {
               <div className="grid gap-2">
                 {DEMO_USERS.map((user) => (
                   <button
-                    key={user.role}
+                    key={user.email}
                     type="button"
                     onClick={() => handleQuickLogin(user)}
                     className="text-left p-2.5 rounded-md border border-border bg-muted/50 hover:bg-accent transition-colors text-xs"
