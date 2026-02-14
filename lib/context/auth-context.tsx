@@ -122,16 +122,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Hydrate from sessionStorage on mount
   useEffect(() => {
-    try {
-      const stored = sessionStorage.getItem("sp_auth_user")
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        setUser(parsed)
+    const validateSession = async () => {
+      try {
+        const token = sessionStorage.getItem("sp_auth_token")
+        if (token) {
+          const response = await fetch("/api/auth/session", {
+            headers: { "Authorization": `Bearer ${token}` },
+          })
+          
+          if (response.ok) {
+            const data = await response.json()
+            const authUser: AuthUser = {
+              id: data.user.id,
+              name: data.user.name,
+              email: data.user.email,
+              role: data.user.role,
+              initials: data.user.name
+                .split(" ")
+                .map((n: string) => n[0])
+                .join("")
+                .toUpperCase()
+                .slice(0, 2),
+            }
+            setUser(authUser)
+          } else {
+            // Token invalid, clear it
+            sessionStorage.removeItem("sp_auth_token")
+          }
+        }
+      } catch (error) {
+        console.error("[v0] Error validating session:", error)
       }
-    } catch {
-      // ignore
+      setIsLoading(false)
     }
-    setIsLoading(false)
+    
+    validateSession()
   }, [])
 
   const login = useCallback(async (email: string, password: string) => {
@@ -148,6 +173,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const data = await response.json()
+      const token = data.token
       const authUser: AuthUser = {
         id: data.user.id,
         name: data.user.name,
@@ -157,8 +183,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         customerId: data.user.customerId,
       }
 
+      // Store token in sessionStorage (token validates session on server)
+      sessionStorage.setItem("sp_auth_token", token)
       setUser(authUser)
-      sessionStorage.setItem("sp_auth_user", JSON.stringify(authUser))
       
       return { success: true }
     } catch (error) {
@@ -167,9 +194,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    try {
+      const token = sessionStorage.getItem("sp_auth_token")
+      if (token) {
+        // Delete session from database
+        await fetch("/api/auth/session", {
+          method: "DELETE",
+          headers: { "Authorization": `Bearer ${token}` },
+        })
+      }
+    } catch (error) {
+      console.error("[v0] Error during logout:", error)
+    }
+    
     setUser(null)
-    sessionStorage.removeItem("sp_auth_user")
+    sessionStorage.removeItem("sp_auth_token")
   }, [])
 
   const checkAccess = useCallback(

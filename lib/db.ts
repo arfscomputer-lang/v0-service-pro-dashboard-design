@@ -408,3 +408,41 @@ export async function getNextWorkOrderId() {
     return `OT-${String(Date.now() % 10000).padStart(4, '0')}`
   }
 }
+
+// ============================================
+// SESSIONS
+// ============================================
+
+export async function createSession(data: {
+  user_id: string
+  token: string
+  expires_at: Date
+}) {
+  const result = await query(
+    `INSERT INTO sessions (user_id, token, expires_at)
+     VALUES ($1, $2, $3) RETURNING *`,
+    [data.user_id, data.token, data.expires_at]
+  )
+  return result.rows[0]
+}
+
+export async function getSessionByToken(token: string) {
+  return getOne(
+    `SELECT s.*, u.* FROM sessions s
+     JOIN users u ON s.user_id = u.id
+     WHERE s.token = $1 AND s.expires_at > NOW()`,
+    [token]
+  )
+}
+
+export async function deleteSession(token: string) {
+  await query(`DELETE FROM sessions WHERE token = $1`, [token])
+}
+
+export async function deleteUserSessions(user_id: string) {
+  await query(`DELETE FROM sessions WHERE user_id = $1`, [user_id])
+}
+
+export async function cleanupExpiredSessions() {
+  await query(`DELETE FROM sessions WHERE expires_at <= NOW()`)
+}

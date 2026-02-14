@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getOne } from '@/lib/db'
+import { getOne, createSession } from '@/lib/db'
 import bcrypt from 'bcryptjs'
+import crypto from 'crypto'
 
 export async function POST(req: NextRequest) {
   try {
@@ -44,9 +45,20 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Return user data (without password hash)
+    // Create session in database
+    const token = crypto.randomBytes(32).toString('hex')
+    const expires_at = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
+    
+    await createSession({
+      user_id: user.id,
+      token,
+      expires_at,
+    })
+
+    // Return user data with session token
     return NextResponse.json({
       success: true,
+      token,
       user: {
         id: user.id,
         name: user.name,
