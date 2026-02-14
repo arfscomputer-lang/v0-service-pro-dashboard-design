@@ -577,8 +577,15 @@ export function TopHeader() {
           <span className="text-[11px] font-medium text-emerald-700">En Vivo</span>
         </div>
 
-        {/* Crear Usuario Button */}
-        <CreateUserDialog triggerSize="sm" /
+        {/* Nueva Orden Button */}
+        <Button 
+          size="sm" 
+          className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+          onClick={() => setOrderOpen(true)}
+        >
+          <Plus className="h-4 w-4" />
+          <span className="hidden sm:inline">Nueva Orden</span>
+        </Button>
 
         {/* ── Notifications (Popover) ── */}
         <Popover open={notifOpen} onOpenChange={setNotifOpen}>
