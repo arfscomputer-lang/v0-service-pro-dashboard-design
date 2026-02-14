@@ -416,12 +416,12 @@ export function TopHeader() {
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <Label className="text-xs font-semibold text-muted-foreground">Tecnico Asignado</Label>
-                      <Select value={formData.technicianId} onValueChange={(v) => setFormData({ ...formData, technicianId: v })}>
+                      <Select value={formData.technicianId} onValueChange={(v) => setFormData({ ...formData, technicianId: v === 'auto' ? '' : v })}>
                         <SelectTrigger className="bg-card">
                           <SelectValue placeholder="Auto-asignar..." />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Auto-asignar por proximidad</SelectItem>
+                          <SelectItem value="auto">Auto-asignar por proximidad</SelectItem>
                           {technicians.map(t => (
                             <SelectItem key={t.id} value={t.id}>
                               {t.name}
