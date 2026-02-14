@@ -539,14 +539,6 @@ export function TopHeader() {
   )
 }
 
-    body: "Tecnico sin llegar al sitio despues de 45 min.",
-    time: "Hace 5 min",
-    read: false,
-    href: "/orden/OT-1042",
-  },
-  {
-    id: "n2",
-    type: "completado",
     title: "Trabajo Completado - OT-1038",
     body: "Carlos Mendez finalizo la instalacion en Polanco.",
     time: "Hace 12 min",
