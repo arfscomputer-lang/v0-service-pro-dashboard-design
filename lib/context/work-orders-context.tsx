@@ -97,13 +97,15 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
         if (data.customerId !== undefined) payload.customer_id = data.customerId
         if (data.technicianId !== undefined) payload.technician_id = data.technicianId
 
-        const response = await fetch(`/api/work-orders/${id}`, {
+        const res = await fetch(`/api/work-orders/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
-        } as RequestInit)
+        })
 
-        if (!response.ok) throw new Error('Failed to update work order')
+        if (!res.ok) {
+          throw new Error('Failed to update work order')
+        }
 
         setWorkOrders((prev) =>
           prev.map((wo) => (wo.id !== id ? wo : { ...wo, ...data }))
