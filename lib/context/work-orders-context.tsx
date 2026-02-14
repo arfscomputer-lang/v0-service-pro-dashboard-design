@@ -85,7 +85,7 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
   const updateWorkOrder = useCallback(async (id: string, data: Partial<WorkOrder>) => {
     try {
       const payload: Record<string, any> = {}
-      if (data.order_id !== undefined) payload.order_id = data.orderId
+      if (data.orderId !== undefined) payload.order_id = data.orderId
       if (data.type !== undefined) payload.type = data.type
       if (data.description !== undefined) payload.description = data.description
       if (data.status !== undefined) payload.status = data.status
