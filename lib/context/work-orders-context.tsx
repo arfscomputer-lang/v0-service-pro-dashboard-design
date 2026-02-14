@@ -2,11 +2,6 @@
 
 import React, { createContext, useContext, useCallback, useState, useEffect } from 'react'
 
-// Helper to check fetch response
-const checkResponse = (res: Response): boolean => {
-  return res.ok
-}
-
 export interface WorkOrder {
   id: string
   orderId: string
@@ -39,9 +34,11 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     const fetchWorkOrders = async () => {
       try {
-        const response: Response = await fetch('/api/work-orders')
-        if (!checkResponse(response)) throw new Error('Failed to fetch work orders')
-        const json = await response.json()
+        const res = await fetch('/api/work-orders')
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`)
+        }
+        const json = await res.json()
         const list = json.data || json.workOrders || []
         setWorkOrders(Array.isArray(list) ? list : [])
       } catch (error) {
@@ -55,7 +52,7 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
   const addWorkOrder = useCallback(
     async (data: Omit<WorkOrder, 'id' | 'createdAt' | 'updatedAt'>) => {
       try {
-        const response: Response = await fetch('/api/work-orders', {
+        const res = await fetch('/api/work-orders', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -73,13 +70,16 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
           }),
         })
 
-        if (!checkResponse(response)) throw new Error('Failed to create work order')
-        const result = await response.json()
+        if (!res.ok) {
+          throw new Error(`Failed to create work order: ${res.status}`)
+        }
+
+        const result = await res.json()
         const newWorkOrder = result.data || result.workOrder
         setWorkOrders((prev) => [...prev, newWorkOrder])
         return newWorkOrder
       } catch (error) {
-        console.error('[v0] Error adding work order:', error)
+        console.error('[v0] Error creating work order:', error)
         throw error
       }
     },
@@ -102,13 +102,15 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
         if (data.customerId !== undefined) payload.customer_id = data.customerId
         if (data.technicianId !== undefined) payload.technician_id = data.technicianId
 
-        const response: Response = await fetch(`/api/work-orders/${id}`, {
+        const res = await fetch(`/api/work-orders/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         })
 
-        if (!checkResponse(response)) throw new Error('Failed to update work order')
+        if (!res.ok) {
+          throw new Error(`Failed to update work order: ${res.status}`)
+        }
 
         setWorkOrders((prev) =>
           prev.map((wo) => (wo.id !== id ? wo : { ...wo, ...data }))
@@ -124,11 +126,13 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
   const deleteWorkOrder = useCallback(
     async (id: string) => {
       try {
-        const response: Response = await fetch(`/api/work-orders/${id}`, {
+        const res = await fetch(`/api/work-orders/${id}`, {
           method: 'DELETE',
         })
 
-        if (!checkResponse(response)) throw new Error('Failed to delete work order')
+        if (!res.ok) {
+          throw new Error(`Failed to delete work order: ${res.status}`)
+        }
 
         setWorkOrders((prev) => prev.filter((wo) => wo.id !== id))
       } catch (error) {
@@ -140,14 +144,7 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
   )
 
   return (
-    <WorkOrdersContext.Provider
-      value={{
-        workOrders,
-        addWorkOrder,
-        updateWorkOrder,
-        deleteWorkOrder,
-      }}
-    >
+    <WorkOrdersContext.Provider value={{ workOrders, addWorkOrder, updateWorkOrder, deleteWorkOrder }}>
       {children}
     </WorkOrdersContext.Provider>
   )
