@@ -7,73 +7,7 @@ import { AgendaCard, type AgendaJob, type JobStatus } from "@/components/technic
 import { BottomTabs } from "@/components/technician/bottom-tabs"
 import { CalendarDays } from "lucide-react"
 
-const initialJobs: AgendaJob[] = [
-  {
-    id: "job-1",
-    orderId: "OT-1042",
-    customer: "Empresa Alfa S.A.",
-    phone: "+52 55 1234 5678",
-    address: "Av. Reforma 450, Col. Centro, CDMX",
-    type: "Reparacion HVAC - Unidad Central",
-    priority: "alta",
-    scheduledTime: "08:00",
-    estimatedDuration: "2h",
-    notes: "El cliente reporta fuga de refrigerante en la unidad del 3er piso. Llevar kit de deteccion de fugas.",
-    status: "completado",
-  },
-  {
-    id: "job-2",
-    orderId: "OT-1045",
-    customer: "Roberto Martinez",
-    phone: "+52 55 9876 5432",
-    address: "Calle 5 de Mayo 220, Col. Juarez, CDMX",
-    type: "Mantenimiento Preventivo HVAC",
-    priority: "media",
-    scheduledTime: "10:30",
-    estimatedDuration: "1.5h",
-    notes: "Mantenimiento programado trimestral. Incluye limpieza de filtros y revision de gas.",
-    status: "en_sitio",
-  },
-  {
-    id: "job-3",
-    orderId: "OT-1048",
-    customer: "Maria Gonzalez",
-    phone: "+52 55 5555 1234",
-    address: "Av. Universidad 1200, Col. Del Valle, CDMX",
-    type: "Inspeccion de Gas - Certificacion",
-    priority: "alta",
-    scheduledTime: "13:00",
-    estimatedDuration: "1h",
-    notes: "Inspeccion requerida para renovacion de certificado. Acceso por recepcion.",
-    status: "pendiente",
-  },
-  {
-    id: "job-4",
-    orderId: "OT-1051",
-    customer: "Fernando Lopez",
-    phone: "+52 55 4321 8765",
-    address: "Col. Roma Norte 78, Int. 4B, CDMX",
-    type: "Reparacion Electrica",
-    priority: "media",
-    scheduledTime: "15:00",
-    estimatedDuration: "2h",
-    notes: "Cortocircuito intermitente en el panel principal. El cliente estara disponible a partir de las 14:30.",
-    status: "pendiente",
-  },
-  {
-    id: "job-5",
-    orderId: "OT-1054",
-    customer: "Diego Ramirez",
-    phone: "+52 55 6789 0123",
-    address: "Av. Chapultepec 560, Piso 2, CDMX",
-    type: "Instalacion Panel Solar",
-    priority: "baja",
-    scheduledTime: "17:00",
-    estimatedDuration: "1.5h",
-    notes: "Primera fase de instalacion. Verificar que el material ya esta en sitio.",
-    status: "pendiente",
-  },
-]
+const initialJobs: AgendaJob[] = []
 
 function getNextStatus(current: JobStatus): JobStatus {
   const flow: Record<string, JobStatus> = {
