@@ -539,7 +539,6 @@ export function TopHeader() {
   )
 }
 
-    title: "Alerta Critica - OT-1042",
     body: "Tecnico sin llegar al sitio despues de 45 min.",
     time: "Hace 5 min",
     read: false,
