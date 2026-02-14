@@ -822,36 +822,6 @@ function formatCurrency(n: number) {
 
 type SortKey = "name" | "type" | "totalSpent" | "nps" | "createdAt"
 
-// ── Page ─────────────────────────────────────────────────
-
-export default function ClientesPage() {
-  const { customers, addCustomer, updateCustomer, deleteCustomer } = useCustomers()
-
-  const [search, setSearch] = useState("")
-  const [typeFilter, setTypeFilter] = useState<string>("all")
-  const [tagFilter, setTagFilter] = useState<string>("all")
-  const [sortKey, setSortKey] = useState<SortKey>("name")
-  const [sortAsc, setSortAsc] = useState(true)
-
-  const [formOpen, setFormOpen] = useState(false)
-  const [editTarget, setEditTarget] = useState<Customer | null>(null)
-  const [deleteTarget, setDeleteTarget] = useState<Customer | null>(null)
-
-  // Filter + sort
-  const filtered = useMemo(() => {
-    let list = [...customers]
-
-    if (search.trim()) {
-      const q = search.toLowerCase()
-      list = list.filter(
-        (c) =>
-          c.name.toLowerCase().includes(q) ||
-          c.email.toLowerCase().includes(q) ||
-          c.phone.includes(q) ||
-          c.id.includes(q) ||
-          c.address.toLowerCase().includes(q)
-      )
-    }
 
     if (typeFilter !== "all") {
       list = list.filter((c) => c.type === typeFilter)
