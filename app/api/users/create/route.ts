@@ -66,8 +66,10 @@ export async function POST(req: NextRequest) {
     )
   } catch (error) {
     console.error('[v0] Error creating user:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
+    console.error('[v0] Error details:', errorMessage)
     return NextResponse.json(
-      { error: 'Error al crear el usuario' },
+      { error: `Error al crear el usuario: ${errorMessage}` },
       { status: 500 }
     )
   }
