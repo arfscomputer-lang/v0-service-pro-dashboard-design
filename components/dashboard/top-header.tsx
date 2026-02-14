@@ -4,17 +4,13 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import {
   Search,
-  Plus,
   Bell,
   HelpCircle,
   Radio,
   X,
-  Clock,
   AlertTriangle,
   CheckCircle2,
   UserCheck,
-  Wrench,
-  MapPin,
   Keyboard,
   BookOpen,
   MessageCircle,
@@ -22,38 +18,17 @@ import {
   ExternalLink,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import { SearchCommand } from "./search-command"
 import { useAuth } from "@/lib/context/auth-context"
-import { useWorkOrders } from "@/lib/context/work-orders-context"
-import { useCustomers } from "@/lib/context/customers-context"
-import { useTechnicians } from "@/lib/context/technicians-context"
-import { useNextWorkOrderId } from "@/lib/hooks/use-next-work-order-id"
 
 /* ─── Notifications data ─── */
 interface Notification {
@@ -134,7 +109,6 @@ const helpSections = [
     icon: Keyboard,
     items: [
       { keys: "Ctrl + K", desc: "Buscar" },
-      { keys: "Ctrl + N", desc: "Nueva Orden" },
       { keys: "Ctrl + D", desc: "Ir a Despacho" },
       { keys: "Esc", desc: "Cerrar panel" },
     ],
@@ -150,34 +124,11 @@ const helpLinks = [
 /* ─── Component ─── */
 export function TopHeader() {
   const { user } = useAuth()
-  const { addWorkOrder } = useWorkOrders()
-  const { customers } = useCustomers()
-  const { technicians } = useTechnicians()
-  const { nextId } = useNextWorkOrderId()
   
   const [searchOpen, setSearchOpen] = useState(false)
-  const [orderOpen, setOrderOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS)
-  const [submitted, setSubmitted] = useState(false)
-  
-  // Form state for creating order - ALL work_orders fields
-  const [formData, setFormData] = useState({
-    orderId: '',
-    customerId: '',
-    technicianId: '',
-    type: '',
-    description: '',
-    status: 'pendiente',
-    priority: 'normal',
-    address: '',
-    city: 'CDMX',
-    scheduledDate: new Date().toISOString().split('T')[0],
-    scheduledTime: '09:00',
-    completedDate: '',
-    equipmentWarranty: false,
-  })
 
   const unread = notifications.filter((n) => !n.read).length
 
@@ -192,44 +143,10 @@ export function TopHeader() {
         e.preventDefault()
         setSearchOpen(true)
       }
-      if ((e.ctrlKey || e.metaKey) && e.key === "n") {
-        e.preventDefault()
-        setOrderOpen(true)
-      }
     }
     window.addEventListener("keydown", handleKey)
     return () => window.removeEventListener("keydown", handleKey)
   }, [])
-
-  /* Reset form state when sheet closes */
-  useEffect(() => {
-    if (!orderOpen) {
-      const t = setTimeout(() => {
-        setSubmitted(false)
-        setFormData({
-          orderId: '',
-          customerId: '',
-          technicianId: '',
-          type: '',
-          description: '',
-          status: 'pendiente',
-          priority: 'normal',
-          address: '',
-          city: 'CDMX',
-          scheduledDate: new Date().toISOString().split('T')[0],
-          scheduledTime: '09:00',
-          completedDate: '',
-          equipmentWarranty: false,
-        })
-      }, 300)
-      return () => clearTimeout(t)
-    } else {
-      // When sheet opens, populate with next ID
-      if (nextId && !formData.orderId) {
-        setFormData(prev => ({ ...prev, orderId: nextId }))
-      }
-    }
-  }, [orderOpen, nextId])
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6">
@@ -254,247 +171,6 @@ export function TopHeader() {
           <Radio className="h-3 w-3 text-emerald-600 animate-pulse" />
           <span className="text-[11px] font-medium text-emerald-700">En Vivo</span>
         </div>
-
-      {/* ── Nueva Orden (Sheet) — only admin/supervisor/cliente ── */}
-      {user && (user.role === "admin" || user.role === "supervisor" || user.role === "cliente") && (
-        <Button
-          size="sm"
-          className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
-          onClick={() => setOrderOpen(true)}
-        >
-          <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline">Nueva Orden</span>
-        </Button>
-      )}
-
-        <Sheet open={orderOpen} onOpenChange={setOrderOpen}>
-          <SheetContent side="right" className="w-full sm:max-w-lg p-0 flex flex-col">
-            <SheetHeader className="px-6 pt-6 pb-4 border-b border-border">
-              <SheetTitle className="text-foreground">Crear Nueva Orden de Trabajo</SheetTitle>
-              <SheetDescription className="text-muted-foreground">
-                Completa los campos para generar una nueva OT.
-              </SheetDescription>
-            </SheetHeader>
-
-            {submitted ? (
-              <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8">
-                <div className="h-16 w-16 rounded-full bg-success/10 flex items-center justify-center">
-                  <CheckCircle2 className="h-8 w-8 text-success" />
-                </div>
-                <p className="text-lg font-semibold text-foreground">Orden Creada</p>
-                <p className="text-sm text-muted-foreground text-center">
-                  La orden fue registrada exitosamente y esta lista para asignarse.
-                </p>
-                <div className="flex gap-3 mt-2">
-                  <Button variant="outline" onClick={() => setOrderOpen(false)}>
-                    Cerrar
-                  </Button>
-                  <Button onClick={() => setSubmitted(false)} className="bg-primary text-primary-foreground">
-                    Crear Otra
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <ScrollArea className="flex-1">
-                <form
-                  className="flex flex-col gap-5 p-6"
-                  onSubmit={async (e) => {
-                    e.preventDefault()
-                    try {
-                      console.log('[v0] Creating work order with ALL fields:', JSON.stringify(formData))
-                      
-                      await addWorkOrder({
-                        orderId: formData.orderId,
-                        customerId: formData.customerId || null,
-                        technicianId: formData.technicianId || null,
-                        type: formData.type,
-                        description: formData.description,
-                        status: formData.status,
-                        priority: formData.priority,
-                        address: formData.address,
-                        city: formData.city,
-                        scheduledDate: formData.scheduledDate,
-                        scheduledTime: formData.scheduledTime,
-                      })
-                      
-                      console.log('[v0] Work order created successfully')
-                      setSubmitted(true)
-                    } catch (error) {
-                      console.error('[v0] Error creating work order:', error)
-                    }
-                  }}
-                >
-                  {/* Order ID (auto-generated, read-only) */}
-                  <div className="flex flex-col gap-1.5">
-                    <Label className="text-xs font-semibold text-muted-foreground">ID de Orden</Label>
-                    <Input value={formData.orderId} readOnly className="bg-muted/50" />
-                  </div>
-
-                  {/* Cliente y Tecnico */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="flex flex-col gap-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground">Cliente *</Label>
-                      <Select value={formData.customerId} onValueChange={(v) => setFormData({ ...formData, customerId: v })} required>
-                        <SelectTrigger className="bg-card">
-                          <SelectValue placeholder="Seleccionar cliente..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {customers.map(c => (
-                            <SelectItem key={c.id} value={c.id}>
-                              {c.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground">Tecnico Asignado</Label>
-                      <Select value={formData.technicianId} onValueChange={(v) => setFormData({ ...formData, technicianId: v === 'auto' ? '' : v })}>
-                        <SelectTrigger className="bg-card">
-                          <SelectValue placeholder="Auto-asignar..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="auto">Auto-asignar</SelectItem>
-                          {technicians.map(t => (
-                            <SelectItem key={t.id} value={t.id}>
-                              {t.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  {/* Tipo, Estado y Prioridad */}
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="flex flex-col gap-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground">Tipo *</Label>
-                      <Select value={formData.type} onValueChange={(v) => setFormData({ ...formData, type: v })} required>
-                        <SelectTrigger className="bg-card">
-                          <SelectValue placeholder="Tipo..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Reparacion HVAC">Reparacion HVAC</SelectItem>
-                          <SelectItem value="Reparacion Electrica">Reparacion Electrica</SelectItem>
-                          <SelectItem value="Instalacion Electrica">Instalacion Electrica</SelectItem>
-                          <SelectItem value="Mantenimiento Plomeria">Mantenimiento Plomeria</SelectItem>
-                          <SelectItem value="Instalacion Panel Solar">Instalacion Panel Solar</SelectItem>
-                          <SelectItem value="Inspeccion Gas">Inspeccion Gas</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground">Estado *</Label>
-                      <Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })} required>
-                        <SelectTrigger className="bg-card">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pendiente">Pendiente</SelectItem>
-                          <SelectItem value="asignada">Asignada</SelectItem>
-                          <SelectItem value="en_ruta">En Ruta</SelectItem>
-                          <SelectItem value="en_sitio">En Sitio</SelectItem>
-                          <SelectItem value="completada">Completada</SelectItem>
-                          <SelectItem value="cancelada">Cancelada</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground">Prioridad *</Label>
-                      <Select value={formData.priority} onValueChange={(v) => setFormData({ ...formData, priority: v })} required>
-                        <SelectTrigger className="bg-card">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="baja">Baja</SelectItem>
-                          <SelectItem value="normal">Normal</SelectItem>
-                          <SelectItem value="alta">Alta</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  {/* Direccion y Ciudad */}
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="col-span-2 flex flex-col gap-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground">Direccion *</Label>
-                      <div className="relative">
-                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          placeholder="Av. Reforma 222, Col. Juarez"
-                          value={formData.address}
-                          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                          required
-                          className="pl-10 bg-card"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground">Ciudad *</Label>
-                      <Input
-                        placeholder="CDMX"
-                        value={formData.city}
-                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                        required
-                        className="bg-card"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Fecha y Hora Programada */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="flex flex-col gap-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground">Fecha Programada *</Label>
-                      <Input 
-                        type="date" 
-                        value={formData.scheduledDate} 
-                        onChange={(e) => setFormData({ ...formData, scheduledDate: e.target.value })} 
-                        required
-                        className="bg-card" 
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground">Hora *</Label>
-                      <div className="relative">
-                        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                          type="time" 
-                          value={formData.scheduledTime} 
-                          onChange={(e) => setFormData({ ...formData, scheduledTime: e.target.value })} 
-                          required
-                          className="pl-10 bg-card" 
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Descripcion */}
-                  <div className="flex flex-col gap-1.5">
-                    <Label className="text-xs font-semibold text-muted-foreground">Descripcion</Label>
-                    <Textarea
-                      placeholder="Describe el trabajo a realizar..."
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      rows={3}
-                      className="bg-card resize-none"
-                    />
-                  </div>
-
-                  {/* Submit */}
-                  <div className="flex justify-end gap-3 pt-2">
-                    <Button type="button" variant="outline" onClick={() => setOrderOpen(false)}>
-                      Cancelar
-                    </Button>
-                    <Button type="submit" className="bg-primary text-primary-foreground gap-2">
-                      <Plus className="h-4 w-4" />
-                      Crear Orden
-                    </Button>
-                  </div>
-                </form>
-              </ScrollArea>
-            )}
-          </SheetContent>
-        </Sheet>
 
         {/* ── Notifications (Popover) ── */}
         <Popover open={notifOpen} onOpenChange={setNotifOpen}>
