@@ -14,7 +14,19 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { order_id, type, description, status, priority, address, city, scheduled_date, scheduled_time } = body
+    const { 
+      order_id, 
+      type, 
+      description, 
+      status, 
+      priority, 
+      address, 
+      city, 
+      scheduled_date, 
+      scheduled_time,
+      customer_id,
+      technician_id
+    } = body
 
     if (!order_id || !type || !status || !priority) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
@@ -30,6 +42,8 @@ export async function POST(req: NextRequest) {
       city,
       scheduled_date,
       scheduled_time,
+      customer_id,
+      technician_id,
     })
 
     console.log("[v0] Created work order:", workOrder.id)
