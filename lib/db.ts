@@ -366,21 +366,21 @@ export async function deleteWorkOrder(id: string) {
   await query(`DELETE FROM work_orders WHERE id = $1`, [id])
 }
 
-function normalizeWorkOrder(row: any) {
-  return {
-    id: row.id,
-    orderId: row.order_id,
-    type: row.type || "",
-    description: row.description || "",
-    status: row.status || "pendiente",
-    priority: row.priority || "normal",
-    address: row.address || "",
-    city: row.city || "",
-    scheduledDate: row.scheduled_date ? String(row.scheduled_date).slice(0, 10) : "",
-    scheduledTime: row.scheduled_time || "09:00",
-    customerId: row.customer_id || null,
-    technicianId: row.technician_id || null,
-    createdAt: row.created_at || "",
-    updatedAt: row.updated_at || "",
+// ============================================
+// WORK ORDER ID GENERATION
+// ============================================
+
+export async function getNextWorkOrderId() {
+  try {
+    const result = await getOne<{ max: number }>(
+      `SELECT CAST(SUBSTRING(MAX(order_id), 4) AS INTEGER) as max FROM work_orders WHERE order_id LIKE 'OT-%'`
+    )
+    const lastNumber = result?.max || 0
+    const nextNumber = lastNumber + 1
+    return `OT-${String(nextNumber).padStart(4, '0')}`
+  } catch (error) {
+    console.error('[v0] Error getting next work order ID:', error)
+    // Fallback to a safe default
+    return `OT-${String(Date.now() % 10000).padStart(4, '0')}`
   }
 }

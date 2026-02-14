@@ -53,6 +53,7 @@ import { useAuth } from "@/lib/context/auth-context"
 import { useWorkOrders } from "@/lib/context/work-orders-context"
 import { useCustomers } from "@/lib/context/customers-context"
 import { useTechnicians } from "@/lib/context/technicians-context"
+import { useNextWorkOrderId } from "@/lib/hooks/use-next-work-order-id"
 
 /* ─── Notifications data ─── */
 interface Notification {
@@ -152,6 +153,7 @@ export function TopHeader() {
   const { addWorkOrder } = useWorkOrders()
   const { customers } = useCustomers()
   const { technicians } = useTechnicians()
+  const { nextId } = useNextWorkOrderId()
   
   const [searchOpen, setSearchOpen] = useState(false)
   const [orderOpen, setOrderOpen] = useState(false)
@@ -219,8 +221,13 @@ export function TopHeader() {
         })
       }, 300)
       return () => clearTimeout(t)
+    } else {
+      // When sheet opens, populate with next ID
+      if (nextId && !formData.orderId) {
+        setFormData(prev => ({ ...prev, orderId: nextId }))
+      }
     }
-  }, [orderOpen])
+  }, [orderOpen, nextId])
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6">
@@ -297,7 +304,7 @@ export function TopHeader() {
                       const selectedTechnician = technicians.find(t => t.id === formData.technicianId)
                       
                       await addWorkOrder({
-                        orderId: formData.orderId || `OT-${Date.now()}`,
+                        orderId: formData.orderId,
                         type: formData.type,
                         description: formData.description,
                         status: 'pendiente',
