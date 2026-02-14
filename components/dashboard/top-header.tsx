@@ -169,7 +169,7 @@ export function TopHeader() {
     type: '',
     priority: 'normal',
     address: '',
-    city: '',
+    city: 'CDMX',
     scheduledDate: new Date().toISOString().split('T')[0],
     scheduledTime: '',
     duration: '',
@@ -211,7 +211,7 @@ export function TopHeader() {
           type: '',
           priority: 'normal',
           address: '',
-          city: '',
+          city: 'CDMX',
           scheduledDate: new Date().toISOString().split('T')[0],
           scheduledTime: '',
           duration: '',
@@ -374,16 +374,28 @@ export function TopHeader() {
                   </div>
 
                   {/* Address */}
-                  <div className="flex flex-col gap-1.5">
-                    <Label className="text-xs font-semibold text-muted-foreground">Direccion del Sitio *</Label>
-                    <div className="relative">
-                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="col-span-2 flex flex-col gap-1.5">
+                      <Label className="text-xs font-semibold text-muted-foreground">Direccion del Sitio *</Label>
+                      <div className="relative">
+                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Av. Reforma 222, Col. Juarez"
+                          value={formData.address}
+                          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                          required
+                          className="pl-10 bg-card"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <Label className="text-xs font-semibold text-muted-foreground">Ciudad *</Label>
                       <Input
-                        placeholder="Av. Reforma 222, Col. Juarez, CDMX"
-                        value={formData.address}
-                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                        placeholder="CDMX"
+                        value={formData.city}
+                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                         required
-                        className="pl-10 bg-card"
+                        className="bg-card"
                       />
                     </div>
                   </div>
