@@ -162,20 +162,21 @@ export function TopHeader() {
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS)
   const [submitted, setSubmitted] = useState(false)
   
-  // Form state for creating order
+  // Form state for creating order - ALL work_orders fields
   const [formData, setFormData] = useState({
     orderId: '',
     customerId: '',
+    technicianId: '',
     type: '',
+    description: '',
+    status: 'pendiente',
     priority: 'normal',
     address: '',
     city: 'CDMX',
     scheduledDate: new Date().toISOString().split('T')[0],
-    scheduledTime: '',
-    duration: '',
-    technicianId: '',
-    description: '',
-    equipment: '',
+    scheduledTime: '09:00',
+    completedDate: '',
+    equipmentWarranty: false,
   })
 
   const unread = notifications.filter((n) => !n.read).length
@@ -208,16 +209,17 @@ export function TopHeader() {
         setFormData({
           orderId: '',
           customerId: '',
+          technicianId: '',
           type: '',
+          description: '',
+          status: 'pendiente',
           priority: 'normal',
           address: '',
           city: 'CDMX',
           scheduledDate: new Date().toISOString().split('T')[0],
-          scheduledTime: '',
-          duration: '',
-          technicianId: '',
-          description: '',
-          equipment: '',
+          scheduledTime: '09:00',
+          completedDate: '',
+          equipmentWarranty: false,
         })
       }, 300)
       return () => clearTimeout(t)
@@ -299,23 +301,22 @@ export function TopHeader() {
                   onSubmit={async (e) => {
                     e.preventDefault()
                     try {
-                      console.log('[v0] Creating work order from top-header:', JSON.stringify(formData))
-                      const selectedCustomer = customers.find(c => c.id === formData.customerId)
-                      const selectedTechnician = technicians.find(t => t.id === formData.technicianId)
+                      console.log('[v0] Creating work order with ALL fields:', JSON.stringify(formData))
                       
                       await addWorkOrder({
                         orderId: formData.orderId,
+                        customerId: formData.customerId || null,
+                        technicianId: formData.technicianId || null,
                         type: formData.type,
                         description: formData.description,
-                        status: 'pendiente',
+                        status: formData.status,
                         priority: formData.priority,
                         address: formData.address,
                         city: formData.city,
                         scheduledDate: formData.scheduledDate,
                         scheduledTime: formData.scheduledTime,
-                        customerId: formData.customerId || null,
-                        technicianId: formData.technicianId || null,
                       })
+                      
                       console.log('[v0] Work order created successfully')
                       setSubmitted(true)
                     } catch (error) {
@@ -323,27 +324,51 @@ export function TopHeader() {
                     }
                   }}
                 >
-                  {/* Client */}
+                  {/* Order ID (auto-generated, read-only) */}
                   <div className="flex flex-col gap-1.5">
-                    <Label className="text-xs font-semibold text-muted-foreground">Cliente *</Label>
-                    <Select value={formData.customerId} onValueChange={(v) => setFormData({ ...formData, customerId: v })} required>
-                      <SelectTrigger className="bg-card">
-                        <SelectValue placeholder="Seleccionar cliente..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {customers.map(c => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label className="text-xs font-semibold text-muted-foreground">ID de Orden</Label>
+                    <Input value={formData.orderId} readOnly className="bg-muted/50" />
                   </div>
 
-                  {/* Type + Priority */}
+                  {/* Cliente y Tecnico */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground">Tipo de Trabajo *</Label>
+                      <Label className="text-xs font-semibold text-muted-foreground">Cliente *</Label>
+                      <Select value={formData.customerId} onValueChange={(v) => setFormData({ ...formData, customerId: v })} required>
+                        <SelectTrigger className="bg-card">
+                          <SelectValue placeholder="Seleccionar cliente..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {customers.map(c => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <Label className="text-xs font-semibold text-muted-foreground">Tecnico Asignado</Label>
+                      <Select value={formData.technicianId} onValueChange={(v) => setFormData({ ...formData, technicianId: v === 'auto' ? '' : v })}>
+                        <SelectTrigger className="bg-card">
+                          <SelectValue placeholder="Auto-asignar..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="auto">Auto-asignar</SelectItem>
+                          {technicians.map(t => (
+                            <SelectItem key={t.id} value={t.id}>
+                              {t.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Tipo, Estado y Prioridad */}
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="flex flex-col gap-1.5">
+                      <Label className="text-xs font-semibold text-muted-foreground">Tipo *</Label>
                       <Select value={formData.type} onValueChange={(v) => setFormData({ ...formData, type: v })} required>
                         <SelectTrigger className="bg-card">
                           <SelectValue placeholder="Tipo..." />
@@ -359,10 +384,26 @@ export function TopHeader() {
                       </Select>
                     </div>
                     <div className="flex flex-col gap-1.5">
+                      <Label className="text-xs font-semibold text-muted-foreground">Estado *</Label>
+                      <Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })} required>
+                        <SelectTrigger className="bg-card">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pendiente">Pendiente</SelectItem>
+                          <SelectItem value="asignada">Asignada</SelectItem>
+                          <SelectItem value="en_ruta">En Ruta</SelectItem>
+                          <SelectItem value="en_sitio">En Sitio</SelectItem>
+                          <SelectItem value="completada">Completada</SelectItem>
+                          <SelectItem value="cancelada">Cancelada</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
                       <Label className="text-xs font-semibold text-muted-foreground">Prioridad *</Label>
                       <Select value={formData.priority} onValueChange={(v) => setFormData({ ...formData, priority: v })} required>
                         <SelectTrigger className="bg-card">
-                          <SelectValue placeholder="Prioridad..." />
+                          <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="baja">Baja</SelectItem>
@@ -373,10 +414,10 @@ export function TopHeader() {
                     </div>
                   </div>
 
-                  {/* Address */}
+                  {/* Direccion y Ciudad */}
                   <div className="grid grid-cols-3 gap-4">
                     <div className="col-span-2 flex flex-col gap-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground">Direccion del Sitio *</Label>
+                      <Label className="text-xs font-semibold text-muted-foreground">Direccion *</Label>
                       <div className="relative">
                         <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
@@ -400,81 +441,43 @@ export function TopHeader() {
                     </div>
                   </div>
 
-                  {/* Scheduled Date/Time */}
+                  {/* Fecha y Hora Programada */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground">Fecha Programada</Label>
-                      <Input type="date" value={formData.scheduledDate} onChange={(e) => setFormData({ ...formData, scheduledDate: e.target.value })} className="bg-card" />
+                      <Label className="text-xs font-semibold text-muted-foreground">Fecha Programada *</Label>
+                      <Input 
+                        type="date" 
+                        value={formData.scheduledDate} 
+                        onChange={(e) => setFormData({ ...formData, scheduledDate: e.target.value })} 
+                        required
+                        className="bg-card" 
+                      />
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground">Hora Estimada</Label>
+                      <Label className="text-xs font-semibold text-muted-foreground">Hora *</Label>
                       <div className="relative">
                         <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input type="time" value={formData.scheduledTime} onChange={(e) => setFormData({ ...formData, scheduledTime: e.target.value })} className="pl-10 bg-card" />
+                        <Input 
+                          type="time" 
+                          value={formData.scheduledTime} 
+                          onChange={(e) => setFormData({ ...formData, scheduledTime: e.target.value })} 
+                          required
+                          className="pl-10 bg-card" 
+                        />
                       </div>
                     </div>
                   </div>
 
-                  {/* Duration + Tech */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="flex flex-col gap-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground">Duracion Estimada</Label>
-                      <Select>
-                        <SelectTrigger className="bg-card">
-                          <SelectValue placeholder="Seleccionar..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="0.5">30 min</SelectItem>
-                          <SelectItem value="1">1 hora</SelectItem>
-                          <SelectItem value="1.5">1.5 horas</SelectItem>
-                          <SelectItem value="2">2 horas</SelectItem>
-                          <SelectItem value="3">3 horas</SelectItem>
-                          <SelectItem value="4">4 horas</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground">Tecnico Asignado</Label>
-                      <Select value={formData.technicianId} onValueChange={(v) => setFormData({ ...formData, technicianId: v === 'auto' ? '' : v })}>
-                        <SelectTrigger className="bg-card">
-                          <SelectValue placeholder="Auto-asignar..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="auto">Auto-asignar por proximidad</SelectItem>
-                          {technicians.map(t => (
-                            <SelectItem key={t.id} value={t.id}>
-                              {t.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  {/* Description */}
+                  {/* Descripcion */}
                   <div className="flex flex-col gap-1.5">
-                    <Label className="text-xs font-semibold text-muted-foreground">Descripcion del Problema</Label>
+                    <Label className="text-xs font-semibold text-muted-foreground">Descripcion</Label>
                     <Textarea
-                      placeholder="Describe la situacion que reporta el cliente..."
+                      placeholder="Describe el trabajo a realizar..."
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       rows={3}
                       className="bg-card resize-none"
                     />
-                  </div>
-
-                  {/* Equipment */}
-                  <div className="flex flex-col gap-1.5">
-                    <Label className="text-xs font-semibold text-muted-foreground">Equipo Relacionado</Label>
-                    <div className="relative">
-                      <Wrench className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Ej: Minisplit Carrier 2 Ton, Caldera industrial..."
-                        value={formData.equipment}
-                        onChange={(e) => setFormData({ ...formData, equipment: e.target.value })}
-                        className="pl-10 bg-card"
-                      />
-                    </div>
                   </div>
 
                   {/* Submit */}
