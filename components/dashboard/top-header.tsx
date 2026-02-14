@@ -4,7 +4,6 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import {
   Search,
-  Plus,
   Bell,
   HelpCircle,
   Radio,
@@ -20,37 +19,17 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import { SearchCommand } from "./search-command"
+import { CreateUserDialog } from "./create-user-dialog"
 import { useAuth } from "@/lib/context/auth-context"
-import { useWorkOrders } from "@/lib/context/work-orders-context"
-import { useCustomers } from "@/lib/context/customers-context"
-import { useTechnicians } from "@/lib/context/technicians-context"
-import { useNextWorkOrderId } from "@/lib/hooks/use-next-work-order-id"
 
 /* ─── Notifications data ─── */
 interface Notification {
@@ -146,27 +125,11 @@ const helpLinks = [
 /* ─── Component ─── */
 export function TopHeader() {
   const { user } = useAuth()
-  const { addWorkOrder } = useWorkOrders()
-  const { customers } = useCustomers()
-  const { technicians } = useTechnicians()
-  const { nextId } = useNextWorkOrderId()
   
   const [searchOpen, setSearchOpen] = useState(false)
-  const [orderOpen, setOrderOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS)
-  const [submitted, setSubmitted] = useState(false)
-  
-  const [formData, setFormData] = useState({
-    orderId: '',
-    customerId: '',
-    technicianId: '',
-    type: '',
-    priority: 'normal',
-    description: '',
-    status: 'pendiente',
-  })
 
   const unread = notifications.filter((n) => !n.read).length
 
@@ -185,29 +148,6 @@ export function TopHeader() {
     window.addEventListener("keydown", handleKey)
     return () => window.removeEventListener("keydown", handleKey)
   }, [])
-
-  /* Populate nextId when dialog opens */
-  useEffect(() => {
-    if (orderOpen && nextId && !formData.orderId) {
-      setFormData(prev => ({ ...prev, orderId: nextId }))
-    }
-  }, [orderOpen, nextId])
-
-  /* Reset form when dialog closes */
-  useEffect(() => {
-    if (!orderOpen) {
-      setSubmitted(false)
-      setFormData({
-        orderId: '',
-        customerId: '',
-        technicianId: '',
-        type: '',
-        priority: 'normal',
-        description: '',
-        status: 'pendiente',
-      })
-    }
-  }, [orderOpen])
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6">
@@ -233,15 +173,8 @@ export function TopHeader() {
           <span className="text-[11px] font-medium text-emerald-700">En Vivo</span>
         </div>
 
-        {/* Nueva Orden Button */}
-        <Button 
-          size="sm" 
-          className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
-          onClick={() => setOrderOpen(true)}
-        >
-          <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline">Nueva Orden</span>
-        </Button>
+        {/* Crear Usuario Button */}
+        <CreateUserDialog triggerSize="sm" /
 
         {/* ── Notifications (Popover) ── */}
         <Popover open={notifOpen} onOpenChange={setNotifOpen}>
@@ -366,169 +299,6 @@ export function TopHeader() {
           </PopoverContent>
         </Popover>
       </div>
-
-      {/* Nueva Orden Dialog */}
-      <Dialog open={orderOpen} onOpenChange={setOrderOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Nueva Orden de Trabajo</DialogTitle>
-            <DialogDescription>Completa los campos para crear una nueva orden</DialogDescription>
-          </DialogHeader>
-
-          {submitted ? (
-            <div className="flex flex-col items-center justify-center gap-4 py-8">
-              <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
-                <CheckCircle2 className="h-8 w-8 text-green-600" />
-              </div>
-              <p className="text-lg font-semibold">Orden Creada Exitosamente</p>
-              <p className="text-sm text-muted-foreground text-center">La orden ha sido registrada en el sistema</p>
-              <div className="flex gap-3 mt-4">
-                <Button variant="outline" onClick={() => setOrderOpen(false)}>
-                  Cerrar
-                </Button>
-                <Button onClick={() => setSubmitted(false)} className="bg-primary text-primary-foreground">
-                  Crear Otra
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault()
-                try {
-                  console.log('[v0] Creating work order:', JSON.stringify(formData))
-                  await addWorkOrder({
-                    orderId: formData.orderId,
-                    customerId: formData.customerId || null,
-                    technicianId: formData.technicianId || null,
-                    type: formData.type,
-                    description: formData.description,
-                    status: formData.status,
-                    priority: formData.priority,
-                    address: '',
-                    city: '',
-                    scheduledDate: new Date().toISOString().split('T')[0],
-                    scheduledTime: '09:00',
-                  })
-                  setSubmitted(true)
-                } catch (error) {
-                  console.error('[v0] Error:', error)
-                }
-              }}
-              className="space-y-4"
-            >
-              {/* Order ID - Read Only */}
-              <div>
-                <Label className="text-xs font-semibold">ID de Orden</Label>
-                <Input value={formData.orderId} readOnly className="bg-muted/50 mt-1" />
-              </div>
-
-              {/* Cliente y Tecnico */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-xs font-semibold">Cliente *</Label>
-                  <Select value={formData.customerId} onValueChange={(v) => setFormData({ ...formData, customerId: v })} required>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Seleccionar cliente..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {customers.map(c => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-xs font-semibold">Tecnico</Label>
-                  <Select value={formData.technicianId} onValueChange={(v) => setFormData({ ...formData, technicianId: v === 'auto' ? '' : v })}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Auto-asignar..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="auto">Auto-asignar por proximidad</SelectItem>
-                      {technicians.map(t => (
-                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Tipo, Estado y Prioridad */}
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Label className="text-xs font-semibold">Tipo *</Label>
-                  <Select value={formData.type} onValueChange={(v) => setFormData({ ...formData, type: v })} required>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Seleccionar..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Reparacion HVAC">Reparacion HVAC</SelectItem>
-                      <SelectItem value="Reparacion Electrica">Reparacion Electrica</SelectItem>
-                      <SelectItem value="Instalacion Electrica">Instalacion Electrica</SelectItem>
-                      <SelectItem value="Mantenimiento Plomeria">Mantenimiento Plomeria</SelectItem>
-                      <SelectItem value="Instalacion Panel Solar">Instalacion Panel Solar</SelectItem>
-                      <SelectItem value="Inspeccion Gas">Inspeccion Gas</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-xs font-semibold">Estado *</Label>
-                  <Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })} required>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pendiente">Pendiente</SelectItem>
-                      <SelectItem value="asignada">Asignada</SelectItem>
-                      <SelectItem value="en_ruta">En Ruta</SelectItem>
-                      <SelectItem value="en_sitio">En Sitio</SelectItem>
-                      <SelectItem value="completada">Completada</SelectItem>
-                      <SelectItem value="cancelada">Cancelada</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-xs font-semibold">Prioridad *</Label>
-                  <Select value={formData.priority} onValueChange={(v) => setFormData({ ...formData, priority: v })} required>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="baja">Baja</SelectItem>
-                      <SelectItem value="normal">Normal</SelectItem>
-                      <SelectItem value="alta">Alta</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Descripcion */}
-              <div>
-                <Label className="text-xs font-semibold">Descripción</Label>
-                <Textarea
-                  placeholder="Describe el trabajo a realizar..."
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  rows={3}
-                  className="mt-1 resize-none"
-                />
-              </div>
-
-              {/* Buttons */}
-              <div className="flex justify-end gap-3 pt-4">
-                <Button type="button" variant="outline" onClick={() => setOrderOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit" className="gap-2 bg-primary text-primary-foreground">
-                  <Plus className="h-4 w-4" />
-                  Crear Orden
-                </Button>
-              </div>
-            </form>
-          )}
-        </DialogContent>
-      </Dialog>
     </header>
   )
 }

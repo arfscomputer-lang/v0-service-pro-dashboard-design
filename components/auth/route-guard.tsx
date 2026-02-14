@@ -14,7 +14,7 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
 
-  const isPublicRoute = pathname === "/login" || pathname === "/auth/login" || pathname === "/crear-usuario"
+  const isPublicRoute = pathname === "/login" || pathname === "/auth/login"
 
   useEffect(() => {
     if (isLoading) return
