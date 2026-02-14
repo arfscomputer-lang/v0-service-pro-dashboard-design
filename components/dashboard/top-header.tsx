@@ -50,6 +50,9 @@ import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import { SearchCommand } from "./search-command"
 import { useAuth } from "@/lib/context/auth-context"
+import { useWorkOrders } from "@/lib/context/work-orders-context"
+import { useCustomers } from "@/lib/context/customers-context"
+import { useTechnicians } from "@/lib/context/technicians-context"
 
 /* ─── Notifications data ─── */
 interface Notification {
@@ -146,12 +149,32 @@ const helpLinks = [
 /* ─── Component ─── */
 export function TopHeader() {
   const { user } = useAuth()
+  const { addWorkOrder } = useWorkOrders()
+  const { customers } = useCustomers()
+  const { technicians } = useTechnicians()
+  
   const [searchOpen, setSearchOpen] = useState(false)
   const [orderOpen, setOrderOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS)
   const [submitted, setSubmitted] = useState(false)
+  
+  // Form state for creating order
+  const [formData, setFormData] = useState({
+    orderId: '',
+    customerId: '',
+    type: '',
+    priority: 'normal',
+    address: '',
+    city: '',
+    scheduledDate: new Date().toISOString().split('T')[0],
+    scheduledTime: '',
+    duration: '',
+    technicianId: '',
+    description: '',
+    equipment: '',
+  })
 
   const unread = notifications.filter((n) => !n.read).length
 
@@ -178,7 +201,23 @@ export function TopHeader() {
   /* Reset form state when sheet closes */
   useEffect(() => {
     if (!orderOpen) {
-      const t = setTimeout(() => setSubmitted(false), 300)
+      const t = setTimeout(() => {
+        setSubmitted(false)
+        setFormData({
+          orderId: '',
+          customerId: '',
+          type: '',
+          priority: 'normal',
+          address: '',
+          city: '',
+          scheduledDate: new Date().toISOString().split('T')[0],
+          scheduledTime: '',
+          duration: '',
+          technicianId: '',
+          description: '',
+          equipment: '',
+        })
+      }, 300)
       return () => clearTimeout(t)
     }
   }, [orderOpen])
@@ -250,24 +289,46 @@ export function TopHeader() {
               <ScrollArea className="flex-1">
                 <form
                   className="flex flex-col gap-5 p-6"
-                  onSubmit={(e) => {
+                  onSubmit={async (e) => {
                     e.preventDefault()
-                    setSubmitted(true)
+                    try {
+                      console.log('[v0] Creating work order from top-header:', JSON.stringify(formData))
+                      const selectedCustomer = customers.find(c => c.id === formData.customerId)
+                      const selectedTechnician = technicians.find(t => t.id === formData.technicianId)
+                      
+                      await addWorkOrder({
+                        orderId: formData.orderId || `OT-${Date.now()}`,
+                        type: formData.type,
+                        description: formData.description,
+                        status: 'pendiente',
+                        priority: formData.priority,
+                        address: formData.address,
+                        city: formData.city,
+                        scheduledDate: formData.scheduledDate,
+                        scheduledTime: formData.scheduledTime,
+                        customerId: formData.customerId || null,
+                        technicianId: formData.technicianId || null,
+                      })
+                      console.log('[v0] Work order created successfully')
+                      setSubmitted(true)
+                    } catch (error) {
+                      console.error('[v0] Error creating work order:', error)
+                    }
                   }}
                 >
                   {/* Client */}
                   <div className="flex flex-col gap-1.5">
                     <Label className="text-xs font-semibold text-muted-foreground">Cliente *</Label>
-                    <Select required>
+                    <Select value={formData.customerId} onValueChange={(v) => setFormData({ ...formData, customerId: v })} required>
                       <SelectTrigger className="bg-card">
                         <SelectValue placeholder="Seleccionar cliente..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="c1">Grupo Industrial Norte S.A.</SelectItem>
-                        <SelectItem value="c2">Residencial Las Lomas</SelectItem>
-                        <SelectItem value="c3">Cafe La Esquina</SelectItem>
-                        <SelectItem value="c4">Torre Reforma 115</SelectItem>
-                        <SelectItem value="c5">Roberto Sanchez P.</SelectItem>
+                        {customers.map(c => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -276,30 +337,30 @@ export function TopHeader() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1.5">
                       <Label className="text-xs font-semibold text-muted-foreground">Tipo de Trabajo *</Label>
-                      <Select required>
+                      <Select value={formData.type} onValueChange={(v) => setFormData({ ...formData, type: v })} required>
                         <SelectTrigger className="bg-card">
                           <SelectValue placeholder="Tipo..." />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="instalacion">Instalacion</SelectItem>
-                          <SelectItem value="reparacion">Reparacion</SelectItem>
-                          <SelectItem value="mantenimiento">Mantenimiento</SelectItem>
-                          <SelectItem value="inspeccion">Inspeccion</SelectItem>
-                          <SelectItem value="emergencia">Emergencia</SelectItem>
+                          <SelectItem value="Reparacion HVAC">Reparacion HVAC</SelectItem>
+                          <SelectItem value="Reparacion Electrica">Reparacion Electrica</SelectItem>
+                          <SelectItem value="Instalacion Electrica">Instalacion Electrica</SelectItem>
+                          <SelectItem value="Mantenimiento Plomeria">Mantenimiento Plomeria</SelectItem>
+                          <SelectItem value="Instalacion Panel Solar">Instalacion Panel Solar</SelectItem>
+                          <SelectItem value="Inspeccion Gas">Inspeccion Gas</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <Label className="text-xs font-semibold text-muted-foreground">Prioridad *</Label>
-                      <Select required>
+                      <Select value={formData.priority} onValueChange={(v) => setFormData({ ...formData, priority: v })} required>
                         <SelectTrigger className="bg-card">
                           <SelectValue placeholder="Prioridad..." />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="baja">Baja</SelectItem>
-                          <SelectItem value="media">Media</SelectItem>
+                          <SelectItem value="normal">Normal</SelectItem>
                           <SelectItem value="alta">Alta</SelectItem>
-                          <SelectItem value="critica">Critica</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -312,6 +373,8 @@ export function TopHeader() {
                       <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         placeholder="Av. Reforma 222, Col. Juarez, CDMX"
+                        value={formData.address}
+                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                         required
                         className="pl-10 bg-card"
                       />
@@ -322,13 +385,13 @@ export function TopHeader() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1.5">
                       <Label className="text-xs font-semibold text-muted-foreground">Fecha Programada</Label>
-                      <Input type="date" className="bg-card" />
+                      <Input type="date" value={formData.scheduledDate} onChange={(e) => setFormData({ ...formData, scheduledDate: e.target.value })} className="bg-card" />
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <Label className="text-xs font-semibold text-muted-foreground">Hora Estimada</Label>
                       <div className="relative">
                         <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input type="time" className="pl-10 bg-card" />
+                        <Input type="time" value={formData.scheduledTime} onChange={(e) => setFormData({ ...formData, scheduledTime: e.target.value })} className="pl-10 bg-card" />
                       </div>
                     </div>
                   </div>
@@ -353,16 +416,17 @@ export function TopHeader() {
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <Label className="text-xs font-semibold text-muted-foreground">Tecnico Asignado</Label>
-                      <Select>
+                      <Select value={formData.technicianId} onValueChange={(v) => setFormData({ ...formData, technicianId: v })}>
                         <SelectTrigger className="bg-card">
                           <SelectValue placeholder="Auto-asignar..." />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="auto">Auto-asignar por proximidad</SelectItem>
-                          <SelectItem value="t1">Carlos Mendez</SelectItem>
-                          <SelectItem value="t2">Ana Garcia</SelectItem>
-                          <SelectItem value="t3">Roberto Lopez</SelectItem>
-                          <SelectItem value="t4">Maria Fernandez</SelectItem>
+                          <SelectItem value="">Auto-asignar por proximidad</SelectItem>
+                          {technicians.map(t => (
+                            <SelectItem key={t.id} value={t.id}>
+                              {t.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -373,6 +437,8 @@ export function TopHeader() {
                     <Label className="text-xs font-semibold text-muted-foreground">Descripcion del Problema</Label>
                     <Textarea
                       placeholder="Describe la situacion que reporta el cliente..."
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       rows={3}
                       className="bg-card resize-none"
                     />
@@ -385,6 +451,8 @@ export function TopHeader() {
                       <Wrench className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         placeholder="Ej: Minisplit Carrier 2 Ton, Caldera industrial..."
+                        value={formData.equipment}
+                        onChange={(e) => setFormData({ ...formData, equipment: e.target.value })}
                         className="pl-10 bg-card"
                       />
                     </div>
