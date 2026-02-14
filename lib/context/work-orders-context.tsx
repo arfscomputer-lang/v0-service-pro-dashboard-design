@@ -2,6 +2,11 @@
 
 import React, { createContext, useContext, useCallback, useState, useEffect } from 'react'
 
+// Helper to check fetch response
+const checkResponse = (res: Response): boolean => {
+  return res.ok
+}
+
 export interface WorkOrder {
   id: string
   orderId: string
@@ -35,7 +40,7 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
     const fetchWorkOrders = async () => {
       try {
         const response = await fetch('/api/work-orders')
-        if (!response.ok) throw new Error('Failed to fetch work orders')
+        if (!checkResponse(response)) throw new Error('Failed to fetch work orders')
         const json = await response.json()
         const list = json.data || json.workOrders || []
         setWorkOrders(Array.isArray(list) ? list : [])
@@ -68,7 +73,7 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
           }),
         })
 
-        if (!response.ok) throw new Error('Failed to create work order')
+        if (!checkResponse(response)) throw new Error('Failed to create work order')
         const result = await response.json()
         const newWorkOrder = result.data || result.workOrder
         setWorkOrders((prev) => [...prev, newWorkOrder])
@@ -103,7 +108,7 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
           body: JSON.stringify(payload),
         })
 
-        if (!response.ok) throw new Error('Failed to update work order')
+        if (!checkResponse(response)) throw new Error('Failed to update work order')
 
         setWorkOrders((prev) =>
           prev.map((wo) => (wo.id !== id ? wo : { ...wo, ...data }))
@@ -123,7 +128,7 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
           method: 'DELETE',
         })
 
-        if (!response.ok) throw new Error('Failed to delete work order')
+        if (!checkResponse(response)) throw new Error('Failed to delete work order')
 
         setWorkOrders((prev) => prev.filter((wo) => wo.id !== id))
       } catch (error) {
