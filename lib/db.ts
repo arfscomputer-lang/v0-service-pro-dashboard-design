@@ -54,7 +54,7 @@ export async function createUser(data: {
   const result = await query(
     `INSERT INTO users (email, password_hash, name, role, customer_id, status)
      VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-    [data.email, data.password_hash, data.name, data.role, data.customer_id || null, 'active']
+    [data.email, data.password_hash, data.name, data.role, data.customer_id || null, 'activo']
   )
   return result.rows[0]
 }

@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if user is active
-    if (user.status !== 'active') {
+    if (user.status !== 'activo') {
       return NextResponse.json(
         { error: 'User account is not active' },
         { status: 401 }
