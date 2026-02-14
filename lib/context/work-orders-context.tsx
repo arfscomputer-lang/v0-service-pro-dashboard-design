@@ -35,9 +35,7 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
     const fetchWorkOrders = async () => {
       try {
         const response = await fetch('/api/work-orders')
-        if (response.status < 200 || response.status >= 300) {
-          throw new Error('Failed to fetch work orders')
-        }
+        if (!response.ok) throw new Error('Failed to fetch work orders')
         const json = await response.json()
         const list = json.data || json.workOrders || []
         setWorkOrders(Array.isArray(list) ? list : [])
@@ -52,7 +50,7 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
   const addWorkOrder = useCallback(
     async (data: Omit<WorkOrder, 'id' | 'createdAt' | 'updatedAt'>) => {
       try {
-        const res = await fetch('/api/work-orders', {
+        const response = await fetch('/api/work-orders', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -70,9 +68,8 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
           }),
         })
 
-        const isOk = res.status < 200 || res.status >= 300
-        if (isOk) throw new Error('Failed to create work order')
-        const result = await res.json()
+        if (!response.ok) throw new Error('Failed to create work order')
+        const result = await response.json()
         const newWorkOrder = result.data || result.workOrder
         setWorkOrders((prev) => [...prev, newWorkOrder])
         return newWorkOrder
@@ -100,16 +97,13 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
         if (data.customerId !== undefined) payload.customer_id = data.customerId
         if (data.technicianId !== undefined) payload.technician_id = data.technicianId
 
-        const res = await fetch(`/api/work-orders/${id}`, {
+        const response = await fetch(`/api/work-orders/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         })
 
-        const isError = res.status < 200 || res.status >= 300
-        if (isError) {
-          throw new Error('Failed to update work order')
-        }
+        if (!response.ok) throw new Error('Failed to update work order')
 
         setWorkOrders((prev) =>
           prev.map((wo) => (wo.id !== id ? wo : { ...wo, ...data }))
@@ -125,8 +119,12 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
   const deleteWorkOrder = useCallback(
     async (id: string) => {
       try {
-        const response = await fetch(`/api/work-orders/${id}`, { method: 'DELETE' })
+        const response = await fetch(`/api/work-orders/${id}`, {
+          method: 'DELETE',
+        })
+
         if (!response.ok) throw new Error('Failed to delete work order')
+
         setWorkOrders((prev) => prev.filter((wo) => wo.id !== id))
       } catch (error) {
         console.error('[v0] Error deleting work order:', error)
@@ -137,7 +135,14 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
   )
 
   return (
-    <WorkOrdersContext.Provider value={{ workOrders, addWorkOrder, updateWorkOrder, deleteWorkOrder }}>
+    <WorkOrdersContext.Provider
+      value={{
+        workOrders,
+        addWorkOrder,
+        updateWorkOrder,
+        deleteWorkOrder,
+      }}
+    >
       {children}
     </WorkOrdersContext.Provider>
   )
@@ -145,6 +150,8 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
 
 export function useWorkOrders() {
   const context = useContext(WorkOrdersContext)
-  if (context === undefined) throw new Error('useWorkOrders must be used within WorkOrdersProvider')
+  if (!context) {
+    throw new Error('useWorkOrders must be used within WorkOrdersProvider')
+  }
   return context
 }
