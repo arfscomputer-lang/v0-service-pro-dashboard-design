@@ -39,7 +39,7 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     const fetchWorkOrders = async () => {
       try {
-        const response = await fetch('/api/work-orders')
+        const response: Response = await fetch('/api/work-orders')
         if (!checkResponse(response)) throw new Error('Failed to fetch work orders')
         const json = await response.json()
         const list = json.data || json.workOrders || []
@@ -55,7 +55,7 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
   const addWorkOrder = useCallback(
     async (data: Omit<WorkOrder, 'id' | 'createdAt' | 'updatedAt'>) => {
       try {
-        const response = await fetch('/api/work-orders', {
+        const response: Response = await fetch('/api/work-orders', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -102,7 +102,7 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
         if (data.customerId !== undefined) payload.customer_id = data.customerId
         if (data.technicianId !== undefined) payload.technician_id = data.technicianId
 
-        const response = await fetch(`/api/work-orders/${id}`, {
+        const response: Response = await fetch(`/api/work-orders/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -124,7 +124,7 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
   const deleteWorkOrder = useCallback(
     async (id: string) => {
       try {
-        const response = await fetch(`/api/work-orders/${id}`, {
+        const response: Response = await fetch(`/api/work-orders/${id}`, {
           method: 'DELETE',
         })
 
