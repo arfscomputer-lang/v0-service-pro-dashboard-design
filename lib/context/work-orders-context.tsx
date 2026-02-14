@@ -50,7 +50,7 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
   const addWorkOrder = useCallback(
     async (data: Omit<WorkOrder, 'id' | 'createdAt' | 'updatedAt'>) => {
       try {
-        const response = await fetch('/api/work-orders', {
+        const res = await fetch('/api/work-orders', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -68,8 +68,8 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
           }),
         })
 
-        if (!response.ok) throw new Error('Failed to create work order')
-        const result = await response.json()
+        if (!res.ok) throw new Error('Failed to create work order')
+        const result = await res.json()
         const newWorkOrder = result.data || result.workOrder
         setWorkOrders((prev) => [...prev, newWorkOrder])
         return newWorkOrder
