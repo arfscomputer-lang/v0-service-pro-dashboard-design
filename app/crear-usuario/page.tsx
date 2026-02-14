@@ -72,13 +72,16 @@ export default function CrearUsuarioPage() {
       })
 
       const data = await response.json()
+      console.log("[v0] Create user response:", { status: response.status, data })
 
       if (!response.ok) {
+        console.error("[v0] Create user error:", data)
         setError(data.error || "Error al crear el usuario")
         setIsLoading(false)
         return
       }
 
+      console.log("[v0] User created successfully:", data)
       setSuccess(true)
       setName("")
       setEmail("")
