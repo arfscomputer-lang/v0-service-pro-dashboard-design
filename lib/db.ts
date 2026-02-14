@@ -52,9 +52,9 @@ export async function createUser(data: {
   customer_id?: string
 }) {
   const result = await query(
-    `INSERT INTO users (email, password_hash, name, role, customer_id)
-     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-    [data.email, data.password_hash, data.name, data.role, data.customer_id || null]
+    `INSERT INTO users (email, password_hash, name, role, customer_id, status)
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+    [data.email, data.password_hash, data.name, data.role, data.customer_id || null, 'active']
   )
   return result.rows[0]
 }
