@@ -1,11 +1,17 @@
 "use client"
 
+import { useState, useCallback } from "react"
 import Link from "next/link"
 import { SidebarNav } from "@/components/dashboard/sidebar-nav"
 import { TopHeader } from "@/components/dashboard/top-header"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 import {
   ClipboardList,
   Plus,
@@ -15,36 +21,73 @@ import {
   Clock,
   MapPin,
   Wrench,
+  Edit2,
+  Trash2,
 } from "lucide-react"
-import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
-
-const orders = [
-  { id: "OT-1050", customer: "Maria Gonzalez", type: "Reparacion HVAC", address: "Av. Reforma 450, Col. Centro", status: "en_progreso", priority: "alta", date: "11 Feb 2026", time: "09:00" },
-  { id: "OT-1051", customer: "Fernando Lopez", type: "Inspeccion Gas", address: "Av. Universidad 1200", status: "pendiente", priority: "alta", date: "11 Feb 2026", time: "10:30" },
-  { id: "OT-1052", customer: "Patricia Herrera", type: "Reparacion Electrica", address: "Col. Roma Norte 78", status: "pendiente", priority: "media", date: "11 Feb 2026", time: "11:00" },
-  { id: "OT-1053", customer: "Laura Castillo", type: "Mantenimiento Plomeria", address: "Calle Juarez 340", status: "pendiente", priority: "media", date: "11 Feb 2026", time: "13:00" },
-  { id: "OT-1054", customer: "Diego Ramirez", type: "Instalacion Panel Solar", address: "Av. Chapultepec 560", status: "pendiente", priority: "baja", date: "12 Feb 2026", time: "08:00" },
-  { id: "OT-1055", customer: "Alejandra Ruiz", type: "Revision Caldera", address: "Blvd. Insurgentes 890", status: "en_progreso", priority: "alta", date: "11 Feb 2026", time: "14:00" },
-  { id: "OT-1056", customer: "Roberto Martinez", type: "Mantenimiento General", address: "Calle 5 de Mayo 220", status: "completada", priority: "baja", date: "10 Feb 2026", time: "09:00" },
-  { id: "OT-1042", customer: "Empresa Alfa", type: "Reparacion HVAC", address: "Blvd. Industrial 100", status: "completada", priority: "media", date: "10 Feb 2026", time: "08:00" },
-  { id: "OT-1043", customer: "Roberto Martinez", type: "Instalacion Electrica", address: "Calle 5 de Mayo 220", status: "completada", priority: "alta", date: "09 Feb 2026", time: "09:30" },
-]
+import { useWorkOrders, type WorkOrder } from "@/lib/context/work-orders-context"
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   pendiente: { label: "Pendiente", className: "bg-amber-100 text-amber-800 border-amber-200" },
-  en_progreso: { label: "En Progreso", className: "bg-blue-100 text-blue-800 border-blue-200" },
+  asignada: { label: "Asignada", className: "bg-blue-100 text-blue-800 border-blue-200" },
+  en_ruta: { label: "En Ruta", className: "bg-violet-100 text-violet-800 border-violet-200" },
+  en_sitio: { label: "En Sitio", className: "bg-indigo-100 text-indigo-800 border-indigo-200" },
   completada: { label: "Completada", className: "bg-emerald-100 text-emerald-800 border-emerald-200" },
   cancelada: { label: "Cancelada", className: "bg-red-100 text-red-800 border-red-200" },
 }
 
 const priorityConfig: Record<string, { label: string; dot: string }> = {
-  alta: { label: "Alta", dot: "bg-destructive" },
-  media: { label: "Media", dot: "bg-warning" },
-  baja: { label: "Baja", dot: "bg-muted-foreground" },
+  baja: { label: "Baja", dot: "bg-gray-400" },
+  normal: { label: "Normal", dot: "bg-blue-500" },
+  alta: { label: "Alta", dot: "bg-amber-500" },
+  urgente: { label: "Urgente", dot: "bg-destructive" },
 }
 
 export default function OrdenesPage() {
+  const { workOrders, updateWorkOrder, deleteWorkOrder } = useWorkOrders()
+  const [searchTerm, setSearchTerm] = useState("")
+  const [editingOrder, setEditingOrder] = useState<WorkOrder | null>(null)
+  const [editForm, setEditForm] = useState<Partial<WorkOrder>>({})
+
+  const filteredOrders = workOrders.filter(
+    (order) =>
+      order.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.description.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  const handleEditOpen = useCallback((order: WorkOrder) => {
+    setEditingOrder(order)
+    setEditForm(order)
+  }, [])
+
+  const handleSaveEdit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault()
+      if (!editingOrder) return
+      try {
+        await updateWorkOrder(editingOrder.id, editForm)
+        setEditingOrder(null)
+        setEditForm({})
+      } catch (error) {
+        console.error("[v0] Error saving work order:", error)
+      }
+    },
+    [editingOrder, editForm, updateWorkOrder]
+  )
+
+  const handleDelete = useCallback(
+    async (orderId: string) => {
+      if (!confirm("¿Estás seguro de que deseas eliminar esta orden?")) return
+      try {
+        await deleteWorkOrder(orderId)
+      } catch (error) {
+        console.error("[v0] Error deleting work order:", error)
+      }
+    },
+    [deleteWorkOrder]
+  )
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <SidebarNav />
@@ -59,78 +102,204 @@ export default function OrdenesPage() {
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
                 <ClipboardList className="h-5 w-5 text-primary" />
               </div>
-              <div>
-                <h1 className="text-xl font-bold text-foreground">Ordenes de Trabajo</h1>
-                <p className="text-sm text-muted-foreground">{orders.length} ordenes en total</p>
-              </div>
+              <h1 className="text-2xl font-bold text-foreground">Órdenes de Trabajo</h1>
             </div>
-            <Button size="sm" className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
+            <Button className="gap-2" size="sm">
               <Plus className="h-4 w-4" />
               Nueva Orden
             </Button>
           </div>
 
-          {/* Search and filters */}
-          <div className="flex items-center gap-3">
+          {/* Filters */}
+          <div className="flex gap-3">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input placeholder="Buscar por # de orden, cliente..." className="pl-10 bg-card border-border" />
+              <Input
+                placeholder="Buscar orden..."
+                className="pl-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
-            <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+            <Button variant="outline" size="sm" className="gap-2">
               <Filter className="h-4 w-4" />
-              Filtros
+              Filtrar
             </Button>
           </div>
 
-          {/* Orders list */}
-          <div className="flex-1 overflow-hidden rounded-xl border border-border bg-card">
-            <ScrollArea className="h-full">
-              <div className="divide-y divide-border">
-                {orders.map((order) => {
-                  const st = statusConfig[order.status]
-                  const pr = priorityConfig[order.priority]
-                  return (
-                    <Link
-                      key={order.id}
-                      href={`/orden/${order.id}`}
-                      className="flex items-center gap-4 px-5 py-4 hover:bg-secondary/40 transition-colors group"
-                    >
-                      {/* Priority dot */}
-                      <span className={cn("h-2.5 w-2.5 shrink-0 rounded-full", pr.dot)} title={`Prioridad ${pr.label}`} />
-
-                      {/* Order info */}
+          {/* Orders Table */}
+          <ScrollArea className="flex-1 rounded-lg border bg-card">
+            <div className="divide-y">
+              {filteredOrders.map((order) => {
+                const st = statusConfig[order.status] || statusConfig.pendiente
+                const pr = priorityConfig[order.priority] || priorityConfig.normal
+                return (
+                  <div
+                    key={order.id}
+                    className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex-1 flex items-center gap-4 min-w-0">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-sm font-bold font-mono text-primary">{order.id}</span>
-                          <span className="text-sm font-semibold text-foreground">{order.customer}</span>
-                          <Badge variant="outline" className={cn("text-[10px]", st.className)}>{st.label}</Badge>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-sm">{order.orderId}</span>
+                          <Badge variant="outline" className={cn("text-xs", st.className)}>
+                            {st.label}
+                          </Badge>
                         </div>
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Wrench className="h-3 w-3" />
-                            {order.type}
-                          </span>
-                          <span className="flex items-center gap-1">
+                        <p className="text-sm text-muted-foreground truncate">{order.type}</p>
+                        <div className="flex gap-3 mt-2 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-1">
                             <MapPin className="h-3 w-3" />
-                            <span className="truncate max-w-[200px]">{order.address}</span>
-                          </span>
-                          <span className="flex items-center gap-1">
+                            <span className="truncate">{order.address}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
-                            {order.date} - {order.time}
-                          </span>
+                            <span>{order.scheduledDate} {order.scheduledTime}</span>
+                          </div>
                         </div>
                       </div>
+                    </div>
 
-                      {/* Arrow */}
-                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </Link>
-                  )
-                })}
-              </div>
-            </ScrollArea>
-          </div>
+                    <div className="flex items-center gap-2 ml-4">
+                      <div className={cn("h-2 w-2 rounded-full", pr.dot)} title={pr.label} />
+                      <Link href={`/orden/${order.id}`}>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => handleEditOpen(order)}
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                        onClick={() => handleDelete(order.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )
+              })}
+              {filteredOrders.length === 0 && (
+                <div className="flex items-center justify-center h-40 text-muted-foreground">
+                  No hay órdenes disponibles
+                </div>
+              )}
+            </div>
+          </ScrollArea>
         </main>
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editingOrder} onOpenChange={(open) => !open && setEditingOrder(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Orden de Trabajo</DialogTitle>
+            <DialogDescription>Modifica los detalles de la orden</DialogDescription>
+          </DialogHeader>
+          {editingOrder && (
+            <form onSubmit={handleSaveEdit} className="space-y-4">
+              <div>
+                <Label htmlFor="orderId">Número de Orden</Label>
+                <Input
+                  id="orderId"
+                  value={editForm.orderId || ""}
+                  onChange={(e) => setEditForm({ ...editForm, orderId: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="type">Tipo de Servicio</Label>
+                <Input
+                  id="type"
+                  value={editForm.type || ""}
+                  onChange={(e) => setEditForm({ ...editForm, type: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="description">Descripción</Label>
+                <Textarea
+                  id="description"
+                  value={editForm.description || ""}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="status">Estado</Label>
+                  <Select value={editForm.status || ""} onValueChange={(v) => setEditForm({ ...editForm, status: v as any })}>
+                    <SelectTrigger id="status">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(statusConfig).map(([key, { label }]) => (
+                        <SelectItem key={key} value={key}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="priority">Prioridad</Label>
+                  <Select value={editForm.priority || ""} onValueChange={(v) => setEditForm({ ...editForm, priority: v as any })}>
+                    <SelectTrigger id="priority">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(priorityConfig).map(([key, { label }]) => (
+                        <SelectItem key={key} value={key}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="address">Dirección</Label>
+                <Input
+                  id="address"
+                  value={editForm.address || ""}
+                  onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="scheduledDate">Fecha</Label>
+                  <Input
+                    id="scheduledDate"
+                    type="date"
+                    value={editForm.scheduledDate || ""}
+                    onChange={(e) => setEditForm({ ...editForm, scheduledDate: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="scheduledTime">Hora</Label>
+                  <Input
+                    id="scheduledTime"
+                    type="time"
+                    value={editForm.scheduledTime || ""}
+                    onChange={(e) => setEditForm({ ...editForm, scheduledTime: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button type="button" variant="outline" onClick={() => setEditingOrder(null)}>
+                  Cancelar
+                </Button>
+                <Button type="submit">Guardar Cambios</Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

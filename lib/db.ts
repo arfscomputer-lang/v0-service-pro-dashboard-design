@@ -303,6 +303,83 @@ export async function listNotifications(user_id: string) {
   return getMany(`SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC`, [user_id])
 }
 
-export async function markNotificationAsRead(id: string) {
-  await query(`UPDATE notifications SET read = TRUE WHERE id = $1`, [id])
+// ============================================
+// WORK ORDERS
+// ============================================
+
+export async function listWorkOrders() {
+  const rows = await getMany<any>(`SELECT * FROM work_orders ORDER BY scheduled_date DESC, scheduled_time DESC`)
+  return rows.map(normalizeWorkOrder)
+}
+
+export async function getWorkOrderById(id: string) {
+  const row = await getOne<any>(`SELECT * FROM work_orders WHERE id = $1`, [id])
+  return row ? normalizeWorkOrder(row) : null
+}
+
+export async function createWorkOrder(data: {
+  order_id: string; type: string; description: string; status: string;
+  priority: string; address: string; city: string; scheduled_date: string;
+  scheduled_time: string; customer_id?: string; technician_id?: string;
+}) {
+  const result = await query(
+    `INSERT INTO work_orders (order_id, type, description, status, priority, address, city, scheduled_date, scheduled_time, customer_id, technician_id, created_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW()) RETURNING *`,
+    [data.order_id, data.type, data.description, data.status, data.priority, data.address, data.city, data.scheduled_date, data.scheduled_time, data.customer_id || null, data.technician_id || null]
+  )
+  return normalizeWorkOrder(result.rows[0])
+}
+
+export async function updateWorkOrder(id: string, data: Record<string, any>) {
+  const sets: string[] = []
+  const values: any[] = []
+  let idx = 1
+
+  const allowedFields: Record<string, string> = {
+    order_id: "order_id", type: "type", description: "description",
+    status: "status", priority: "priority", address: "address",
+    city: "city", scheduled_date: "scheduled_date", scheduled_time: "scheduled_time",
+    customer_id: "customer_id", technician_id: "technician_id",
+  }
+
+  for (const [key, col] of Object.entries(allowedFields)) {
+    if (data[key] !== undefined) {
+      sets.push(`${col} = $${idx}`)
+      values.push(data[key] || null)
+      idx++
+    }
+  }
+
+  if (sets.length === 0) return getWorkOrderById(id)
+
+  sets.push(`updated_at = NOW()`)
+  values.push(id)
+  const result = await query(
+    `UPDATE work_orders SET ${sets.join(", ")} WHERE id = $${idx} RETURNING *`,
+    values
+  )
+  return result.rows[0] ? normalizeWorkOrder(result.rows[0]) : null
+}
+
+export async function deleteWorkOrder(id: string) {
+  await query(`DELETE FROM work_orders WHERE id = $1`, [id])
+}
+
+function normalizeWorkOrder(row: any) {
+  return {
+    id: row.id,
+    orderId: row.order_id,
+    type: row.type || "",
+    description: row.description || "",
+    status: row.status || "pendiente",
+    priority: row.priority || "normal",
+    address: row.address || "",
+    city: row.city || "",
+    scheduledDate: row.scheduled_date ? String(row.scheduled_date).slice(0, 10) : "",
+    scheduledTime: row.scheduled_time || "09:00",
+    customerId: row.customer_id || null,
+    technicianId: row.technician_id || null,
+    createdAt: row.created_at || "",
+    updatedAt: row.updated_at || "",
+  }
 }

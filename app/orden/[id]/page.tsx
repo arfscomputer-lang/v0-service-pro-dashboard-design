@@ -1,6 +1,6 @@
 "use client"
 
-import { use, useState } from "react"
+import { use, useState, useMemo } from "react"
 import { SidebarNav } from "@/components/dashboard/sidebar-nav"
 import { OrderHeader } from "@/components/work-order/order-header"
 import { CustomerSidebar } from "@/components/work-order/customer-sidebar"
@@ -17,6 +17,7 @@ import {
   Camera,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useWorkOrders } from "@/lib/context/work-orders-context"
 
 const tabs = [
   { id: "detalles", label: "Detalles", icon: FileText },
@@ -57,16 +58,80 @@ export default function WorkOrderDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = use(params)
+  const { workOrders, updateWorkOrder } = useWorkOrders()
   const [activeTab, setActiveTab] = useState("detalles")
   const [editOpen, setEditOpen] = useState(false)
-  const [orderData, setOrderData] = useState<OrderFormData>(getInitialData)
 
-  const handleSave = (data: OrderFormData) => {
-    setOrderData(data)
+  const workOrder = useMemo(() => workOrders.find((wo) => wo.id === id), [workOrders, id])
+
+  const orderData: OrderFormData = workOrder
+    ? {
+        status: workOrder.status as any,
+        priority: workOrder.priority as any,
+        type: workOrder.type,
+        category: workOrder.type,
+        scheduledDate: workOrder.scheduledDate,
+        scheduledTime: workOrder.scheduledTime,
+        estimatedDuration: "2 horas",
+        slaDeadline: `${workOrder.scheduledDate} - 18:00`,
+        equipment: "Unidad Central HVAC",
+        serialNumber: "SN-887432-AC",
+        warranty: "Vigente hasta Mar 2027",
+        description: workOrder.description,
+        customerName: "Cliente",
+        customerCompany: "",
+        customerPhone: "",
+        customerEmail: "",
+        customerAddress: workOrder.address,
+        technicianName: "Sin asignar",
+        technicianRole: "Especialista",
+        technicianPhone: "",
+      }
+    : {
+        status: "pendiente",
+        priority: "normal",
+        type: "",
+        category: "",
+        scheduledDate: "",
+        scheduledTime: "",
+        estimatedDuration: "",
+        slaDeadline: "",
+        equipment: "",
+        serialNumber: "",
+        warranty: "",
+        description: "",
+        customerName: "",
+        customerCompany: "",
+        customerPhone: "",
+        customerEmail: "",
+        customerAddress: "",
+        technicianName: "",
+        technicianRole: "",
+        technicianPhone: "",
+      }
+
+  const handleSave = async (data: OrderFormData) => {
+    if (!workOrder) return
+    try {
+      await updateWorkOrder(workOrder.id, {
+        type: data.type,
+        description: data.description,
+        status: data.status,
+        priority: data.priority,
+      })
+      setEditOpen(false)
+    } catch (error) {
+      console.error("[v0] Error saving work order:", error)
+    }
   }
 
-  const handleStatusChange = (status: OrderFormData["status"]) => {
-    setOrderData((prev) => ({ ...prev, status }))
+  const handleStatusChange = async (status: OrderFormData["status"]) => {
+    if (!workOrder) return
+    try {
+      await updateWorkOrder(workOrder.id, { status })
+    } catch (error) {
+      console.error("[v0] Error updating status:", error)
+    }
   }
 
   return (
