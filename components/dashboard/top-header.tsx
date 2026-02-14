@@ -532,19 +532,6 @@ export function TopHeader() {
     </header>
   )
 }
-
-/* ─── Notifications data ─── */
-interface Notification {
-  id: string
-  type: "alerta" | "info" | "completado" | "asignacion"
-  title: string
-  body: string
-  time: string
-  read: boolean
-  href: string
-}
-
-const INITIAL_NOTIFICATIONS: Notification[] = [
   {
     id: "n1",
     type: "alerta",
