@@ -307,6 +307,30 @@ export async function listNotifications(user_id: string) {
 // WORK ORDERS
 // ============================================
 
+// ============================================
+// WORK ORDERS
+// ============================================
+
+/** Normalize a work order row from DB into the shape the frontend expects */
+function normalizeWorkOrder(row: any) {
+  return {
+    id: row.id || '',
+    orderId: row.order_id || '',
+    type: row.type || '',
+    description: row.description || '',
+    status: row.status || 'pendiente',
+    priority: row.priority || 'normal',
+    address: row.address || '',
+    city: row.city || '',
+    scheduledDate: row.scheduled_date ? String(row.scheduled_date).slice(0, 10) : '',
+    scheduledTime: row.scheduled_time || '',
+    customerId: row.customer_id || null,
+    technicianId: row.technician_id || null,
+    createdAt: row.created_at || '',
+    updatedAt: row.updated_at || '',
+  }
+}
+
 export async function listWorkOrders() {
   const rows = await getMany<any>(`SELECT * FROM work_orders ORDER BY scheduled_date DESC, scheduled_time DESC`)
   return rows.map(normalizeWorkOrder)

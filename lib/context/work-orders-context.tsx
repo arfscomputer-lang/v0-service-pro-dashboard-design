@@ -34,12 +34,16 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     const fetchWorkOrders = async () => {
       try {
+        console.log('[v0] Fetching work orders from API...')
         const res = await fetch('/api/work-orders')
+        console.log('[v0] API response status:', res.status)
         if (!res.ok) {
           throw new Error(`HTTP error! status: ${res.status}`)
         }
         const json = await res.json()
-        const list = json.data || json.workOrders || []
+        console.log('[v0] API response JSON:', json)
+        const list = json.data || json.workOrders || json || []
+        console.log('[v0] Parsed work orders list:', list)
         setWorkOrders(Array.isArray(list) ? list : [])
       } catch (error) {
         console.error('[v0] Error fetching work orders:', error)
