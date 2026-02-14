@@ -34,9 +34,10 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     const fetchWorkOrders = async () => {
       try {
-        const res = await fetch('/api/work-orders')
-        if (!res.ok) throw new Error('Failed to fetch work orders')
-        const json = await res.json()
+        const response = await fetch('/api/work-orders')
+        const isOk = response.status >= 200 && response.status < 300
+        if (!isOk) throw new Error('Failed to fetch work orders')
+        const json = await response.json()
         const list = json.data || json.workOrders || []
         setWorkOrders(Array.isArray(list) ? list : [])
       } catch (error) {
@@ -68,7 +69,8 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
           }),
         })
 
-        if (!res.ok) throw new Error('Failed to create work order')
+        const isOk = res.status >= 200 && res.status < 300
+        if (!isOk) throw new Error('Failed to create work order')
         const result = await res.json()
         const newWorkOrder = result.data || result.workOrder
         setWorkOrders((prev) => [...prev, newWorkOrder])
@@ -103,7 +105,8 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
           body: JSON.stringify(payload),
         })
 
-        if (!res.ok) {
+        const isOk = res.status >= 200 && res.status < 300
+        if (!isOk) {
           throw new Error('Failed to update work order')
         }
 
