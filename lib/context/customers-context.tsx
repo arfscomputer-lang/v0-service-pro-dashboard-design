@@ -38,6 +38,7 @@ function normalizeCustomer(c: any): Customer {
   return {
     ...c,
     tags: Array.isArray(c.tags) ? c.tags : [],
+    branches: Array.isArray(c.branches) ? c.branches : [],
     interactions: Array.isArray(c.interactions) ? c.interactions : [],
     services: Array.isArray(c.services) ? c.services : [],
     totalSpent: c.totalSpent ?? c.total_spent ?? 0,

@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useMemo, useCallback } from "react"
 import Link from "next/link"
 import { SidebarNav } from "@/components/dashboard/sidebar-nav"
@@ -430,29 +428,56 @@ export default function ClientesPage() {
                           <div className="bg-muted/50 border-b border-border p-6">
                             <h4 className="font-semibold mb-4 flex items-center gap-2">
                               <Briefcase className="h-4 w-4" />
-                              Sucursales ({c.city ? 1 : 0})
+                              Sede Principal y Sucursales ({1 + (c.branches?.length ?? 0)})
                             </h4>
                             <div className="space-y-4">
-                              <div className="border border-border rounded-lg p-4">
+                              {/* Main location */}
+                              <div className="border border-border rounded-lg p-4 bg-card">
                                 <div className="grid grid-cols-2 gap-4">
                                   <div>
-                                    <p className="text-xs text-muted-foreground">Dirección</p>
-                                    <p className="font-medium">{c.address}</p>
+                                    <p className="text-xs text-muted-foreground font-semibold">SEDE PRINCIPAL</p>
+                                    <p className="font-medium mt-1">{c.address}</p>
                                   </div>
                                   <div>
                                     <p className="text-xs text-muted-foreground">Ciudad</p>
                                     <p className="font-medium">{c.city}</p>
                                   </div>
-                                  <div>
-                                    <p className="text-xs text-muted-foreground">Contacto</p>
-                                    <p className="font-medium">{c.name}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs text-muted-foreground">Teléfono</p>
-                                    <p className="font-medium">{c.phone}</p>
+                                  <div className="col-span-2">
+                                    <p className="text-xs text-muted-foreground">Contacto Principal</p>
+                                    <p className="font-medium">{c.name} - {c.phone}</p>
                                   </div>
                                 </div>
                               </div>
+
+                              {/* Branches */}
+                              {(c.branches || []).map((branch) => (
+                                <div key={branch.id} className="border border-amber-200 rounded-lg p-4 bg-amber-50">
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                      <p className="text-xs text-muted-foreground font-semibold">SUCURSAL</p>
+                                      <p className="font-medium mt-1">{branch.address}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-xs text-muted-foreground">Ciudad</p>
+                                      <p className="font-medium">{branch.city} - {branch.zip}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-xs text-muted-foreground">Contacto</p>
+                                      <p className="font-medium">{branch.contactName}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-xs text-muted-foreground">Email/Teléfono</p>
+                                      <p className="text-sm">{branch.contactEmail} / {branch.phone}</p>
+                                    </div>
+                                    {branch.notes && (
+                                      <div className="col-span-2">
+                                        <p className="text-xs text-muted-foreground">Notas</p>
+                                        <p className="text-sm">{branch.notes}</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
                             </div>
                           </div>
                         )}
@@ -680,7 +705,7 @@ export default function ClientesPage() {
           <DialogHeader>
             <DialogTitle>Programar Servicio</DialogTitle>
             <DialogDescription>
-              {selectedForSchedule?.name}
+              Cliente: {selectedForSchedule?.name}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">

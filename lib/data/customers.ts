@@ -5,6 +5,17 @@ export type CustomerTag = "VIP" | "nuevo" | "frecuente" | "moroso" | "corporativ
 export type InteractionType = "llamada" | "email" | "visita" | "nota"
 export type InteractionDirection = "entrante" | "saliente"
 
+export interface Branch {
+  id: string
+  address: string
+  city: string
+  zip: string
+  contactName: string
+  contactEmail: string
+  phone: string
+  notes: string
+}
+
 export interface Interaction {
   id: string
   type: InteractionType
@@ -42,6 +53,7 @@ export interface Customer {
   createdAt: string // ISO
   interactions: Interaction[]
   services: ServiceRecord[]
+  branches: Branch[]
   totalSpent: number
   lifetimeValue: number
 }
@@ -67,6 +79,7 @@ export const customerSeed: Customer[] = [
     createdAt: "2021-03-15",
     totalSpent: 45_800,
     lifetimeValue: 68_500,
+    branches: [],
     interactions: [
       { id: "int-001", type: "llamada", direction: "entrante", date: "2026-02-10", summary: "Solicita revision de clima por ruido inusual en la unidad exterior.", agent: "Carlos Rodriguez" },
       { id: "int-002", type: "email", direction: "saliente", date: "2026-01-28", summary: "Recordatorio de mantenimiento preventivo programado para febrero.", agent: "Sistema" },
@@ -98,6 +111,11 @@ export const customerSeed: Customer[] = [
     createdAt: "2022-01-10",
     totalSpent: 234_600,
     lifetimeValue: 380_000,
+    branches: [
+      { id: "br-001", address: "Paseo de la Reforma 505, Piso 14", city: "CDMX", zip: "06500", contactName: "Ing. Roberto Salas", contactEmail: "rsalas@corpazteca.mx", phone: "+52 55 5678 1234", notes: "Edificio A - Sede Principal" },
+      { id: "br-002", address: "Av. Reforma 200, Piso 8", city: "CDMX", zip: "06500", contactName: "Lic. Maria Vega", contactEmail: "mvega@corpazteca.mx", phone: "+52 55 5678 5678", notes: "Edificio B" },
+      { id: "br-003", address: "Blvd. Periferico 1000", city: "CDMX", zip: "05100", contactName: "Arq. Carlos Lim", contactEmail: "clim@corpazteca.mx", phone: "+52 55 5678 9999", notes: "Edificio C" },
+    ],
     interactions: [
       { id: "int-005", type: "email", direction: "entrante", date: "2026-02-09", summary: "Solicitud de cotizacion para renovacion de sistema electrico piso 8.", agent: "Carlos Rodriguez" },
       { id: "int-006", type: "llamada", direction: "entrante", date: "2026-02-01", summary: "Reporte de falla en aire acondicionado central edificio B.", agent: "Ana Soporte" },
@@ -127,6 +145,7 @@ export const customerSeed: Customer[] = [
     createdAt: "2026-01-05",
     totalSpent: 6_200,
     lifetimeValue: 6_200,
+    branches: [],
     interactions: [
       { id: "int-008", type: "llamada", direction: "entrante", date: "2026-01-05", summary: "Solicita cotizacion de paneles solares para residencia.", agent: "Carlos Rodriguez" },
       { id: "int-009", type: "email", direction: "saliente", date: "2026-01-08", summary: "Envio de cotizacion detallada para sistema solar de 5kW.", agent: "Carlos Rodriguez" },
@@ -154,6 +173,7 @@ export const customerSeed: Customer[] = [
     createdAt: "2021-08-20",
     totalSpent: 189_400,
     lifetimeValue: 310_000,
+    branches: [],
     interactions: [
       { id: "int-010", type: "llamada", direction: "entrante", date: "2026-02-10", summary: "Urgente: fuga de agua en piso 3, 4 habitaciones afectadas.", agent: "Ana Soporte" },
       { id: "int-011", type: "visita", direction: "saliente", date: "2026-01-22", summary: "Mantenimiento mensual de plomeria general.", agent: "Pedro Sanchez" },
@@ -183,6 +203,7 @@ export const customerSeed: Customer[] = [
     createdAt: "2023-05-10",
     totalSpent: 28_300,
     lifetimeValue: 42_000,
+    branches: [],
     interactions: [
       { id: "int-013", type: "llamada", direction: "entrante", date: "2026-02-08", summary: "Queja por retraso en visita del 5 de febrero. Solicita compensacion.", agent: "Ana Soporte" },
       { id: "int-014", type: "nota", direction: "saliente", date: "2026-02-08", summary: "Se ofrecio descuento del 15% en proxima visita como compensacion.", agent: "Carlos Rodriguez" },
@@ -211,6 +232,7 @@ export const customerSeed: Customer[] = [
     createdAt: "2024-01-15",
     totalSpent: 95_600,
     lifetimeValue: 150_000,
+    branches: [],
     interactions: [
       { id: "int-016", type: "email", direction: "entrante", date: "2026-02-07", summary: "Solicitud de mantenimiento preventivo para edificio de cultura.", agent: "Carlos Rodriguez" },
       { id: "int-017", type: "llamada", direction: "saliente", date: "2026-01-20", summary: "Seguimiento de factura pendiente de diciembre.", agent: "Admin Facturacion" },
@@ -238,6 +260,7 @@ export const customerSeed: Customer[] = [
     createdAt: "2022-06-01",
     totalSpent: 67_200,
     lifetimeValue: 95_000,
+    branches: [],
     interactions: [
       { id: "int-018", type: "visita", direction: "saliente", date: "2026-02-03", summary: "Inspeccion mensual de lineas de gas. Todo en orden.", agent: "Sofia Morales" },
       { id: "int-019", type: "llamada", direction: "entrante", date: "2026-01-15", summary: "Solicita cambio de quemadores industriales.", agent: "Ana Soporte" },
@@ -265,6 +288,7 @@ export const customerSeed: Customer[] = [
     createdAt: "2024-09-01",
     totalSpent: 8_900,
     lifetimeValue: 8_900,
+    branches: [],
     interactions: [
       { id: "int-020", type: "llamada", direction: "saliente", date: "2026-02-06", summary: "Tercer intento de cobro. No contesta. Se dejara mensaje.", agent: "Admin Facturacion" },
       { id: "int-021", type: "email", direction: "saliente", date: "2026-01-30", summary: "Recordatorio de pago pendiente - Factura #F-2025-4521.", agent: "Sistema" },
@@ -293,6 +317,7 @@ export const customerSeed: Customer[] = [
     createdAt: "2022-11-01",
     totalSpent: 156_800,
     lifetimeValue: 250_000,
+    branches: [],
     interactions: [
       { id: "int-023", type: "email", direction: "entrante", date: "2026-02-09", summary: "Solicita presupuesto para cambio de sistema hidraulico completo.", agent: "Carlos Rodriguez" },
       { id: "int-024", type: "visita", direction: "saliente", date: "2026-01-28", summary: "Revision trimestral de instalaciones electricas areas comunes.", agent: "Ana Torres" },
@@ -320,6 +345,7 @@ export const customerSeed: Customer[] = [
     createdAt: "2026-02-01",
     totalSpent: 0,
     lifetimeValue: 0,
+    branches: [],
     interactions: [
       { id: "int-025", type: "llamada", direction: "entrante", date: "2026-02-01", summary: "Solicita servicio de revision electrica general. Referido por cli-001.", agent: "Ana Soporte" },
     ],
