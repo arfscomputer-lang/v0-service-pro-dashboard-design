@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -46,6 +46,7 @@ function getEmpty(): Omit<Customer, "id" | "initials"> {
     createdAt: new Date().toISOString().slice(0, 10),
     interactions: [],
     services: [],
+    branches: [],
     totalSpent: 0,
     lifetimeValue: 0,
   }
@@ -93,6 +94,9 @@ export function CustomerFormDialog({ open, onClose, onSave, initialData }: Props
           <DialogTitle className="text-lg font-bold text-foreground">
             {isEdit ? "Editar Cliente" : "Nuevo Cliente"}
           </DialogTitle>
+          <DialogDescription>
+            {isEdit ? "Modifica la información del cliente" : "Registra un nuevo cliente en el sistema"}
+          </DialogDescription>
         </DialogHeader>
 
         <ScrollArea className="max-h-[60vh]">
@@ -181,7 +185,7 @@ export function CustomerFormDialog({ open, onClose, onSave, initialData }: Props
                 type="number"
                 min={0}
                 max={10}
-                value={form.nps ?? ""}
+                value={form.nps !== null && form.nps !== undefined ? form.nps : ""}
                 onChange={(e) => set("nps", e.target.value === "" ? null : Number(e.target.value))}
                 placeholder="Ej: 8"
                 className="max-w-[120px]"

@@ -3,7 +3,7 @@
 import React from "react"
 
 import { useState, useEffect } from "react"
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -71,14 +71,19 @@ export function ItemFormDialog({ open, onClose, onSave, initialData }: Props) {
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-lg p-0 gap-0 overflow-hidden">
-        <DialogTitle className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-border">
-          <span className="text-base font-semibold text-foreground">
-            {initialData ? "Editar Articulo" : "Nuevo Articulo"}
-          </span>
+        <DialogHeader className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-border">
+          <div>
+            <DialogTitle className="text-base font-semibold text-foreground">
+              {initialData ? "Editar Articulo" : "Nuevo Articulo"}
+            </DialogTitle>
+            <DialogDescription>
+              {initialData ? "Modifica la información del artículo" : "Agrega un nuevo artículo al inventario"}
+            </DialogDescription>
+          </div>
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
-        </DialogTitle>
+        </DialogHeader>
 
         <ScrollArea className="max-h-[70vh]">
           <form className="flex flex-col gap-5 p-6" onSubmit={handleSubmit}>

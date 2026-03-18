@@ -38,9 +38,9 @@ export function TopHeader() {
     description: "",
   })
 
-  const availableLocations = useMemo(() => {
-    if (!formData.customerId) return []
-    const customer = customers.find((c) => c.id === formData.customerId)
+  // Get available locations for a customer (with valid addresses)
+  const getLocationsByCustomerId = (customerId: string) => {
+    const customer = customers.find((c) => c.id === customerId)
     if (!customer) return []
 
     const locations = []
@@ -68,6 +68,10 @@ export function TopHeader() {
     }
 
     return locations
+  }
+
+  const availableLocations = useMemo(() => {
+    return getLocationsByCustomerId(formData.customerId)
   }, [formData.customerId, customers])
 
   const handleCustomerChange = (customerId: string) => {
@@ -200,13 +204,24 @@ export function TopHeader() {
                     <SelectValue placeholder="Selecciona un cliente" />
                   </SelectTrigger>
                   <SelectContent>
-                    {customers.map((customer) => (
-                      <SelectItem key={customer.id} value={customer.id}>
-                        {customer.name}
-                      </SelectItem>
-                    ))}
+                    {customers
+                      .filter((customer) => {
+                        // Only show customers that have at least one location with valid address
+                        const locations = getLocationsByCustomerId(customer.id)
+                        return locations.length > 0
+                      })
+                      .map((customer) => (
+                        <SelectItem key={customer.id} value={customer.id}>
+                          {customer.name}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
+                {customers.filter((c) => getLocationsByCustomerId(c.id).length === 0).length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {customers.filter((c) => getLocationsByCustomerId(c.id).length === 0).length} cliente(s) sin dirección registrada
+                  </p>
+                )}
               </div>
 
               {formData.customerId && availableLocations.length === 0 && (
