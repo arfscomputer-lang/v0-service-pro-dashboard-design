@@ -56,6 +56,13 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
   const addWorkOrder = useCallback(
     async (data: Omit<WorkOrder, 'id' | 'createdAt' | 'updatedAt'>) => {
       try {
+        // Validation: ensure address and city are not empty
+        if (!data.address?.trim() || !data.city?.trim()) {
+          const error = new Error('La dirección y ciudad son obligatorias para crear una orden')
+          console.error('[v0] Validation failed in addWorkOrder:', error.message)
+          throw error
+        }
+        
         const res = await fetch('/api/work-orders', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -65,8 +72,8 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
             description: data.description,
             status: data.status,
             priority: data.priority,
-            address: data.address,
-            city: data.city,
+            address: data.address.trim(),
+            city: data.city.trim(),
             scheduled_date: data.scheduledDate,
             scheduled_time: data.scheduledTime,
             customer_id: data.customerId,

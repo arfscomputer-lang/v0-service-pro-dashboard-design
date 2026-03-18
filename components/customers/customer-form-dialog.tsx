@@ -140,11 +140,11 @@ export function CustomerFormDialog({ open, onClose, onSave, initialData }: Props
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="email" className="text-xs font-medium text-muted-foreground">Correo Electrónico *</Label>
-                  <Input id="email" type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="correo@ejemplo.com" />
+                  <Input id="email" type="email" value={form.email || ""} onChange={(e) => set("email", e.target.value)} placeholder="correo@ejemplo.com" />
                 </div>
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="phone" className="text-xs font-medium text-muted-foreground">Teléfono</Label>
-                  <Input id="phone" value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="+52 55 0000 0000" />
+                  <Input id="phone" value={form.phone || ""} onChange={(e) => set("phone", e.target.value)} placeholder="+52 55 0000 0000" />
                 </div>
               </div>
 

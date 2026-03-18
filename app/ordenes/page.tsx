@@ -95,13 +95,34 @@ export default function OrdenesPage() {
   const handleCreateSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault()
+      
+      // Validation: ensure required fields are present and not empty
+      if (!createForm.type?.trim()) {
+        console.error('[v0] Validation failed: type is required')
+        alert('Por favor completa el tipo de servicio')
+        return
+      }
+      
+      if (!createForm.address?.trim()) {
+        console.error('[v0] Validation failed: address is required')
+        alert('Por favor completa la dirección')
+        return
+      }
+      
+      if (!createForm.city?.trim()) {
+        console.error('[v0] Validation failed: city is required')
+        alert('Por favor completa la ciudad')
+        return
+      }
+      
       try {
-        console.log('[v0] Creating work order with data:', JSON.stringify(createForm))
+        console.log('[v0] Creating work order with validated data:', JSON.stringify(createForm))
         await addWorkOrder(createForm)
         console.log('[v0] Work order added to context successfully')
         handleCreateClose()
       } catch (error) {
         console.error('[v0] Error creating work order:', error)
+        alert('Error al crear la orden: ' + (error instanceof Error ? error.message : 'Error desconocido'))
       }
     },
     [createForm, addWorkOrder, handleCreateClose]

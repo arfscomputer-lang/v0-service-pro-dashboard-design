@@ -85,14 +85,10 @@ export function TopHeader() {
     }
 
     const selectedLocation = availableLocations.find((l) => l.id === formData.locationId)
-    if (!selectedLocation) {
-      setError("Sede inválida")
-      return
-    }
-
-    // Validate address and city are not null
-    if (!selectedLocation.address || !selectedLocation.city) {
-      setError("La sede seleccionada no tiene dirección o ciudad válida")
+    
+    // Extra validation to ensure address and city are not null
+    if (!selectedLocation || !selectedLocation.address?.trim() || !selectedLocation.city?.trim()) {
+      setError("Sede seleccionada no tiene dirección válida. Contacte al administrador.")
       return
     }
 
@@ -107,8 +103,8 @@ export function TopHeader() {
         description: formData.description || "",
         status: "pendiente",
         priority: formData.priority === "media" ? "normal" : formData.priority,
-        address: selectedLocation.address,
-        city: selectedLocation.city,
+        address: selectedLocation.address.trim(),
+        city: selectedLocation.city.trim(),
         scheduled_date: new Date().toISOString().split('T')[0],
         scheduled_time: "09:00",
         customer_id: formData.customerId,
