@@ -94,23 +94,31 @@ export function TopHeader() {
         }),
       })
 
-      if (response.ok) {
-        setSuccess("Orden creada exitosamente")
-        setFormData({
-          customerId: "",
-          locationId: "",
-          type: "",
-          priority: "media",
-          description: "",
-        })
-        setTimeout(() => {
-          setOrderDialogOpen(false)
-          setSuccess("")
-        }, 2000)
-      } else {
-        const data = await response.json()
-        setError(data.error || "Error al crear la orden")
+      if (!response.ok) {
+        const contentType = response.headers.get("content-type")
+        if (contentType?.includes("application/json")) {
+          const data = await response.json()
+          setError(data.error || "Error al crear la orden")
+        } else {
+          setError(`Error: ${response.status} ${response.statusText}`)
+        }
+        setIsSubmitting(false)
+        return
       }
+
+      const data = await response.json()
+      setSuccess("Orden creada exitosamente")
+      setFormData({
+        customerId: "",
+        locationId: "",
+        type: "",
+        priority: "media",
+        description: "",
+      })
+      setTimeout(() => {
+        setOrderDialogOpen(false)
+        setSuccess("")
+      }, 2000)
     } catch (err) {
       console.error("[v0] Error creating order:", err)
       setError("Error de conexión. Intente nuevamente.")
