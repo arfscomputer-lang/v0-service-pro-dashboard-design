@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useCustomers } from "@/lib/context/customers-context"
+import { useWorkOrders } from "@/lib/context/work-orders-context"
 import {
   Dialog,
   DialogContent,
@@ -24,25 +25,25 @@ import {
 
 export function TopHeader() {
   const { customers } = useCustomers()
+  const { addWorkOrder } = useWorkOrders()
   const [orderDialogOpen, setOrderDialogOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [formData, setFormData] = useState({
     customerId: "",
-    locationId: "", // "main" or branch ID
+    locationId: "",
     type: "",
     priority: "media",
     description: "",
   })
 
-  // Get available locations (main address + branches) for selected customer
   const availableLocations = useMemo(() => {
     if (!formData.customerId) return []
     const customer = customers.find((c) => c.id === formData.customerId)
     if (!customer) return []
 
-    const locations = [
+    return [
       { id: "main", label: `${customer.name} (Sede Principal)`, address: customer.address, city: customer.city },
       ...(customer.branches || []).map((br) => ({
         id: br.id,
@@ -51,16 +52,10 @@ export function TopHeader() {
         city: br.city,
       })),
     ]
-    return locations
   }, [formData.customerId, customers])
 
-  // Reset location when customer changes
   const handleCustomerChange = (customerId: string) => {
-    setFormData({
-      ...formData,
-      customerId,
-      locationId: "",
-    })
+    setFormData({ ...formData, customerId, locationId: "" })
   }
 
   const handleCreateOrder = async () => {
@@ -95,26 +90,45 @@ export function TopHeader() {
       })
 
       if (!response.ok) {
-        const contentType = response.headers.get("content-type")
-        if (contentType?.includes("application/json")) {
-          const data = await response.json()
-          setError(data.error || "Error al crear la orden")
-        } else {
-          setError(`Error: ${response.status} ${response.statusText}`)
-        }
+        setError(`Error: ${response.status} ${response.statusText}`)
         setIsSubmitting(false)
         return
       }
 
       const data = await response.json()
+      console.log("[v0] Order created from API:", data)
+
+      if (data.data) {
+        const priorityMap: Record<string, 'baja' | 'normal' | 'alta' | 'urgente'> = {
+          'baja': 'baja',
+          'media': 'normal',
+          'alta': 'alta',
+          'urgente': 'urgente'
+        }
+        const mappedPriority = priorityMap[formData.priority] || 'normal'
+        
+        try {
+          await addWorkOrder({
+            orderId: data.data.id,
+            type: formData.type,
+            description: formData.description,
+            status: "pendiente",
+            priority: mappedPriority,
+            address: selectedLocation.address,
+            city: selectedLocation.city,
+            scheduledDate: new Date().toISOString().split('T')[0],
+            scheduledTime: "09:00",
+            customerId: formData.customerId,
+            technicianId: null,
+          })
+          console.log("[v0] Order added to work orders context")
+        } catch (contextError) {
+          console.error("[v0] Error adding to context (will continue):", contextError)
+        }
+      }
+
       setSuccess("Orden creada exitosamente")
-      setFormData({
-        customerId: "",
-        locationId: "",
-        type: "",
-        priority: "media",
-        description: "",
-      })
+      setFormData({ customerId: "", locationId: "", type: "", priority: "media", description: "" })
       setTimeout(() => {
         setOrderDialogOpen(false)
         setSuccess("")
@@ -129,7 +143,6 @@ export function TopHeader() {
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6">
-      {/* Search */}
       <div className="flex-1 max-w-md">
         <div className="relative flex items-center rounded-md border border-border bg-secondary px-3 py-2">
           <Search className="h-4 w-4 mr-3 text-muted-foreground" />
@@ -141,15 +154,12 @@ export function TopHeader() {
         </div>
       </div>
 
-      {/* Actions */}
       <div className="flex items-center gap-3 ml-6">
-        {/* Live indicator */}
         <div className="hidden md:flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 border border-emerald-200">
           <Radio className="h-3 w-3 text-emerald-600 animate-pulse" />
           <span className="text-[11px] font-medium text-emerald-700">En Vivo</span>
         </div>
 
-        {/* Nueva Orden Dialog */}
         <Dialog open={orderDialogOpen} onOpenChange={setOrderDialogOpen}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-2">
@@ -160,9 +170,7 @@ export function TopHeader() {
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>Crear Nueva Orden de Trabajo</DialogTitle>
-              <DialogDescription>
-                Selecciona cliente, sede y completa los datos para crear una nueva orden.
-              </DialogDescription>
+              <DialogDescription>Selecciona cliente, sede y completa los datos para crear una nueva orden.</DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4">
@@ -260,19 +268,10 @@ export function TopHeader() {
               )}
 
               <div className="flex gap-3 pt-4">
-                <Button
-                  onClick={handleCreateOrder}
-                  disabled={isSubmitting}
-                  className="flex-1"
-                >
+                <Button onClick={handleCreateOrder} disabled={isSubmitting} className="flex-1">
                   {isSubmitting ? "Creando..." : "Crear Orden"}
                 </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setOrderDialogOpen(false)}
-                  disabled={isSubmitting}
-                  className="flex-1"
-                >
+                <Button variant="outline" onClick={() => setOrderDialogOpen(false)} disabled={isSubmitting} className="flex-1">
                   Cancelar
                 </Button>
               </div>
@@ -280,12 +279,10 @@ export function TopHeader() {
           </DialogContent>
         </Dialog>
 
-        {/* Notifications */}
         <Button variant="ghost" size="icon">
           <Bell className="h-5 w-5" />
         </Button>
 
-        {/* Help */}
         <Button variant="ghost" size="icon">
           <HelpCircle className="h-5 w-5" />
         </Button>

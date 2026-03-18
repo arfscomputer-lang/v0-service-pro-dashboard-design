@@ -32,6 +32,7 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   asignada: { label: "Asignada", className: "bg-blue-100 text-blue-800 border-blue-200" },
   en_ruta: { label: "En Ruta", className: "bg-violet-100 text-violet-800 border-violet-200" },
   en_sitio: { label: "En Sitio", className: "bg-indigo-100 text-indigo-800 border-indigo-200" },
+  en_proceso: { label: "En Proceso", className: "bg-indigo-100 text-indigo-800 border-indigo-200" },
   completada: { label: "Completada", className: "bg-emerald-100 text-emerald-800 border-emerald-200" },
   cancelada: { label: "Cancelada", className: "bg-red-100 text-red-800 border-red-200" },
 }
@@ -97,6 +98,7 @@ export default function OrdenesPage() {
       try {
         console.log('[v0] Creating work order with data:', JSON.stringify(createForm))
         await addWorkOrder(createForm)
+        console.log('[v0] Work order added to context successfully')
         handleCreateClose()
       } catch (error) {
         console.error('[v0] Error creating work order:', error)
