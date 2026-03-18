@@ -51,6 +51,7 @@ export default function LoginPage() {
                 src="/images/all-services-logo.png"
                 alt="All Services Logo"
                 fill
+                sizes="80px"
                 className="object-contain"
               />
             </div>
@@ -77,6 +78,7 @@ export default function LoginPage() {
                   src="/images/all-services-logo.png"
                   alt="All Services Logo"
                   fill
+                  sizes="56px"
                   className="object-contain"
                 />
               </div>
