@@ -43,15 +43,31 @@ export function TopHeader() {
     const customer = customers.find((c) => c.id === formData.customerId)
     if (!customer) return []
 
-    return [
-      { id: "main", label: `${customer.name} (Sede Principal)`, address: customer.address, city: customer.city },
-      ...(customer.branches || []).map((br) => ({
-        id: br.id,
-        label: `${br.address}, ${br.city}`,
-        address: br.address,
-        city: br.city,
-      })),
-    ]
+    const locations = []
+    // Only add main location if it has a valid address
+    if (customer.address && customer.city) {
+      locations.push({
+        id: "main",
+        label: `${customer.name} (Sede Principal)`,
+        address: customer.address,
+        city: customer.city,
+      })
+    }
+    // Only add branches with valid addresses
+    if (customer.branches) {
+      customer.branches.forEach((br) => {
+        if (br.address && br.city) {
+          locations.push({
+            id: br.id,
+            label: `${br.address}, ${br.city}`,
+            address: br.address,
+            city: br.city,
+          })
+        }
+      })
+    }
+
+    return locations
   }, [formData.customerId, customers])
 
   const handleCustomerChange = (customerId: string) => {
@@ -70,65 +86,68 @@ export function TopHeader() {
       return
     }
 
+    // Validate address and city are not null
+    if (!selectedLocation.address || !selectedLocation.city) {
+      setError("La sede seleccionada no tiene dirección o ciudad válida")
+      return
+    }
+
     setIsSubmitting(true)
     setError("")
     setSuccess("")
 
     try {
-      const response = await fetch("/api/work-orders/create", {
+      const orderData = {
+        order_id: `OT-${Date.now()}`,
+        type: formData.type,
+        description: formData.description || "",
+        status: "pendiente",
+        priority: formData.priority === "media" ? "normal" : formData.priority,
+        address: selectedLocation.address,
+        city: selectedLocation.city,
+        scheduled_date: new Date().toISOString().split('T')[0],
+        scheduled_time: "09:00",
+        customer_id: formData.customerId,
+        technician_id: null,
+      }
+
+      console.log("[v0] Sending order data to API:", orderData)
+
+      const response = await fetch("/api/work-orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customerId: formData.customerId,
-          locationId: formData.locationId,
-          address: selectedLocation.address,
-          city: selectedLocation.city,
-          type: formData.type,
-          priority: formData.priority,
-          description: formData.description,
-        }),
+        body: JSON.stringify(orderData),
       })
 
       if (!response.ok) {
-        setError(`Error: ${response.status} ${response.statusText}`)
+        const text = await response.text()
+        console.error("[v0] API Response (status:", response.status, "):", text)
+        
+        let errorMsg = `Error: ${response.status}`
+        if (response.headers.get("content-type")?.includes("application/json")) {
+          try {
+            const data = JSON.parse(text)
+            errorMsg = data.error || errorMsg
+          } catch (e) {
+            // Failed to parse JSON, use generic error
+          }
+        }
+        setError(errorMsg)
         setIsSubmitting(false)
         return
       }
 
       const data = await response.json()
-      console.log("[v0] Order created from API:", data)
-
-      if (data.data) {
-        const priorityMap: Record<string, 'baja' | 'normal' | 'alta' | 'urgente'> = {
-          'baja': 'baja',
-          'media': 'normal',
-          'alta': 'alta',
-          'urgente': 'urgente'
-        }
-        const mappedPriority = priorityMap[formData.priority] || 'normal'
-        
-        try {
-          await addWorkOrder({
-            orderId: data.data.id,
-            type: formData.type,
-            description: formData.description,
-            status: "pendiente",
-            priority: mappedPriority,
-            address: selectedLocation.address,
-            city: selectedLocation.city,
-            scheduledDate: new Date().toISOString().split('T')[0],
-            scheduledTime: "09:00",
-            customerId: formData.customerId,
-            technicianId: null,
-          })
-          console.log("[v0] Order added to work orders context")
-        } catch (contextError) {
-          console.error("[v0] Error adding to context (will continue):", contextError)
-        }
-      }
+      console.log("[v0] Order created successfully:", data)
 
       setSuccess("Orden creada exitosamente")
-      setFormData({ customerId: "", locationId: "", type: "", priority: "media", description: "" })
+      setFormData({
+        customerId: "",
+        locationId: "",
+        type: "",
+        priority: "media",
+        description: "",
+      })
       setTimeout(() => {
         setOrderDialogOpen(false)
         setSuccess("")
@@ -190,7 +209,14 @@ export function TopHeader() {
                 </Select>
               </div>
 
-              {formData.customerId && (
+              {formData.customerId && availableLocations.length === 0 && (
+                <div className="flex items-center gap-2 p-3 text-sm text-amber-600 bg-amber-50 rounded-lg border border-amber-200">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <span>Este cliente no tiene sedes con dirección registrada</span>
+                </div>
+              )}
+
+              {formData.customerId && availableLocations.length > 0 && (
                 <div className="space-y-2">
                   <Label htmlFor="location">Sede / Sucursal *</Label>
                   <Select value={formData.locationId} onValueChange={(value) => setFormData({ ...formData, locationId: value })} disabled={isSubmitting}>
