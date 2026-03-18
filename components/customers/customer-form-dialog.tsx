@@ -121,11 +121,11 @@ export function CustomerFormDialog({ open, onClose, onSave, initialData }: Props
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="name" className="text-xs font-medium text-muted-foreground">Nombre / Razón Social *</Label>
-                  <Input id="name" value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="Nombre completo o empresa" />
+                  <Input id="name" value={form.name || ""} onChange={(e) => set("name", e.target.value)} placeholder="Nombre completo o empresa" />
                 </div>
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="type" className="text-xs font-medium text-muted-foreground">Tipo de Cliente</Label>
-                  <Select value={form.type} onValueChange={(v) => set("type", v as CustomerType)}>
+                  <Select value={form.type || "residencial"} onValueChange={(v) => set("type", v as CustomerType)}>
                     <SelectTrigger id="type"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {customerTypes.map((t) => (
@@ -152,11 +152,11 @@ export function CustomerFormDialog({ open, onClose, onSave, initialData }: Props
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div className="flex flex-col gap-2 sm:col-span-2">
                   <Label htmlFor="address" className="text-xs font-medium text-muted-foreground">Dirección</Label>
-                  <Input id="address" value={form.address} onChange={(e) => set("address", e.target.value)} placeholder="Calle, número, colonia" />
+                  <Input id="address" value={form.address || ""} onChange={(e) => set("address", e.target.value)} placeholder="Calle, número, colonia" />
                 </div>
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="city" className="text-xs font-medium text-muted-foreground">Ciudad</Label>
-                  <Input id="city" value={form.city} onChange={(e) => set("city", e.target.value)} placeholder="CDMX" />
+                  <Input id="city" value={form.city || ""} onChange={(e) => set("city", e.target.value)} placeholder="CDMX" />
                 </div>
               </div>
 
@@ -166,7 +166,7 @@ export function CustomerFormDialog({ open, onClose, onSave, initialData }: Props
               {/* Schedule */}
               <div className="flex flex-col gap-2">
                 <Label htmlFor="schedule" className="text-xs font-medium text-muted-foreground">Horario Preferido de Atención</Label>
-                <Input id="schedule" value={form.preferredSchedule} onChange={(e) => set("preferredSchedule", e.target.value)} placeholder="Ej: Lunes a Viernes, 9:00-14:00" />
+                <Input id="schedule" value={form.preferredSchedule || ""} onChange={(e) => set("preferredSchedule", e.target.value)} placeholder="Ej: Lunes a Viernes, 9:00-14:00" />
               </div>
             </div>
 

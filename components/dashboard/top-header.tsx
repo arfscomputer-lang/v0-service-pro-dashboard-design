@@ -85,6 +85,91 @@ export function TopHeader() {
     }
 
     const selectedLocation = availableLocations.find((l) => l.id === formData.locationId)
+    if (!selectedLocation) {
+      setError("Sede inválida")
+      return
+    }
+
+    // Extra strict validation for address and city - must exist and not be empty
+    if (!selectedLocation.address?.trim()) {
+      setError("La sede seleccionada no tiene dirección válida. Contacte al administrador.")
+      return
+    }
+
+    if (!selectedLocation.city?.trim()) {
+      setError("La sede seleccionada no tiene ciudad válida. Contacte al administrador.")
+      return
+    }
+
+    setIsSubmitting(true)
+    setError("")
+    setSuccess("")
+
+    try {
+      const orderData = {
+        order_id: `OT-${Date.now()}`,
+        type: formData.type.trim(),
+        description: (formData.description || "").trim(),
+        status: "pendiente",
+        priority: formData.priority === "media" ? "normal" : formData.priority,
+        address: selectedLocation.address.trim(),
+        city: selectedLocation.city.trim(),
+        scheduled_date: new Date().toISOString().split('T')[0],
+        scheduled_time: "09:00",
+        customer_id: formData.customerId,
+        technician_id: null,
+      }
+
+      console.log("[v0] Sending order data to API:", JSON.stringify(orderData))
+
+      const response = await fetch("/api/work-orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(orderData),
+      })
+
+      if (!response.ok) {
+        const text = await response.text()
+        console.error("[v0] API Response (status:", response.status, "):", text)
+        
+        let errorMsg = `Error: ${response.status}`
+        if (response.headers.get("content-type")?.includes("application/json")) {
+          try {
+            const data = JSON.parse(text)
+            errorMsg = data.error || errorMsg
+          } catch (e) {
+            // Failed to parse JSON, use generic error
+          }
+        }
+        setError(errorMsg)
+        setIsSubmitting(false)
+        return
+      }
+
+      const data = await response.json()
+      console.log("[v0] Order created successfully:", data)
+
+      setSuccess("Orden creada exitosamente")
+      setFormData({
+        customerId: "",
+        locationId: "",
+        type: "",
+        priority: "media",
+        description: "",
+      })
+      setTimeout(() => {
+        setOrderDialogOpen(false)
+        setSuccess("")
+      }, 2000)
+    } catch (err) {
+      console.error("[v0] Error creating order:", err)
+      setError("Error de conexión. Intente nuevamente.")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+    const selectedLocation = availableLocations.find((l) => l.id === formData.locationId)
     
     // Extra validation to ensure address and city are not null
     if (!selectedLocation || !selectedLocation.address?.trim() || !selectedLocation.city?.trim()) {
