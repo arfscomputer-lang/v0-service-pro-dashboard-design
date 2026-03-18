@@ -1,10 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import { Search, Bell, HelpCircle, Plus, Radio, AlertCircle, CheckCircle2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { useState, useMemo, useCallback } from "react"
 import { useCustomers } from "@/lib/context/customers-context"
 import { useWorkOrders } from "@/lib/context/work-orders-context"
 import {
@@ -15,13 +11,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
+import { Search, Plus, Bell, HelpCircle, AlertCircle, CheckCircle2, Radio } from "lucide-react"
 
 export function TopHeader() {
   const { customers } = useCustomers()
@@ -74,9 +69,16 @@ export function TopHeader() {
     return getLocationsByCustomerId(formData.customerId)
   }, [formData.customerId, customers])
 
-  const handleCustomerChange = (customerId: string) => {
-    setFormData({ ...formData, customerId, locationId: "" })
-  }
+  const handleCustomerChange = useCallback(
+    (customerId: string) => {
+      setFormData((prev) => ({
+        ...prev,
+        customerId,
+        locationId: "",
+      }))
+    },
+    []
+  )
 
   const handleCreateOrder = async () => {
     if (!formData.customerId || !formData.locationId || !formData.type) {
@@ -107,47 +109,22 @@ export function TopHeader() {
 
     try {
       const orderData = {
-        order_id: `OT-${Date.now()}`,
+        orderId: `OT-${Date.now()}`,
         type: formData.type.trim(),
         description: (formData.description || "").trim(),
-        status: "pendiente",
-        priority: formData.priority === "media" ? "normal" : formData.priority,
+        status: "pendiente" as const,
+        priority: formData.priority === "media" ? ("normal" as const) : (formData.priority as any),
         address: selectedLocation.address.trim(),
         city: selectedLocation.city.trim(),
-        scheduled_date: new Date().toISOString().split('T')[0],
-        scheduled_time: "09:00",
-        customer_id: formData.customerId,
-        technician_id: null,
+        scheduledDate: new Date().toISOString().split('T')[0],
+        scheduledTime: "09:00",
+        customerId: formData.customerId,
+        technicianId: null,
       }
 
-      console.log("[v0] Sending order data to API:", JSON.stringify(orderData))
+      console.log("[v0] Creating order with data:", JSON.stringify(orderData))
 
-      const response = await fetch("/api/work-orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderData),
-      })
-
-      if (!response.ok) {
-        const text = await response.text()
-        console.error("[v0] API Response (status:", response.status, "):", text)
-        
-        let errorMsg = `Error: ${response.status}`
-        if (response.headers.get("content-type")?.includes("application/json")) {
-          try {
-            const data = JSON.parse(text)
-            errorMsg = data.error || errorMsg
-          } catch (e) {
-            // Failed to parse JSON, use generic error
-          }
-        }
-        setError(errorMsg)
-        setIsSubmitting(false)
-        return
-      }
-
-      const data = await response.json()
-      console.log("[v0] Order created successfully:", data)
+      await addWorkOrder(orderData)
 
       setSuccess("Orden creada exitosamente")
       setFormData({
@@ -163,7 +140,7 @@ export function TopHeader() {
       }, 2000)
     } catch (err) {
       console.error("[v0] Error creating order:", err)
-      setError("Error de conexión. Intente nuevamente.")
+      setError(err instanceof Error ? err.message : "Error de conexión. Intente nuevamente.")
     } finally {
       setIsSubmitting(false)
     }
@@ -211,7 +188,6 @@ export function TopHeader() {
                   <SelectContent>
                     {customers
                       .filter((customer) => {
-                        // Only show customers that have at least one location with valid address
                         const locations = getLocationsByCustomerId(customer.id)
                         return locations.length > 0
                       })
@@ -258,17 +234,13 @@ export function TopHeader() {
                 <Label htmlFor="type">Tipo de Servicio *</Label>
                 <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })} disabled={isSubmitting}>
                   <SelectTrigger id="type">
-                    <SelectValue placeholder="Selecciona un tipo" />
+                    <SelectValue placeholder="Selecciona tipo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Reparacion HVAC">Reparación HVAC</SelectItem>
-                    <SelectItem value="Mantenimiento Preventivo">Mantenimiento Preventivo</SelectItem>
-                    <SelectItem value="Inspeccion de Gas">Inspección de Gas</SelectItem>
-                    <SelectItem value="Instalacion AC">Instalación AC</SelectItem>
-                    <SelectItem value="Reparacion Caldera">Reparación Caldera</SelectItem>
-                    <SelectItem value="Reparacion Electrica">Reparación Eléctrica</SelectItem>
-                    <SelectItem value="Mantenimiento Plomeria">Mantenimiento Plomería</SelectItem>
-                    <SelectItem value="Instalacion Electrica">Instalación Eléctrica</SelectItem>
+                    <SelectItem value="instalacion">Instalación</SelectItem>
+                    <SelectItem value="mantenimiento">Mantenimiento</SelectItem>
+                    <SelectItem value="reparacion">Reparación</SelectItem>
+                    <SelectItem value="revision">Revisión</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -277,7 +249,7 @@ export function TopHeader() {
                 <Label htmlFor="priority">Prioridad</Label>
                 <Select value={formData.priority} onValueChange={(value) => setFormData({ ...formData, priority: value })} disabled={isSubmitting}>
                   <SelectTrigger id="priority">
-                    <SelectValue />
+                    <SelectValue placeholder="Selecciona prioridad" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="baja">Baja</SelectItem>
@@ -290,17 +262,18 @@ export function TopHeader() {
 
               <div className="space-y-2">
                 <Label htmlFor="description">Descripción</Label>
-                <Input
+                <Textarea
                   id="description"
-                  placeholder="Detalles adicionales..."
+                  placeholder="Notas adicionales sobre la orden..."
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   disabled={isSubmitting}
+                  rows={3}
                 />
               </div>
 
               {error && (
-                <div className="flex items-center gap-2 p-3 text-sm text-destructive bg-destructive/10 rounded-lg border border-destructive/20">
+                <div className="flex items-center gap-2 p-3 text-sm text-red-600 bg-red-50 rounded-lg border border-red-200">
                   <AlertCircle className="h-4 w-4 shrink-0" />
                   <span>{error}</span>
                 </div>

@@ -19,6 +19,7 @@ import {
   BarChart3,
   PieChart,
   LogOut,
+  DollarSign,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -41,6 +42,7 @@ const navItems: NavItem[] = [
   { icon: UserCircle, label: "Clientes", href: "/clientes", roles: ["admin", "supervisor"] },
   { icon: PieChart, label: "Reportes CRM", href: "/clientes/reportes", roles: ["admin"] },
   { icon: Package, label: "Inventario", href: "/inventario", roles: ["admin", "supervisor"] },
+  { icon: DollarSign, label: "Presupuestos", href: "/presupuestos", roles: ["admin", "supervisor"] },
   { icon: BarChart3, label: "Reportes", href: "/reportes", roles: ["admin", "supervisor"] },
   { icon: FileText, label: "Facturas", href: "/facturas", roles: ["admin"] },
   { icon: Smartphone, label: "Vista Tecnico", href: "/tecnico/agenda", roles: ["admin", "tecnico"] },
