@@ -28,8 +28,17 @@ export async function POST(req: NextRequest) {
       technician_id
     } = body
 
-    if (!order_id || !type || !status || !priority) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+    // Validate required fields including address and city
+    if (!order_id || !type || !status || !priority || !address || !city) {
+      console.error("[v0] Missing required fields:", { 
+        order_id: !!order_id, 
+        type: !!type, 
+        status: !!status, 
+        priority: !!priority, 
+        address: !!address, 
+        city: !!city 
+      })
+      return NextResponse.json({ error: "Missing required fields (order_id, type, status, priority, address, city)" }, { status: 400 })
     }
 
     const workOrder = await createWorkOrder({

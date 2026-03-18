@@ -59,7 +59,19 @@ export function CustomerFormDialog({ open, onClose, onSave, initialData }: Props
     if (open) {
       if (initialData) {
         const { id: _id, initials: _ini, ...rest } = initialData
-        setForm(rest)
+        // Ensure all string fields have a value (empty string instead of undefined/null)
+        const normalized = {
+          ...getEmpty(),
+          ...rest,
+          name: rest.name || "",
+          email: rest.email || "",
+          phone: rest.phone || "",
+          address: rest.address || "",
+          city: rest.city || "",
+          preferredSchedule: rest.preferredSchedule || "",
+          notes: rest.notes || "",
+        }
+        setForm(normalized)
       } else {
         setForm(getEmpty())
       }
@@ -100,62 +112,95 @@ export function CustomerFormDialog({ open, onClose, onSave, initialData }: Props
         </DialogHeader>
 
         <ScrollArea className="max-h-[60vh]">
-          <div className="px-6 py-5 gap-5 flex flex-col">
-            {/* Row: Name + Type */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-semibold text-muted-foreground">Nombre / Razon Social *</Label>
-                <Input value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="Nombre completo o empresa" />
+          <div className="px-6 py-5 space-y-6">
+            {/* Main Customer Info Section */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold text-foreground">Información Principal</h3>
+              
+              {/* Row: Name + Type */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="name" className="text-xs font-medium text-muted-foreground">Nombre / Razón Social *</Label>
+                  <Input id="name" value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="Nombre completo o empresa" />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="type" className="text-xs font-medium text-muted-foreground">Tipo de Cliente</Label>
+                  <Select value={form.type} onValueChange={(v) => set("type", v as CustomerType)}>
+                    <SelectTrigger id="type"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {customerTypes.map((t) => (
+                        <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-semibold text-muted-foreground">Tipo de Cliente</Label>
-                <Select value={form.type} onValueChange={(v) => set("type", v as CustomerType)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {customerTypes.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+
+              {/* Row: Email + Phone */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="email" className="text-xs font-medium text-muted-foreground">Correo Electrónico *</Label>
+                  <Input id="email" type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="correo@ejemplo.com" />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="phone" className="text-xs font-medium text-muted-foreground">Teléfono</Label>
+                  <Input id="phone" value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="+52 55 0000 0000" />
+                </div>
+              </div>
+
+              {/* Row: Address + City */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div className="flex flex-col gap-2 sm:col-span-2">
+                  <Label htmlFor="address" className="text-xs font-medium text-muted-foreground">Dirección</Label>
+                  <Input id="address" value={form.address} onChange={(e) => set("address", e.target.value)} placeholder="Calle, número, colonia" />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="city" className="text-xs font-medium text-muted-foreground">Ciudad</Label>
+                  <Input id="city" value={form.city} onChange={(e) => set("city", e.target.value)} placeholder="CDMX" />
+                </div>
+              </div>
+
+              {/* Geolocation */}
+              <GeoFields lat={form.lat} lng={form.lng} onChangeLat={(v) => set("lat", v)} onChangeLng={(v) => set("lng", v)} />
+
+              {/* Schedule */}
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="schedule" className="text-xs font-medium text-muted-foreground">Horario Preferido de Atención</Label>
+                <Input id="schedule" value={form.preferredSchedule} onChange={(e) => set("preferredSchedule", e.target.value)} placeholder="Ej: Lunes a Viernes, 9:00-14:00" />
               </div>
             </div>
 
-            {/* Row: Email + Phone */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-semibold text-muted-foreground">Correo Electronico *</Label>
-                <Input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="correo@ejemplo.com" />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-semibold text-muted-foreground">Telefono</Label>
-                <Input value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="+52 55 0000 0000" />
-              </div>
-            </div>
-
-            {/* Row: Address + City */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <div className="flex flex-col gap-1.5 sm:col-span-2">
-                <Label className="text-xs font-semibold text-muted-foreground">Direccion</Label>
-                <Input value={form.address} onChange={(e) => set("address", e.target.value)} placeholder="Calle, numero, colonia" />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-semibold text-muted-foreground">Ciudad</Label>
-                <Input value={form.city} onChange={(e) => set("city", e.target.value)} placeholder="CDMX" />
-              </div>
-            </div>
-
-            {/* Geolocation */}
-            <GeoFields lat={form.lat} lng={form.lng} onChangeLat={(v) => set("lat", v)} onChangeLng={(v) => set("lng", v)} />
-
-            {/* Schedule */}
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-semibold text-muted-foreground">Horario Preferido de Atencion</Label>
-              <Input value={form.preferredSchedule} onChange={(e) => set("preferredSchedule", e.target.value)} placeholder="Ej: Lunes a Viernes, 9:00-14:00" />
+            {/* Branches Section */}
+            <div className="space-y-4 pt-4 border-t border-border">
+              <h3 className="text-sm font-semibold text-foreground">Sucursales / Sedes</h3>
+              {form.branches && form.branches.length > 0 ? (
+                <div className="space-y-3">
+                  {form.branches.map((branch, idx) => (
+                    <div key={idx} className="p-3 rounded-lg bg-secondary/50 border border-border">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <p className="text-sm font-medium text-foreground">{branch.address}, {branch.city}</p>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => set("branches", form.branches?.filter((_, i) => i !== idx))}
+                          className="h-6 w-6 p-0"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      {branch.notes && <p className="text-xs text-muted-foreground">{branch.notes}</p>}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground italic">No hay sucursales registradas</p>
+              )}
             </div>
 
             {/* Tags */}
-            <div className="flex flex-col gap-2">
-              <Label className="text-xs font-semibold text-muted-foreground">Etiquetas de Segmentacion</Label>
+            <div className="space-y-3">
+              <Label className="text-xs font-medium text-muted-foreground">Etiquetas de Segmentación</Label>
               <div className="flex flex-wrap gap-2">
                 {allTags.map((tag) => {
                   const active = (form.tags || []).includes(tag)
@@ -179,9 +224,10 @@ export function CustomerFormDialog({ open, onClose, onSave, initialData }: Props
             </div>
 
             {/* NPS */}
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-semibold text-muted-foreground">NPS (0-10, dejar vacio si no aplica)</Label>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="nps" className="text-xs font-medium text-muted-foreground">NPS (0-10, dejar vacío si no aplica)</Label>
               <Input
+                id="nps"
                 type="number"
                 min={0}
                 max={10}
@@ -193,9 +239,9 @@ export function CustomerFormDialog({ open, onClose, onSave, initialData }: Props
             </div>
 
             {/* Notes */}
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-semibold text-muted-foreground">Notas Internas</Label>
-              <Textarea rows={3} value={form.notes} onChange={(e) => set("notes", e.target.value)} placeholder="Observaciones, preferencias, contexto importante..." />
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="notes" className="text-xs font-medium text-muted-foreground">Notas Internas</Label>
+              <Textarea id="notes" rows={3} value={form.notes} onChange={(e) => set("notes", e.target.value)} placeholder="Observaciones, preferencias, contexto importante..." />
             </div>
           </div>
         </ScrollArea>
