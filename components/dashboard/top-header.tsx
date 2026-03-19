@@ -33,13 +33,11 @@ export function TopHeader() {
     description: "",
   })
 
-  // Get available locations for a customer (with valid addresses)
   const getLocationsByCustomerId = (customerId: string) => {
     const customer = customers.find((c) => c.id === customerId)
     if (!customer) return []
 
     const locations = []
-    // Only add main location if it has a valid address
     if (customer.address && customer.city) {
       locations.push({
         id: "main",
@@ -48,7 +46,6 @@ export function TopHeader() {
         city: customer.city,
       })
     }
-    // Only add branches with valid addresses
     if (customer.branches) {
       customer.branches.forEach((br) => {
         if (br.address && br.city) {
@@ -61,7 +58,6 @@ export function TopHeader() {
         }
       })
     }
-
     return locations
   }
 
@@ -69,16 +65,13 @@ export function TopHeader() {
     return getLocationsByCustomerId(formData.customerId)
   }, [formData.customerId, customers])
 
-  const handleCustomerChange = useCallback(
-    (customerId: string) => {
-      setFormData((prev) => ({
-        ...prev,
-        customerId,
-        locationId: "",
-      }))
-    },
-    []
-  )
+  const handleCustomerChange = useCallback((customerId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      customerId,
+      locationId: "",
+    }))
+  }, [])
 
   const handleCreateOrder = async () => {
     if (!formData.customerId || !formData.locationId || !formData.type) {
@@ -87,19 +80,8 @@ export function TopHeader() {
     }
 
     const selectedLocation = availableLocations.find((l) => l.id === formData.locationId)
-    if (!selectedLocation) {
-      setError("Sede inválida")
-      return
-    }
-
-    // Extra strict validation for address and city - must exist and not be empty
-    if (!selectedLocation.address?.trim()) {
-      setError("La sede seleccionada no tiene dirección válida. Contacte al administrador.")
-      return
-    }
-
-    if (!selectedLocation.city?.trim()) {
-      setError("La sede seleccionada no tiene ciudad válida. Contacte al administrador.")
+    if (!selectedLocation || !selectedLocation.address?.trim() || !selectedLocation.city?.trim()) {
+      setError("Sede seleccionada no tiene dirección válida. Contacte al administrador.")
       return
     }
 
@@ -122,10 +104,7 @@ export function TopHeader() {
         technicianId: null,
       }
 
-      console.log("[v0] Creating order with data:", JSON.stringify(orderData))
-
       await addWorkOrder(orderData)
-
       setSuccess("Orden creada exitosamente")
       setFormData({
         customerId: "",
@@ -187,10 +166,7 @@ export function TopHeader() {
                   </SelectTrigger>
                   <SelectContent>
                     {customers
-                      .filter((customer) => {
-                        const locations = getLocationsByCustomerId(customer.id)
-                        return locations.length > 0
-                      })
+                      .filter((customer) => getLocationsByCustomerId(customer.id).length > 0)
                       .map((customer) => (
                         <SelectItem key={customer.id} value={customer.id}>
                           {customer.name}
@@ -198,11 +174,6 @@ export function TopHeader() {
                       ))}
                   </SelectContent>
                 </Select>
-                {customers.filter((c) => getLocationsByCustomerId(c.id).length === 0).length > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    {customers.filter((c) => getLocationsByCustomerId(c.id).length === 0).length} cliente(s) sin dirección registrada
-                  </p>
-                )}
               </div>
 
               {formData.customerId && availableLocations.length === 0 && (

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { Plus, X, Printer } from 'lucide-react'
+import { Plus, X, Printer, DollarSign } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -12,6 +12,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+
+// Currency exchange rates (example rates - in production, fetch from API)
+const EXCHANGE_RATES: Record<string, number> = {
+  USD: 1,
+  VES: 36.5, // Venezuelan Bolívares
+  PYG: 6800, // Paraguayan Guaraní
+}
 
 const INITIAL_COMPANY = {
   name: '',
@@ -51,8 +58,12 @@ const DEFAULT_CONDITIONS = [
   'Garantía de equipos: 1 año por defectos de fábrica.',
 ]
 
-function fmt(n: number) {
-  return n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+function fmt(n: number, currency: string = 'USD') {
+  const rate = EXCHANGE_RATES[currency] || 1
+  const converted = n * rate
+  const symbols: Record<string, string> = { USD: '$', VES: 'Bs.', PYG: '₲' }
+  const symbol = symbols[currency] || '$'
+  return `${symbol} ${converted.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 function sumSection(items: any[]) {
@@ -78,9 +89,10 @@ interface SectionTableProps {
   items: Item[]
   setItems: (items: Item[]) => void
   color: string
+  currency: 'USD' | 'VES' | 'PYG'
 }
 
-function SectionTable({ title, icon, items, setItems, color }: SectionTableProps) {
+function SectionTable({ title, icon, items, setItems, color, currency }: SectionTableProps) {
   const add = () =>
     setItems([...items, { id: nid(), desc: '', unit: 'Und', qty: 1, price: 0 }])
   const remove = (id: number) => setItems(items.filter((i) => i.id !== id))
@@ -171,7 +183,7 @@ function SectionTable({ title, icon, items, setItems, color }: SectionTableProps
                   />
                 </td>
                 <td className="px-4 py-3 text-sm font-semibold text-right text-foreground">
-                  ${fmt(item.qty * item.price)}
+                  {fmt(item.qty * item.price, currency)}
                 </td>
                 <td className="px-4 py-3 text-center">
                   <button
@@ -203,6 +215,7 @@ function SectionTable({ title, icon, items, setItems, color }: SectionTableProps
 
 export default function PresupuestosPage() {
   const [tab, setTab] = useState<'edit' | 'preview'>('edit')
+  const [currency, setCurrency] = useState<'USD' | 'VES' | 'PYG'>('USD')
   const [company, setCompany] = useState(INITIAL_COMPANY)
   const [project, setProject] = useState(INITIAL_PROJECT)
   const [equipment, setEquipment] = useState(DEFAULT_EQUIPMENT)
@@ -272,6 +285,19 @@ export default function PresupuestosPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary border border-border">
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <Select value={currency} onValueChange={(val) => setCurrency(val as 'USD' | 'VES' | 'PYG')}>
+                <SelectTrigger className="border-0 bg-transparent p-0 h-auto focus:ring-0">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="USD">USD - Dólares</SelectItem>
+                  <SelectItem value="VES">VES - Bolívares</SelectItem>
+                  <SelectItem value="PYG">PYG - Guaraní</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <Button onClick={handleNew} variant="outline" size="sm">
               Nuevo
             </Button>
@@ -319,7 +345,7 @@ export default function PresupuestosPage() {
                 className={bold ? 'text-xl font-bold' : 'text-lg font-semibold'}
                 style={{ color }}
               >
-                $ {fmt(value)}
+                {fmt(value, currency)}
               </div>
             </div>
           ))}
@@ -435,6 +461,7 @@ export default function PresupuestosPage() {
               items={equipment}
               setItems={setEquipment}
               color="#1a1a2e"
+              currency={currency}
             />
             <SectionTable
               title="Materiales de Instalación"
@@ -442,6 +469,7 @@ export default function PresupuestosPage() {
               items={materials}
               setItems={setMaterials}
               color="#2d4a7a"
+              currency={currency}
             />
             <SectionTable
               title="Mano de Obra"
@@ -449,6 +477,7 @@ export default function PresupuestosPage() {
               items={labor}
               setItems={setLabor}
               color="#3a6b5a"
+              currency={currency}
             />
 
             {/* Tax & Conditions */}
@@ -513,6 +542,7 @@ export default function PresupuestosPage() {
               labor={labor}
               taxRate={taxRate}
               conditions={conditions}
+              currency={currency}
             />
           </div>
         )}
@@ -529,6 +559,7 @@ function PrintPreview({
   labor,
   taxRate,
   conditions,
+  currency,
 }: any) {
   const sub1 = sumSection(equipment)
   const sub2 = sumSection(materials)
@@ -562,9 +593,9 @@ function PrintPreview({
               <td className="px-3 py-2 border-b text-xs">{item.desc}</td>
               <td className="px-3 py-2 border-b text-xs">{item.unit}</td>
               <td className="px-3 py-2 border-b text-right text-xs">{item.qty}</td>
-              <td className="px-3 py-2 border-b text-right text-xs">${fmt(item.price)}</td>
+              <td className="px-3 py-2 border-b text-right text-xs">{fmt(item.price, currency)}</td>
               <td className="px-3 py-2 border-b text-right font-semibold text-xs">
-                ${fmt(item.qty * item.price)}
+                {fmt(item.qty * item.price, currency)}
               </td>
             </tr>
           ))}
@@ -612,20 +643,20 @@ function PrintPreview({
         ].map(([label, value]) => (
           <div key={label} className="flex justify-between px-4 py-2 border-b text-sm">
             <span>{label}</span>
-            <span className="font-semibold">$ {fmt(value as number)}</span>
+            <span className="font-semibold">{fmt(value as number, currency)}</span>
           </div>
         ))}
         <div className="flex justify-between px-4 py-2 bg-gray-100 border-b font-bold">
           <span>Subtotal</span>
-          <span>$ {fmt(subtotal)}</span>
+          <span>{fmt(subtotal, currency)}</span>
         </div>
         <div className="flex justify-between px-4 py-2 border-b text-sm">
           <span>IVA ({taxRate}%)</span>
-          <span>$ {fmt(tax)}</span>
+          <span>{fmt(tax, currency)}</span>
         </div>
         <div className="flex justify-between px-4 py-3 bg-gray-900 text-white font-bold text-lg">
-          <span>TOTAL (USD)</span>
-          <span>$ {fmt(total)}</span>
+          <span>TOTAL ({currency})</span>
+          <span>{fmt(total, currency)}</span>
         </div>
       </div>
 
