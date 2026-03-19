@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { CATALOGO_PRODUCTOS } from '@/lib/catalogo-cctv'
 
 // Currency exchange rates (example rates - in production, fetch from API)
 const EXCHANGE_RATES: Record<string, number> = {
@@ -36,16 +37,25 @@ const INITIAL_PROJECT = {
   location: '',
 }
 
-const DEFAULT_EQUIPMENT = [
-  { id: 1, desc: 'Cámara IP Bullet 4MP IR 30m (exterior)', unit: 'Und', qty: 4, price: 85 },
-  { id: 2, desc: 'Cámara IP Domo 4MP IR 20m (interior)', unit: 'Und', qty: 4, price: 75 },
-  { id: 3, desc: 'NVR 8 Canales PoE, H.265+, 2 bahías HDD', unit: 'Und', qty: 1, price: 320 },
-]
+const DEFAULT_EQUIPMENT = CATALOGO_PRODUCTOS.equiposPrincipales
+  .slice(0, 5)
+  .map((producto, idx) => ({
+    id: idx + 1,
+    desc: `${producto.nombre} (${producto.marca} ${producto.modelo})`,
+    unit: 'Und',
+    qty: 0,
+    price: 0,
+  }))
 
-const DEFAULT_MATERIALS = [
-  { id: 1, desc: 'Cable UTP Cat.6 exterior (bobina 305m)', unit: 'Und', qty: 1, price: 95 },
-  { id: 2, desc: 'Conectores RJ45 Cat.6 blindados', unit: 'Und', qty: 20, price: 0.8 },
-]
+const DEFAULT_MATERIALS = CATALOGO_PRODUCTOS.materialesInstalacion
+  .slice(0, 5)
+  .map((producto, idx) => ({
+    id: idx + 1,
+    desc: `${producto.nombre} (${producto.marca})`,
+    unit: 'Und',
+    qty: 0,
+    price: 0,
+  }))
 
 const DEFAULT_LABOR = [
   { id: 1, desc: 'Instalación cableado estructurado', unit: 'Gbl', qty: 1, price: 200 },
