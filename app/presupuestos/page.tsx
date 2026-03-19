@@ -100,9 +100,13 @@ interface SectionTableProps {
   setItems: (items: Item[]) => void
   color: string
   currency: 'USD' | 'VES' | 'PYG'
+  catalogItems?: { nombre: string; precio?: number }[]
 }
 
-function SectionTable({ title, icon, items, setItems, color, currency }: SectionTableProps) {
+function SectionTable({ title, icon, items, setItems, color, currency, catalogItems = [] }: SectionTableProps) {
+  const [openDropdown, setOpenDropdown] = useState<number | null>(null)
+  const [searchText, setSearchText] = useState<Record<number, string>>({})
+
   const add = () =>
     setItems([...items, { id: nid(), desc: '', unit: 'Und', qty: 1, price: 0 }])
   const remove = (id: number) => setItems(items.filter((i) => i.id !== id))
@@ -117,6 +121,18 @@ function SectionTable({ title, icon, items, setItems, color, currency }: Section
           : i
       )
     )
+
+  const handleSelectFromCatalog = (id: number, item: { nombre: string; precio?: number }) => {
+    update(id, 'desc', item.nombre)
+    if (item.precio) update(id, 'price', item.precio)
+    setOpenDropdown(null)
+    setSearchText({ ...searchText, [id]: '' })
+  }
+
+  const getFilteredCatalog = (id: number) => {
+    const search = searchText[id]?.toLowerCase() || ''
+    return catalogItems.filter((item) => item.nombre.toLowerCase().includes(search))
+  }
 
   return (
     <div className="bg-card border border-border rounded-lg overflow-hidden">
@@ -151,13 +167,37 @@ function SectionTable({ title, icon, items, setItems, color, currency }: Section
                 className={idx % 2 === 0 ? 'bg-background' : 'bg-secondary/10'}
               >
                 <td className="px-4 py-3 text-sm text-foreground">{idx + 1}</td>
-                <td className="px-4 py-3">
-                  <Input
-                    value={item.desc}
-                    onChange={(e) => update(item.id, 'desc', e.target.value)}
-                    placeholder="Descripción"
-                    className="text-sm"
-                  />
+                <td className="px-4 py-3 relative">
+                  <div className="relative">
+                    <Input
+                      value={item.desc}
+                      onChange={(e) => {
+                        update(item.id, 'desc', e.target.value)
+                        setSearchText({ ...searchText, [item.id]: e.target.value })
+                      }}
+                      onFocus={() => setOpenDropdown(item.id)}
+                      placeholder="Buscar o escribir..."
+                      className="text-sm"
+                    />
+                    {openDropdown === item.id && catalogItems.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-background border border-border rounded-md shadow-lg z-50 max-h-48 overflow-y-auto">
+                        {getFilteredCatalog(item.id).length > 0 ? (
+                          getFilteredCatalog(item.id).map((cat, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => handleSelectFromCatalog(item.id, cat)}
+                              className="w-full text-left px-3 py-2 hover:bg-secondary text-sm border-b border-border last:border-b-0"
+                            >
+                              <div className="font-medium text-foreground">{cat.nombre}</div>
+                              {cat.precio && <div className="text-xs text-muted-foreground">${cat.precio.toFixed(2)}</div>}
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-3 py-2 text-sm text-muted-foreground">Sin coincidencias</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </td>
                 <td className="px-4 py-3">
                   <Select value={item.unit} onValueChange={(v) => update(item.id, 'unit', v)}>
@@ -472,6 +512,10 @@ export default function PresupuestosPage() {
               setItems={setEquipment}
               color="#1a1a2e"
               currency={currency}
+              catalogItems={CATALOGO_PRODUCTOS.equiposPrincipales.map(p => ({ 
+                nombre: `${p.nombre} (${p.marca} ${p.modelo})`, 
+                precio: p.precio 
+              }))}
             />
             <SectionTable
               title="Materiales de Instalación"
@@ -480,6 +524,10 @@ export default function PresupuestosPage() {
               setItems={setMaterials}
               color="#2d4a7a"
               currency={currency}
+              catalogItems={CATALOGO_PRODUCTOS.materialesInstalacion.map(p => ({ 
+                nombre: `${p.nombre} (${p.marca})`, 
+                precio: p.precio 
+              }))}
             />
             <SectionTable
               title="Mano de Obra"
@@ -488,6 +536,7 @@ export default function PresupuestosPage() {
               setItems={setLabor}
               color="#3a6b5a"
               currency={currency}
+              catalogItems={[]}
             />
 
             {/* Tax & Conditions */}

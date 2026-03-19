@@ -1,24 +1,12 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { Plus, AlertCircle, CheckCircle2, Bell, HelpCircle } from 'lucide-react'
+import { useState } from 'react'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { AlertCircle, CheckCircle2, Plus, Bell, HelpCircle } from 'lucide-react'
 import { useCustomers } from '@/lib/context/customers-context'
 import { useWorkOrders } from '@/lib/context/work-orders-context'
 
@@ -62,38 +50,20 @@ export function TopHeader() {
         }
       })
     }
-
     return locations
   }
 
-  const availableLocations = useMemo(() => {
-    return getLocationsByCustomerId(formData.customerId)
-  }, [formData.customerId, customers])
-
-  const handleCustomerChange = (value: string) => {
-    setFormData({ ...formData, customerId: value, locationId: '' })
-    setError('')
-  }
+  const availableLocations = getLocationsByCustomerId(formData.customerId)
 
   const handleCreateOrder = async () => {
     if (!formData.customerId || !formData.locationId || !formData.type) {
-      setError('Por favor completa los campos requeridos (cliente, sede, tipo)')
+      setError('Por favor completa los campos requeridos')
       return
     }
 
     const selectedLocation = availableLocations.find((l) => l.id === formData.locationId)
-    if (!selectedLocation) {
-      setError('Sede inválida')
-      return
-    }
-
-    if (!selectedLocation.address?.trim()) {
-      setError('La sede seleccionada no tiene dirección válida. Contacte al administrador.')
-      return
-    }
-
-    if (!selectedLocation.city?.trim()) {
-      setError('La sede seleccionada no tiene ciudad válida. Contacte al administrador.')
+    if (!selectedLocation || !selectedLocation.address?.trim() || !selectedLocation.city?.trim()) {
+      setError('Sede sin dirección válida')
       return
     }
 
@@ -102,146 +72,94 @@ export function TopHeader() {
     setSuccess('')
 
     try {
-      const orderData = {
-        order_id: `OT-${Date.now()}`,
-        type: formData.type.trim(),
-        description: (formData.description || '').trim(),
-        status: 'pendiente',
-        priority: formData.priority === 'media' ? 'normal' : formData.priority,
-        address: selectedLocation.address.trim(),
-        city: selectedLocation.city.trim(),
-        scheduled_date: new Date().toISOString().split('T')[0],
-        scheduled_time: '09:00',
-        customer_id: formData.customerId,
-        technician_id: null,
-      }
-
       const response = await fetch('/api/work-orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData),
+        body: JSON.stringify({
+          order_id: `OT-${Date.now()}`,
+          type: formData.type.trim(),
+          description: (formData.description || '').trim(),
+          status: 'pendiente',
+          priority: formData.priority === 'media' ? 'normal' : formData.priority,
+          address: selectedLocation.address.trim(),
+          city: selectedLocation.city.trim(),
+          scheduled_date: new Date().toISOString().split('T')[0],
+          scheduled_time: '09:00',
+          customer_id: formData.customerId,
+          technician_id: null,
+        }),
       })
 
       if (!response.ok) {
-        const text = await response.text()
-        let errorMsg = `Error: ${response.status}`
-        if (response.headers.get('content-type')?.includes('application/json')) {
-          try {
-            const data = JSON.parse(text)
-            errorMsg = data.error || errorMsg
-          } catch (e) {
-            // Failed to parse JSON, use generic error
-          }
-        }
-        setError(errorMsg)
-        setIsSubmitting(false)
+        const data = await response.json()
+        setError(data.error || 'Error al crear orden')
         return
       }
 
-      const data = await response.json()
-
       setSuccess('Orden creada exitosamente')
-      setFormData({
-        customerId: '',
-        locationId: '',
-        type: '',
-        priority: 'media',
-        description: '',
-      })
+      setFormData({ customerId: '', locationId: '', type: '', priority: 'media', description: '' })
       setTimeout(() => {
         setOrderDialogOpen(false)
         setSuccess('')
       }, 2000)
     } catch (err) {
-      setError('Error de conexión. Intente nuevamente.')
+      setError('Error de conexión')
     } finally {
       setIsSubmitting(false)
     }
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background">
-      <div className="flex items-center justify-between h-16 px-6">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground">Panel de Control</h2>
-          <p className="text-xs text-muted-foreground">Bienvenido al sistema CCTV</p>
-        </div>
+    <header className="border-b border-border bg-background sticky top-0 z-40">
+      <div className="px-6 py-4 flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-foreground">Panel Principal</h1>
 
         <div className="flex items-center gap-4">
           <Dialog open={orderDialogOpen} onOpenChange={setOrderDialogOpen}>
-            <Button
-              onClick={() => setOrderDialogOpen(true)}
-              className="gap-2"
-              size="sm"
-            >
-              <Plus className="h-4 w-4" />
-              Nueva Orden
-            </Button>
-
+            <DialogTrigger asChild>
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" />
+                Nueva Orden
+              </Button>
+            </DialogTrigger>
             <DialogContent className="max-w-lg">
               <DialogHeader>
-                <DialogTitle>Crear Nueva Orden de Trabajo</DialogTitle>
-                <DialogDescription>
-                  Completa los datos para crear una nueva orden de servicio
-                </DialogDescription>
+                <DialogTitle>Nueva Orden de Trabajo</DialogTitle>
+                <DialogDescription>Crea una nueva orden rápidamente</DialogDescription>
               </DialogHeader>
 
-              <div className="space-y-4">
-                {error && (
-                  <div className="flex items-center gap-2 p-3 text-sm text-red-600 bg-red-50 rounded-lg border border-red-200">
-                    <AlertCircle className="h-4 w-4 shrink-0" />
-                    <span>{error}</span>
-                  </div>
-                )}
-
+              <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Cliente *</label>
-                  <Select
-                    value={formData.customerId}
-                    onValueChange={handleCustomerChange}
-                    disabled={isSubmitting}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona un cliente" />
+                  <Label htmlFor="customer">Cliente *</Label>
+                  <Select value={formData.customerId} onValueChange={(v) => setFormData({ ...formData, customerId: v, locationId: '' })} disabled={isSubmitting}>
+                    <SelectTrigger id="customer">
+                      <SelectValue placeholder="Selecciona cliente" />
                     </SelectTrigger>
                     <SelectContent>
-                      {customers
-                        .filter((customer) => {
-                          const locations = getLocationsByCustomerId(customer.id)
-                          return locations.length > 0
-                        })
-                        .map((customer) => (
-                          <SelectItem key={customer.id} value={customer.id}>
-                            {customer.name}
-                          </SelectItem>
-                        ))}
+                      {customers.filter((c) => getLocationsByCustomerId(c.id).length > 0).map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
 
                 {formData.customerId && availableLocations.length === 0 && (
                   <div className="flex items-center gap-2 p-3 text-sm text-amber-600 bg-amber-50 rounded-lg border border-amber-200">
-                    <AlertCircle className="h-4 w-4 shrink-0" />
-                    <span>Este cliente no tiene sedes con dirección registrada</span>
+                    <AlertCircle className="h-4 w-4" />
+                    <span>Cliente sin sedes con dirección</span>
                   </div>
                 )}
 
                 {formData.customerId && availableLocations.length > 0 && (
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Sede / Sucursal *</label>
-                    <Select
-                      value={formData.locationId}
-                      onValueChange={(value) => setFormData({ ...formData, locationId: value })}
-                      disabled={isSubmitting}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecciona una sede" />
+                    <Label htmlFor="location">Sede *</Label>
+                    <Select value={formData.locationId} onValueChange={(v) => setFormData({ ...formData, locationId: v })} disabled={isSubmitting}>
+                      <SelectTrigger id="location">
+                        <SelectValue placeholder="Selecciona sede" />
                       </SelectTrigger>
                       <SelectContent>
-                        {availableLocations.map((location) => (
-                          <SelectItem key={location.id} value={location.id}>
-                            {location.label}
-                          </SelectItem>
+                        {availableLocations.map((loc) => (
+                          <SelectItem key={loc.id} value={loc.id}>{loc.label}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -249,33 +167,25 @@ export function TopHeader() {
                 )}
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Tipo de Servicio *</label>
-                  <Select
-                    value={formData.type}
-                    onValueChange={(value) => setFormData({ ...formData, type: value })}
-                    disabled={isSubmitting}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona el tipo" />
+                  <Label htmlFor="type">Tipo de Servicio *</Label>
+                  <Select value={formData.type} onValueChange={(v) => setFormData({ ...formData, type: v })} disabled={isSubmitting}>
+                    <SelectTrigger id="type">
+                      <SelectValue placeholder="Selecciona tipo" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="instalacion">Instalación</SelectItem>
                       <SelectItem value="mantenimiento">Mantenimiento</SelectItem>
                       <SelectItem value="reparacion">Reparación</SelectItem>
-                      <SelectItem value="inspeccion">Inspección</SelectItem>
+                      <SelectItem value="diagnostico">Diagnóstico</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Prioridad</label>
-                  <Select
-                    value={formData.priority}
-                    onValueChange={(value) => setFormData({ ...formData, priority: value })}
-                    disabled={isSubmitting}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona prioridad" />
+                  <Label htmlFor="priority">Prioridad</Label>
+                  <Select value={formData.priority} onValueChange={(v) => setFormData({ ...formData, priority: v })} disabled={isSubmitting}>
+                    <SelectTrigger id="priority">
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="baja">Baja</SelectItem>
@@ -287,37 +197,29 @@ export function TopHeader() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Descripción</label>
-                  <Textarea
-                    placeholder="Detalles adicionales de la orden..."
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    disabled={isSubmitting}
-                    rows={3}
-                  />
+                  <Label htmlFor="description">Descripción</Label>
+                  <Input id="description" placeholder="Detalles..." value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} disabled={isSubmitting} />
                 </div>
 
+                {error && (
+                  <div className="flex items-center gap-2 p-3 text-sm text-destructive bg-destructive/10 rounded-lg">
+                    <AlertCircle className="h-4 w-4" />
+                    <span>{error}</span>
+                  </div>
+                )}
+
                 {success && (
-                  <div className="flex items-center gap-2 p-3 text-sm text-green-600 bg-green-50 rounded-lg border border-green-200">
-                    <CheckCircle2 className="h-4 w-4 shrink-0" />
+                  <div className="flex items-center gap-2 p-3 text-sm text-green-600 bg-green-50 rounded-lg">
+                    <CheckCircle2 className="h-4 w-4" />
                     <span>{success}</span>
                   </div>
                 )}
 
                 <div className="flex gap-3 pt-4">
-                  <Button
-                    onClick={handleCreateOrder}
-                    disabled={isSubmitting}
-                    className="flex-1"
-                  >
+                  <Button onClick={handleCreateOrder} disabled={isSubmitting} className="flex-1">
                     {isSubmitting ? 'Creando...' : 'Crear Orden'}
                   </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setOrderDialogOpen(false)}
-                    disabled={isSubmitting}
-                    className="flex-1"
-                  >
+                  <Button variant="outline" onClick={() => setOrderDialogOpen(false)} disabled={isSubmitting} className="flex-1">
                     Cancelar
                   </Button>
                 </div>
