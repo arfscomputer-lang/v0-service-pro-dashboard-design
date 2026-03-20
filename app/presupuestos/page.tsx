@@ -544,7 +544,23 @@ export default function PresupuestosPage() {
 
             {/* Kit Selector and Material Calculator */}
             <div className="bg-card border border-border rounded-lg p-6 space-y-4">
-              <h2 className="font-bold text-lg text-foreground">🎯 Herramientas Rápidas</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="font-bold text-lg text-foreground">Herramientas Rápidas</h2>
+                <Button
+                  onClick={() => {
+                    if (confirm('¿Limpiar todos los items (equipos, materiales y mano de obra)?')) {
+                      setEquipment([])
+                      setMaterials([])
+                      setLabor([])
+                    }
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                >
+                  Limpiar Todo
+                </Button>
+              </div>
               <div className="space-y-4">
                 <div>
                   <p className="text-sm font-medium text-foreground mb-2">Cargar Kit Predefinido</p>
