@@ -15,6 +15,7 @@ import {
 import { CATALOGO_PRODUCTOS } from '@/lib/catalogo-cctv'
 import { KitSelector } from '@/components/budget/kit-selector'
 import { MaterialCalculator } from '@/components/budget/material-calculator'
+import { SaveKitDialog } from '@/components/budget/save-kit-dialog'
 
 // Currency exchange rates (example rates - in production, fetch from API)
 const EXCHANGE_RATES: Record<string, number> = {
@@ -546,20 +547,31 @@ export default function PresupuestosPage() {
             <div className="bg-card border border-border rounded-lg p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="font-bold text-lg text-foreground">Herramientas Rápidas</h2>
-                <Button
-                  onClick={() => {
-                    if (confirm('¿Limpiar todos los items (equipos, materiales y mano de obra)?')) {
-                      setEquipment([])
-                      setMaterials([])
-                      setLabor([])
-                    }
-                  }}
-                  variant="outline"
-                  size="sm"
-                  className="text-destructive hover:text-destructive"
-                >
-                  Limpiar Todo
-                </Button>
+                <div className="flex items-center gap-2">
+                  <SaveKitDialog
+                    equipment={equipment}
+                    materials={materials}
+                    labor={labor}
+                    onSave={() => {
+                      // Refresh kit selector by reloading customKits
+                      window.dispatchEvent(new Event('customKitsUpdated'))
+                    }}
+                  />
+                  <Button
+                    onClick={() => {
+                      if (confirm('¿Limpiar todos los items (equipos, materiales y mano de obra)?')) {
+                        setEquipment([])
+                        setMaterials([])
+                        setLabor([])
+                      }
+                    }}
+                    variant="outline"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                  >
+                    Limpiar Todo
+                  </Button>
+                </div>
               </div>
               <div className="space-y-4">
                 <div>
