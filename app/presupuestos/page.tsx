@@ -13,6 +13,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { CATALOGO_PRODUCTOS } from '@/lib/catalogo-cctv'
+import { KitSelector } from '@/components/budget/kit-selector'
+import { MaterialCalculator } from '@/components/budget/material-calculator'
 
 // Currency exchange rates (example rates - in production, fetch from API)
 const EXCHANGE_RATES: Record<string, number> = {
@@ -310,6 +312,42 @@ export default function PresupuestosPage() {
     setTab('edit')
   }
 
+  const handleLoadKit = useCallback((kitItems: Array<{
+    section: 'equipos' | 'materiales' | 'mano_de_obra'
+    description: string
+    unit: string
+    quantity: number
+    price: number
+  }>) => {
+    const equipmentItems = kitItems.filter(i => i.section === 'equipos').map((i, idx) => ({
+      id: Math.max(...equipment.map(e => e.id), 0) + idx + 1,
+      desc: i.description,
+      unit: i.unit,
+      qty: i.quantity,
+      price: i.price
+    }))
+    
+    const materialItems = kitItems.filter(i => i.section === 'materiales').map((i, idx) => ({
+      id: Math.max(...materials.map(m => m.id), 0) + idx + 1,
+      desc: i.description,
+      unit: i.unit,
+      qty: i.quantity,
+      price: i.price
+    }))
+    
+    const laborItems = kitItems.filter(i => i.section === 'mano_de_obra').map((i, idx) => ({
+      id: Math.max(...labor.map(l => l.id), 0) + idx + 1,
+      desc: i.description,
+      unit: i.unit,
+      qty: i.quantity,
+      price: i.price
+    }))
+
+    setEquipment([...equipment, ...equipmentItems])
+    setMaterials([...materials, ...materialItems])
+    setLabor([...labor, ...laborItems])
+  }, [equipment, materials, labor])
+
   return (
     <main className="min-h-screen bg-background">
       {/* Header */}
@@ -504,7 +542,24 @@ export default function PresupuestosPage() {
               </div>
             </div>
 
-            {/* Sections */}
+            {/* Kit Selector and Material Calculator */}
+            <div className="bg-card border border-border rounded-lg p-6 space-y-4">
+              <h2 className="font-bold text-lg text-foreground">🎯 Herramientas Rápidas</h2>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm font-medium text-foreground mb-2">Cargar Kit Predefinido</p>
+                  <KitSelector onLoadKit={handleLoadKit} />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground mb-2">Calcular Materiales Automáticos</p>
+                  <MaterialCalculator 
+                    equipment={equipment}
+                    materials={materials}
+                    onAddMaterials={setMaterials}
+                  />
+                </div>
+              </div>
+            </div>
             <SectionTable
               title="Equipos Principales"
               icon="⚙️"
