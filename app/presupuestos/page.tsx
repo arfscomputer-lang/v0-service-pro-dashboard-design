@@ -151,7 +151,7 @@ function SectionTable({ title, icon, items, setItems, color, currency, catalogIt
         <table className="w-full">
           <thead>
             <tr className="border-b border-border bg-secondary/30">
-              {['#', 'Descripción', 'Und', 'Cant.', 'P.Unit ($)', 'Total ($)', ''].map(
+              {['#', 'Descripción', 'Und', 'Cant.', `P.Unit (${currency})`, `Total (${currency})`, ''].map(
                 (h, i) => (
                   <th
                     key={i}
@@ -234,15 +234,20 @@ function SectionTable({ title, icon, items, setItems, color, currency, catalogIt
                       type="number"
                       min="0"
                       step="0.01"
-                      value={item.price}
-                      onChange={(e) => update(item.id, 'price', e.target.value)}
+                      value={(item.price * EXCHANGE_RATES[currency]).toFixed(2)}
+                      onChange={(e) => {
+                        const convertedValue = parseFloat(e.target.value) / EXCHANGE_RATES[currency]
+                        update(item.id, 'price', convertedValue.toString())
+                      }}
                       className="text-sm text-right"
                       placeholder="0.00"
                     />
                   </div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {currency !== 'USD' && `USD: $${(item.price).toFixed(2)}`}
-                  </div>
+                  {currency !== 'USD' && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      USD: ${item.price.toFixed(2)}
+                    </div>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-sm font-semibold text-right text-foreground">
                   {fmt(item.qty * item.price, currency)}
