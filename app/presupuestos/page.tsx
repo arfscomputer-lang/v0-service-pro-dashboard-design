@@ -16,6 +16,8 @@ import { CATALOGO_PRODUCTOS } from '@/lib/catalogo-cctv'
 import { KitSelector } from '@/components/budget/kit-selector'
 import { MaterialCalculator } from '@/components/budget/material-calculator'
 import { SaveKitDialog } from '@/components/budget/save-kit-dialog'
+import { savePriceHistory, getHistoricalPrice } from '@/lib/price-history'
+import { PriceHistoryHint } from '@/components/budget/price-history-hint'
 
 // Currency exchange rates (example rates - in production, fetch from API)
 const EXCHANGE_RATES: Record<string, number> = {
@@ -247,6 +249,8 @@ function SectionTable({ title, icon, items, setItems, color, currency, catalogIt
                           if (!isNaN(numValue) && numValue >= 0) {
                             const convertedValue = numValue / EXCHANGE_RATES[currency]
                             update(item.id, 'price', convertedValue.toString())
+                            // Guardar en historial de precios
+                            savePriceHistory(item.desc, convertedValue, 'USD')
                           }
                         }
                         setEditingPrice({ ...editingPrice, [item.id]: undefined })
@@ -260,6 +264,15 @@ function SectionTable({ title, icon, items, setItems, color, currency, catalogIt
                       USD: ${item.price.toFixed(2)}
                     </div>
                   )}
+                  <PriceHistoryHint 
+                    productName={item.desc}
+                    currency={currency}
+                    onUsePrice={(price) => {
+                      const convertedPrice = price * EXCHANGE_RATES[currency]
+                      setEditingPrice({ ...editingPrice, [item.id]: convertedPrice.toFixed(2) })
+                      update(item.id, 'price', price.toString())
+                    }}
+                  />
                 </td>
                 <td className="px-4 py-3 text-sm font-semibold text-right text-foreground">
                   {fmt(item.qty * item.price, currency)}
