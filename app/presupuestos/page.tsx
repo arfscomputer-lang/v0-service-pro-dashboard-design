@@ -109,6 +109,7 @@ interface SectionTableProps {
 function SectionTable({ title, icon, items, setItems, color, currency, catalogItems = [] }: SectionTableProps) {
   const [openDropdown, setOpenDropdown] = useState<number | null>(null)
   const [searchText, setSearchText] = useState<Record<number, string>>({})
+  const [editingPrice, setEditingPrice] = useState<Record<number, string>>({})
 
   const add = () =>
     setItems([...items, { id: nid(), desc: '', unit: 'Und', qty: 1, price: 0 }])
@@ -233,8 +234,11 @@ function SectionTable({ title, icon, items, setItems, color, currency, catalogIt
                     <Input
                       type="text"
                       inputMode="decimal"
-                      value={item.price > 0 ? (item.price * EXCHANGE_RATES[currency]).toFixed(2) : ''}
+                      value={editingPrice[item.id] !== undefined ? editingPrice[item.id] : (item.price * EXCHANGE_RATES[currency]).toFixed(2)}
                       onChange={(e) => {
+                        setEditingPrice({ ...editingPrice, [item.id]: e.target.value })
+                      }}
+                      onBlur={(e) => {
                         const inputValue = e.target.value.trim()
                         if (inputValue === '') {
                           update(item.id, 'price', '0')
@@ -245,6 +249,7 @@ function SectionTable({ title, icon, items, setItems, color, currency, catalogIt
                             update(item.id, 'price', convertedValue.toString())
                           }
                         }
+                        setEditingPrice({ ...editingPrice, [item.id]: undefined })
                       }}
                       className="text-sm text-right"
                       placeholder="0.00"
