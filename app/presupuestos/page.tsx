@@ -239,7 +239,7 @@ function SectionTable({ title, icon, items, setItems, color, currency, catalogIt
                         const convertedValue = parseFloat(e.target.value) / EXCHANGE_RATES[currency]
                         update(item.id, 'price', convertedValue.toString())
                       }}
-                      className="text-sm text-right"
+                      className="text-sm text-right [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [&]:m-0"
                       placeholder="0.00"
                     />
                   </div>
