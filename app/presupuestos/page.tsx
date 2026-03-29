@@ -231,15 +231,19 @@ function SectionTable({ title, icon, items, setItems, color, currency, catalogIt
                       {currency === 'USD' ? '$' : currency === 'VES' ? 'Bs.' : '₲'}
                     </span>
                     <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={(item.price * EXCHANGE_RATES[currency]).toFixed(2)}
+                      type="text"
+                      inputMode="decimal"
+                      value={((item.price * EXCHANGE_RATES[currency]) || '').toString()}
                       onChange={(e) => {
-                        const convertedValue = parseFloat(e.target.value) / EXCHANGE_RATES[currency]
-                        update(item.id, 'price', convertedValue.toString())
+                        const inputValue = e.target.value
+                        // Solo permitir números y un punto decimal
+                        if (/^\d*\.?\d*$/.test(inputValue) || inputValue === '') {
+                          const numValue = parseFloat(inputValue) || 0
+                          const convertedValue = numValue / EXCHANGE_RATES[currency]
+                          update(item.id, 'price', convertedValue.toString())
+                        }
                       }}
-                      className="text-sm text-right [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [&]:m-0"
+                      className="text-sm text-right [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       placeholder="0.00"
                     />
                   </div>
