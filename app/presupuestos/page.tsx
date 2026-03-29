@@ -226,14 +226,23 @@ function SectionTable({ title, icon, items, setItems, color, currency, catalogIt
                   />
                 </td>
                 <td className="px-4 py-3">
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={item.price}
-                    onChange={(e) => update(item.id, 'price', e.target.value)}
-                    className="text-sm text-right"
-                  />
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      {currency === 'USD' ? '$' : currency === 'VES' ? 'Bs.' : '₲'}
+                    </span>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={item.price}
+                      onChange={(e) => update(item.id, 'price', e.target.value)}
+                      className="text-sm text-right"
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {currency !== 'USD' && `USD: $${(item.price).toFixed(2)}`}
+                  </div>
                 </td>
                 <td className="px-4 py-3 text-sm font-semibold text-right text-foreground">
                   {fmt(item.qty * item.price, currency)}
