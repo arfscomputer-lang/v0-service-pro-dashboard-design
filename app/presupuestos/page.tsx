@@ -233,21 +233,24 @@ function SectionTable({ title, icon, items, setItems, color, currency, catalogIt
                     <Input
                       type="text"
                       inputMode="decimal"
-                      value={((item.price * EXCHANGE_RATES[currency]) || '').toString()}
+                      value={item.price > 0 ? (item.price * EXCHANGE_RATES[currency]).toFixed(2) : ''}
                       onChange={(e) => {
-                        const inputValue = e.target.value
-                        // Solo permitir números y un punto decimal
-                        if (/^\d*\.?\d*$/.test(inputValue) || inputValue === '') {
-                          const numValue = parseFloat(inputValue) || 0
-                          const convertedValue = numValue / EXCHANGE_RATES[currency]
-                          update(item.id, 'price', convertedValue.toString())
+                        const inputValue = e.target.value.trim()
+                        if (inputValue === '') {
+                          update(item.id, 'price', '0')
+                        } else {
+                          const numValue = parseFloat(inputValue)
+                          if (!isNaN(numValue) && numValue >= 0) {
+                            const convertedValue = numValue / EXCHANGE_RATES[currency]
+                            update(item.id, 'price', convertedValue.toString())
+                          }
                         }
                       }}
-                      className="text-sm text-right [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      className="text-sm text-right"
                       placeholder="0.00"
                     />
                   </div>
-                  {currency !== 'USD' && (
+                  {currency !== 'USD' && item.price > 0 && (
                     <div className="text-xs text-muted-foreground mt-1">
                       USD: ${item.price.toFixed(2)}
                     </div>
