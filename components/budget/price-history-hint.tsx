@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getHistoricalPrice, EXCHANGE_RATES } from '@/lib/price-history'
+import { getHistoricalPrice } from '@/lib/price-history'
 import { Button } from '@/components/ui/button'
 import { TrendingUp } from 'lucide-react'
 
@@ -9,6 +9,12 @@ interface PriceHistoryHintProps {
   productName: string
   currency: 'USD' | 'VES' | 'PYG'
   onUsePrice: (price: number) => void
+}
+
+const EXCHANGE_RATES: Record<string, number> = {
+  USD: 1,
+  VES: 36.5,
+  PYG: 6800,
 }
 
 export function PriceHistoryHint({ productName, currency, onUsePrice }: PriceHistoryHintProps) {
