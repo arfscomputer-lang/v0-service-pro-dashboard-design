@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import {
@@ -20,11 +20,14 @@ import {
   PieChart,
   LogOut,
   DollarSign,
+  Menu,
+  X,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useAuth, type UserRole } from "@/lib/context/auth-context"
+import { useMediaQuery } from "@/hooks/use-media-query"
 
 interface NavItem {
   icon: typeof LayoutDashboard
@@ -58,9 +61,18 @@ const roleLabels: Record<UserRole, string> = {
 
 export function SidebarNav() {
   const [collapsed, setCollapsed] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const isMobile = useMediaQuery("(max-width: 768px)")
   const pathname = usePathname()
   const router = useRouter()
   const { user, logout } = useAuth()
+
+  // Auto collapse on mobile
+  useEffect(() => {
+    if (isMobile) {
+      setCollapsed(true)
+    }
+  }, [isMobile])
 
   function isActive(href: string) {
     if (href === "/") {
@@ -83,10 +95,31 @@ export function SidebarNav() {
 
   return (
     <TooltipProvider delayDuration={300}>
+      {/* Mobile Menu Button */}
+      {isMobile && (
+        <button
+          onClick={() => setMobileOpen(!mobileOpen)}
+          className="fixed top-4 left-4 z-50 md:hidden p-2 rounded-lg bg-sidebar text-sidebar-foreground"
+        >
+          {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
+      )}
+
+      {/* Mobile Overlay */}
+      {isMobile && mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
       <aside
         className={cn(
           "flex h-screen flex-col bg-sidebar text-sidebar-foreground transition-all duration-300 border-r border-sidebar-border",
-          collapsed ? "w-[68px]" : "w-[260px]"
+          "fixed md:static z-40 md:z-auto",
+          isMobile && !mobileOpen && "-translate-x-full",
+          collapsed && !isMobile ? "w-[68px]" : "w-[260px]"
         )}
       >
         {/* Logo */}

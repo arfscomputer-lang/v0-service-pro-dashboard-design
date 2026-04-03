@@ -391,13 +391,13 @@ export default function PresupuestosPage() {
   return (
     <main className="min-h-screen bg-background">
       {/* Header */}
-      <div className="sticky top-0 z-50 bg-card border-b border-border px-6 py-4 shadow-sm">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-primary text-primary-foreground p-2 rounded-lg">
+      <div className="sticky top-0 z-50 bg-card border-b border-border px-4 md:px-6 py-3 md:py-4 shadow-sm">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 md:gap-4 flex-wrap md:flex-nowrap">
+          <div className="flex items-center gap-2 md:gap-3 min-w-0">
+            <div className="bg-primary text-primary-foreground p-2 rounded-lg shrink-0">
               <svg
-                width="24"
-                height="24"
+                width="20"
+                height="20"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -407,32 +407,33 @@ export default function PresupuestosPage() {
                 <circle cx="12" cy="13" r="4" />
               </svg>
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-foreground">CCTV Presupuestos</h1>
-              <p className="text-xs text-muted-foreground">Generador de presupuestos</p>
+            <div className="min-w-0">
+              <h1 className="text-lg md:text-xl font-bold text-foreground truncate">CCTV Presupuestos</h1>
+              <p className="text-xs text-muted-foreground hidden md:block">Generador de presupuestos</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary border border-border">
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+          <div className="flex items-center gap-1 md:gap-2 flex-wrap justify-end">
+            <div className="flex items-center gap-2 px-2 md:px-3 py-1.5 rounded-lg bg-secondary border border-border">
+              <DollarSign className="h-4 w-4 text-muted-foreground shrink-0" />
               <Select value={currency} onValueChange={(val) => setCurrency(val as 'USD' | 'VES' | 'PYG')}>
-                <SelectTrigger className="border-0 bg-transparent p-0 h-auto focus:ring-0">
+                <SelectTrigger className="border-0 bg-transparent p-0 h-auto focus:ring-0 text-xs md:text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="USD">USD - Dólares</SelectItem>
-                  <SelectItem value="VES">VES - Bolívares</SelectItem>
-                  <SelectItem value="PYG">PYG - Guaraní</SelectItem>
+                  <SelectItem value="USD">USD</SelectItem>
+                  <SelectItem value="VES">VES</SelectItem>
+                  <SelectItem value="PYG">PYG</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={handleNew} variant="outline" size="sm">
+            <Button onClick={handleNew} variant="outline" size="sm" className="text-xs md:text-sm">
               Nuevo
             </Button>
             <Button
               onClick={() => setTab('edit')}
               variant={tab === 'edit' ? 'default' : 'ghost'}
               size="sm"
+              className="text-xs md:text-sm"
             >
               Editar
             </Button>
@@ -440,13 +441,14 @@ export default function PresupuestosPage() {
               onClick={() => setTab('preview')}
               variant={tab === 'preview' ? 'default' : 'ghost'}
               size="sm"
+              className="text-xs md:text-sm"
             >
               Vista previa
             </Button>
             {tab === 'preview' && (
-              <Button onClick={handlePrint} size="sm" className="gap-2">
+              <Button onClick={handlePrint} size="sm" className="gap-2 text-xs md:text-sm">
                 <Printer className="h-4 w-4" />
-                Imprimir
+                <span className="hidden md:inline">Imprimir</span>
               </Button>
             )}
           </div>
@@ -455,7 +457,7 @@ export default function PresupuestosPage() {
 
       {/* Summary Bar */}
       {tab === 'edit' && (
-        <div className="bg-card border-b border-border px-6 py-3 grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="bg-card border-b border-border px-4 md:px-6 py-3 grid grid-cols-2 md:grid-cols-5 gap-2 md:gap-3">
           {[
             { label: 'Equipos', value: sub1, color: '#1a1a2e' },
             { label: 'Materiales', value: sub2, color: '#2d4a7a' },
@@ -465,12 +467,12 @@ export default function PresupuestosPage() {
           ].map(({ label, value, color, bold }, i) => (
             <div
               key={i}
-              className="p-3 rounded-lg border-l-4 bg-secondary/30"
+              className="p-2 md:p-3 rounded-lg border-l-4 bg-secondary/30"
               style={{ borderColor: color }}
             >
               <div className="text-xs font-semibold text-muted-foreground uppercase">{label}</div>
               <div
-                className={bold ? 'text-xl font-bold' : 'text-lg font-semibold'}
+                className={bold ? 'text-lg md:text-xl font-bold' : 'text-base md:text-lg font-semibold'}
                 style={{ color }}
               >
                 {fmt(value, currency)}
@@ -481,37 +483,40 @@ export default function PresupuestosPage() {
       )}
 
       {/* Content */}
-      <div className="px-6 py-8 max-w-7xl mx-auto">
+      <div className="px-4 md:px-6 py-6 md:py-8 max-w-7xl mx-auto">
         {tab === 'edit' ? (
           <div className="space-y-6">
             {/* Company & Project Info */}
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="bg-card border border-border rounded-lg p-6 space-y-4">
-                <h2 className="font-bold text-lg text-foreground">🏢 Datos de la Empresa</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+              <div className="bg-card border border-border rounded-lg p-4 md:p-6 space-y-4">
+                <h2 className="font-bold text-base md:text-lg text-foreground">🏢 Datos de la Empresa</h2>
                 <div className="space-y-3">
                   <div>
-                    <label className="text-sm font-medium text-foreground">Nombre</label>
+                    <label className="text-xs md:text-sm font-medium text-foreground">Nombre</label>
                     <Input
                       value={company.name}
                       onChange={(e) => setCompany({ ...company, name: e.target.value })}
                       placeholder="Nombre de su empresa"
+                      className="text-xs md:text-sm"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="text-sm font-medium text-foreground">RIF / NIT</label>
+                      <label className="text-xs md:text-sm font-medium text-foreground">RIF / NIT</label>
                       <Input
                         value={company.rif}
                         onChange={(e) => setCompany({ ...company, rif: e.target.value })}
                         placeholder="J-XXXXXXXX-X"
+                        className="text-xs md:text-sm"
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-foreground">Teléfono</label>
+                      <label className="text-xs md:text-sm font-medium text-foreground">Teléfono</label>
                       <Input
                         value={company.phone}
                         onChange={(e) => setCompany({ ...company, phone: e.target.value })}
                         placeholder="+58 XXX-XXXXXXX"
+                        className="text-xs md:text-sm"
                       />
                     </div>
                   </div>

@@ -101,18 +101,18 @@ export function CustomerFormDialog({ open, onClose, onSave, initialData }: Props
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] p-0">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border">
-          <DialogTitle className="text-lg font-bold text-foreground">
+      <DialogContent className="max-w-full md:max-w-2xl max-h-[95vh] md:max-h-[90vh] p-0 mx-4 md:mx-auto">
+        <DialogHeader className="px-4 md:px-6 pt-4 md:pt-6 pb-3 md:pb-4 border-b border-border">
+          <DialogTitle className="text-base md:text-lg font-bold text-foreground">
             {isEdit ? "Editar Cliente" : "Nuevo Cliente"}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs md:text-sm">
             {isEdit ? "Modifica la información del cliente" : "Registra un nuevo cliente en el sistema"}
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[60vh]">
-          <div className="px-6 py-5 space-y-6">
+        <ScrollArea className="max-h-[calc(95vh-120px)] md:max-h-[60vh]">
+          <div className="px-4 md:px-6 py-4 md:py-5 space-y-6">
             {/* Main Customer Info Section */}
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-foreground">Información Principal</h3>

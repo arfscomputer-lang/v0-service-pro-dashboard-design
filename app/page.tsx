@@ -45,16 +45,16 @@ export default function DashboardPage() {
     <div className="flex h-screen overflow-hidden bg-background">
       <SidebarNav />
 
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden w-full">
         <TopHeader />
 
-        <main className="flex-1 overflow-y-auto p-6 gap-6 flex flex-col bg-background">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 gap-6 flex flex-col bg-background">
           {/* Header */}
           <div className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
               Panel Principal
             </h1>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs md:text-sm text-muted-foreground">
               Resumen en tiempo real de la operación desde la base de datos Neon
             </p>
           </div>
@@ -63,7 +63,7 @@ export default function DashboardPage() {
           <DashboardMetrics />
 
           {/* Main Content Grid */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-3">
             {/* Recent Orders */}
             <RecentOrders />
 
@@ -78,7 +78,7 @@ export default function DashboardPage() {
                   return (
                     <Link key={link.href} href={link.href}>
                       <Card className="h-full border border-border hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group">
-                        <CardContent className="p-4">
+                        <CardContent className="p-3 md:p-4">
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1">
                               <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
