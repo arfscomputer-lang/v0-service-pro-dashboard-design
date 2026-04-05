@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import Link from "next/link"
 import { SidebarNav } from "@/components/dashboard/sidebar-nav"
 import { TopHeader } from "@/components/dashboard/top-header"
@@ -26,7 +26,15 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useWorkOrders, type WorkOrder } from "@/lib/context/work-orders-context"
-import { technicianProfiles } from "@/lib/data/technicians"
+
+interface Technician {
+  id: string
+  name: string
+  role?: string
+  email?: string
+  phone?: string
+  status?: string
+}
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   pendiente: { label: "Pendiente", className: "bg-amber-100 text-amber-800 border-amber-200" },
@@ -48,6 +56,8 @@ const priorityConfig: Record<string, { label: string; dot: string }> = {
 export default function OrdenesPage() {
   const { workOrders, addWorkOrder, updateWorkOrder, deleteWorkOrder } = useWorkOrders()
   const [searchTerm, setSearchTerm] = useState("")
+  const [technicians, setTechnicians] = useState<Technician[]>([])
+  const [loadingTechnicians, setLoadingTechnicians] = useState(true)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [createForm, setCreateForm] = useState<Omit<WorkOrder, 'id' | 'createdAt' | 'updatedAt'>>({
     orderId: '',
@@ -64,6 +74,27 @@ export default function OrdenesPage() {
   })
   const [editingOrder, setEditingOrder] = useState<WorkOrder | null>(null)
   const [editForm, setEditForm] = useState<Partial<WorkOrder>>({})
+
+  // Cargar técnicos desde la API
+  useEffect(() => {
+    const fetchTechnicians = async () => {
+      try {
+        setLoadingTechnicians(true)
+        const response = await fetch('/api/technicians')
+        if (!response.ok) throw new Error('Failed to fetch technicians')
+        const json = await response.json()
+        setTechnicians(json.data || [])
+        console.log('[v0] Loaded technicians from database:', json.data?.length)
+      } catch (error) {
+        console.error('[v0] Error loading technicians:', error)
+        setTechnicians([])
+      } finally {
+        setLoadingTechnicians(false)
+      }
+    }
+
+    fetchTechnicians()
+  }, [])
 
   const filteredOrders = workOrders.filter(
     (order) =>
@@ -383,9 +414,9 @@ export default function OrdenesPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Sin asignar</SelectItem>
-                    {technicianProfiles.map((tech) => (
+                    {technicians.map((tech) => (
                       <SelectItem key={tech.id} value={tech.id}>
-                        {tech.name} - {tech.role}
+                        {tech.name} {tech.role ? `- ${tech.role}` : ''}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -526,9 +557,9 @@ export default function OrdenesPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Sin asignar</SelectItem>
-                    {technicianProfiles.map((tech) => (
+                    {technicians.map((tech) => (
                       <SelectItem key={tech.id} value={tech.id}>
-                        {tech.name} - {tech.role}
+                        {tech.name} {tech.role ? `- ${tech.role}` : ''}
                       </SelectItem>
                     ))}
                   </SelectContent>
