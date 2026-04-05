@@ -3,14 +3,14 @@ import { query } from '@/lib/db'
 
 export async function GET() {
   try {
-    // Get work order metrics
+    // Get work order metrics - count ALL pending orders (not just last 30 days)
     const workOrdersResult = await query(
       `SELECT 
         COUNT(*) as total,
         SUM(CASE WHEN status = 'pendiente' THEN 1 ELSE 0 END) as pending,
         SUM(CASE WHEN status = 'completada' THEN 1 ELSE 0 END) as completed,
         SUM(CASE WHEN status IN ('en_ruta', 'en_sitio') THEN 1 ELSE 0 END) as in_progress
-      FROM work_orders WHERE created_at >= NOW() - INTERVAL '30 days'`,
+      FROM work_orders`,
       []
     )
 
@@ -34,7 +34,7 @@ export async function GET() {
       []
     )
 
-    // Get recent orders
+    // Get recent orders - last 5 orders
     const recentOrdersResult = await query(
       `SELECT id, order_id, status, priority, created_at 
        FROM work_orders 
@@ -42,6 +42,8 @@ export async function GET() {
        LIMIT 5`,
       []
     )
+
+    console.log('[v0] Dashboard metrics - Work orders result:', workOrdersResult.rows[0])
 
     return NextResponse.json({
       workOrders: workOrdersResult.rows[0] || {},
