@@ -377,8 +377,8 @@ export async function updateWorkOrder(id: string, data: Record<string, any>) {
   if (sets.length === 0) return getWorkOrderById(id)
 
   sets.push(`updated_at = NOW()`)
+  const idIdx = idx
   values.push(id)
-  const idIdx = idx + 1
   const result = await query(
     `UPDATE work_orders SET ${sets.join(", ")} WHERE id = $${idIdx} RETURNING *`,
     values

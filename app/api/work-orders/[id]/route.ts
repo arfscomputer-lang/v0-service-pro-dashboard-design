@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getWorkOrderById, updateWorkOrder, deleteWorkOrder } from "@/lib/db"
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const workOrder = await getWorkOrderById(params.id)
+    const { id } = await params
+    const workOrder = await getWorkOrderById(id)
     if (!workOrder) {
       return NextResponse.json({ error: "Work order not found" }, { status: 404 })
     }
@@ -14,14 +15,15 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     const body = await req.json()
-    const workOrder = await updateWorkOrder(params.id, body)
+    const workOrder = await updateWorkOrder(id, body)
     if (!workOrder) {
       return NextResponse.json({ error: "Work order not found" }, { status: 404 })
     }
-    console.log("[v0] Updated work order:", params.id)
+    console.log("[v0] Updated work order:", id)
     return NextResponse.json({ data: workOrder }, { status: 200 })
   } catch (error) {
     console.error("[v0] Error updating work order:", error)
@@ -29,10 +31,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await deleteWorkOrder(params.id)
-    console.log("[v0] Deleted work order:", params.id)
+    const { id } = await params
+    await deleteWorkOrder(id)
+    console.log("[v0] Deleted work order:", id)
     return NextResponse.json({ success: true }, { status: 200 })
   } catch (error) {
     console.error("[v0] Error deleting work order:", error)
