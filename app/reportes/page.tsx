@@ -1,8 +1,7 @@
 "use client"
 
 import React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { SidebarNav } from "@/components/dashboard/sidebar-nav"
 import { TopHeader } from "@/components/dashboard/top-header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -19,6 +18,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   CalendarDays,
+  Loader,
 } from "lucide-react"
 import {
   BarChart,
@@ -35,57 +35,71 @@ import {
   Cell,
 } from "recharts"
 
-// ── Data ──────────────────────────────────────────────────────
-
-const productivityData = [
-  { week: "Sem 1", completados: 42, asignados: 48 },
-  { week: "Sem 2", completados: 38, asignados: 45 },
-  { week: "Sem 3", completados: 50, asignados: 52 },
-  { week: "Sem 4", completados: 45, asignados: 50 },
-  { week: "Sem 5", completados: 55, asignados: 58 },
-  { week: "Sem 6", completados: 48, asignados: 53 },
-]
-
-const responseTimeData = [
-  { day: "Lun", promedio: 22, objetivo: 25 },
-  { day: "Mar", promedio: 18, objetivo: 25 },
-  { day: "Mie", promedio: 28, objetivo: 25 },
-  { day: "Jue", promedio: 20, objetivo: 25 },
-  { day: "Vie", promedio: 24, objetivo: 25 },
-  { day: "Sab", promedio: 15, objetivo: 25 },
-]
-
-const satisfactionData = [
-  { name: "5 estrellas", value: 48, color: "#16a34a" },
-  { name: "4 estrellas", value: 28, color: "#65a30d" },
-  { name: "3 estrellas", value: 14, color: "#eab308" },
-  { name: "2 estrellas", value: 7, color: "#f97316" },
-  { name: "1 estrella", value: 3, color: "#ef4444" },
-]
-
-const techRanking = [
-  { name: "Ana Torres", initials: "AT", jobs: 48, rating: 4.9, responseMin: 18 },
-  { name: "Luis Hernandez", initials: "LH", jobs: 45, rating: 4.8, responseMin: 22 },
-  { name: "Sofia Morales", initials: "SM", jobs: 38, rating: 4.7, responseMin: 20 },
-  { name: "Pedro Sanchez", initials: "PS", jobs: 35, rating: 4.5, responseMin: 28 },
-  { name: "Carlos Vega", initials: "CV", jobs: 30, rating: 4.6, responseMin: 25 },
-]
+interface ReportData {
+  productivityData: any[]
+  techRanking: any[]
+  satisfactionData: any[]
+  responseTimeData: any[]
+}
 
 const CHART_BLUE = "#2e5cb8"
 const CHART_BLUE_LIGHT = "#6b8fd4"
 const CHART_EMERALD = "#16a34a"
 const CHART_AMBER = "#eab308"
 
-// ── Component ─────────────────────────────────────────────────
-
 export default function ReportesPage() {
   const [period, setPeriod] = useState<"semana" | "mes" | "trimestre">("semana")
+  const [reportData, setReportData] = useState<ReportData | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchReportData = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch('/api/reports/productivity')
+        if (!response.ok) throw new Error('Failed to fetch report data')
+        const data = await response.json()
+        setReportData(data)
+        console.log('[v0] Loaded report data:', data)
+      } catch (error) {
+        console.error('[v0] Error loading reports:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchReportData()
+  }, [])
 
   const periods = [
     { key: "semana" as const, label: "Ultima Semana" },
     { key: "mes" as const, label: "Ultimo Mes" },
     { key: "trimestre" as const, label: "Ultimo Trimestre" },
   ]
+
+  if (loading) {
+    return (
+      <div className="flex h-screen overflow-hidden bg-background">
+        <SidebarNav />
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <TopHeader />
+          <main className="flex-1 overflow-y-auto p-6 flex items-center justify-center">
+            <div className="flex flex-col items-center gap-3">
+              <Loader className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-muted-foreground">Cargando reportes...</p>
+            </div>
+          </main>
+        </div>
+      </div>
+    )
+  }
+
+  const data = reportData || {
+    productivityData: [],
+    techRanking: [],
+    satisfactionData: [],
+    responseTimeData: [],
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -178,7 +192,7 @@ export default function ReportesPage() {
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={productivityData} barGap={4}>
+                  <BarChart data={data.productivityData} barGap={4}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                     <XAxis dataKey="week" tick={{ fontSize: 12 }} stroke="#94a3b8" />
                     <YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" />
@@ -217,7 +231,7 @@ export default function ReportesPage() {
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={260}>
-                  <LineChart data={responseTimeData}>
+                  <LineChart data={data.responseTimeData}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                     <XAxis dataKey="day" tick={{ fontSize: 12 }} stroke="#94a3b8" />
                     <YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" domain={[0, 40]} />
@@ -276,7 +290,7 @@ export default function ReportesPage() {
                 <ResponsiveContainer width="100%" height={220}>
                   <PieChart>
                     <Pie
-                      data={satisfactionData}
+                      data={data.satisfactionData}
                       cx="50%"
                       cy="50%"
                       innerRadius={55}
@@ -284,7 +298,7 @@ export default function ReportesPage() {
                       paddingAngle={3}
                       dataKey="value"
                     >
-                      {satisfactionData.map((entry) => (
+                      {data.satisfactionData.map((entry) => (
                         <Cell key={entry.name} fill={entry.color} />
                       ))}
                     </Pie>
@@ -295,15 +309,15 @@ export default function ReportesPage() {
                         borderRadius: 8,
                         fontSize: 12,
                       }}
-                      formatter={(value: number) => [`${value}%`, ""]}
+                      formatter={(value: number) => [`${value}`, ""]}
                     />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="flex flex-wrap justify-center gap-x-4 gap-y-1.5 mt-2">
-                  {satisfactionData.map((d) => (
+                  {data.satisfactionData.map((d) => (
                     <div key={d.name} className="flex items-center gap-1.5">
                       <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: d.color }} />
-                      <span className="text-[11px] text-muted-foreground">{d.name} ({d.value}%)</span>
+                      <span className="text-[11px] text-muted-foreground">{d.name} ({d.value})</span>
                     </div>
                   ))}
                 </div>
