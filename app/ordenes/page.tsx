@@ -117,8 +117,14 @@ export default function OrdenesPage() {
       }
       
       try {
-        console.log('[v0] Creating work order with validated data:', JSON.stringify(createForm))
-        await addWorkOrder(createForm)
+        // Format date to ensure it's in YYYY-MM-DD format
+        const formattedData = { ...createForm }
+        if (formattedData.scheduledDate) {
+          const dateObj = new Date(formattedData.scheduledDate)
+          formattedData.scheduledDate = dateObj.toISOString().split('T')[0]
+        }
+        console.log('[v0] Creating work order with validated data:', JSON.stringify(formattedData))
+        await addWorkOrder(formattedData)
         console.log('[v0] Work order added to context successfully')
         handleCreateClose()
       } catch (error) {
@@ -139,7 +145,14 @@ export default function OrdenesPage() {
       e.preventDefault()
       if (!editingOrder) return
       try {
-        await updateWorkOrder(editingOrder.id, editForm)
+        // Format date to ensure it's in YYYY-MM-DD format
+        const formattedData = { ...editForm }
+        if (formattedData.scheduledDate) {
+          // If it's a Date object or string, convert to ISO date format
+          const dateObj = new Date(formattedData.scheduledDate)
+          formattedData.scheduledDate = dateObj.toISOString().split('T')[0]
+        }
+        await updateWorkOrder(editingOrder.id, formattedData)
         setEditingOrder(null)
         setEditForm({})
       } catch (error) {
