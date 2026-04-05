@@ -346,10 +346,17 @@ export async function createWorkOrder(data: {
   priority: string; address: string; city: string; scheduled_date: string;
   scheduled_time: string; customer_id?: string; technician_id?: string;
 }) {
+  // Validate technician_id: skip if not a valid UUID
+  let technicianId = data.technician_id || null
+  if (technicianId && !isValidUUID(technicianId)) {
+    console.log(`[v0] Skipping invalid technician_id during creation: ${technicianId}`)
+    technicianId = null
+  }
+
   const result = await query(
     `INSERT INTO work_orders (order_id, type, description, status, priority, address, city, scheduled_date, scheduled_time, customer_id, technician_id, created_at)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW()) RETURNING *`,
-    [data.order_id, data.type, data.description, data.status, data.priority, data.address, data.city, data.scheduled_date, data.scheduled_time, data.customer_id || null, data.technician_id || null]
+    [data.order_id, data.type, data.description, data.status, data.priority, data.address, data.city, data.scheduled_date, data.scheduled_time, data.customer_id || null, technicianId]
   )
   return normalizeWorkOrder(result.rows[0])
 }
@@ -368,6 +375,11 @@ export async function updateWorkOrder(id: string, data: Record<string, any>) {
 
   for (const [key, col] of Object.entries(allowedFields)) {
     if (data[key] !== undefined) {
+      // Skip technician_id if it's not a valid UUID (e.g., "tech-3" from frontend data)
+      if (col === "technician_id" && data[key] && !isValidUUID(data[key])) {
+        console.log(`[v0] Skipping invalid technician_id: ${data[key]}`)
+        continue
+      }
       sets.push(`${col} = $${idx}`)
       values.push(data[key] || null)
       idx++
@@ -384,6 +396,12 @@ export async function updateWorkOrder(id: string, data: Record<string, any>) {
     values
   )
   return result.rows[0] ? normalizeWorkOrder(result.rows[0]) : null
+}
+
+// Helper function to validate UUID format
+function isValidUUID(uuid: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  return uuidRegex.test(uuid)
 }
 
 export async function deleteWorkOrder(id: string) {
