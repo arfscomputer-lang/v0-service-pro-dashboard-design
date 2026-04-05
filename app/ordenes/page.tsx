@@ -26,6 +26,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useWorkOrders, type WorkOrder } from "@/lib/context/work-orders-context"
+import { technicianProfiles } from "@/lib/data/technicians"
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   pendiente: { label: "Pendiente", className: "bg-amber-100 text-amber-800 border-amber-200" },
@@ -358,6 +359,25 @@ export default function OrdenesPage() {
                   />
                 </div>
               </div>
+              <div>
+                <Label htmlFor="technicianId">Técnico Asignado</Label>
+                <Select 
+                  value={editForm.technicianId || ""} 
+                  onValueChange={(v) => setEditForm({ ...editForm, technicianId: v || null })}
+                >
+                  <SelectTrigger id="technicianId">
+                    <SelectValue placeholder="Seleccionar técnico..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Sin asignar</SelectItem>
+                    {technicianProfiles.map((tech) => (
+                      <SelectItem key={tech.id} value={tech.id}>
+                        {tech.name} - {tech.role}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="flex gap-2 justify-end">
                 <Button type="button" variant="outline" onClick={() => setEditingOrder(null)}>
                   Cancelar
@@ -481,6 +501,25 @@ export default function OrdenesPage() {
                     required
                   />
                 </div>
+              </div>
+              <div>
+                <Label htmlFor="technicianId">Técnico Asignado</Label>
+                <Select 
+                  value={createForm.technicianId || ""} 
+                  onValueChange={(v) => setCreateForm({ ...createForm, technicianId: v || null })}
+                >
+                  <SelectTrigger id="technicianId">
+                    <SelectValue placeholder="Seleccionar técnico..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Sin asignar</SelectItem>
+                    {technicianProfiles.map((tech) => (
+                      <SelectItem key={tech.id} value={tech.id}>
+                        {tech.name} - {tech.role}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex gap-2 justify-end">
                 <Button type="button" variant="outline" onClick={handleCreateClose}>
