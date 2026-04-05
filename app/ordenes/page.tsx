@@ -362,14 +362,14 @@ export default function OrdenesPage() {
               <div>
                 <Label htmlFor="technicianId">Técnico Asignado</Label>
                 <Select 
-                  value={editForm.technicianId || ""} 
-                  onValueChange={(v) => setEditForm({ ...editForm, technicianId: v || null })}
+                  value={editForm.technicianId || "none"} 
+                  onValueChange={(v) => setEditForm({ ...editForm, technicianId: v === "none" ? null : v })}
                 >
                   <SelectTrigger id="technicianId">
                     <SelectValue placeholder="Seleccionar técnico..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Sin asignar</SelectItem>
+                    <SelectItem value="none">Sin asignar</SelectItem>
                     {technicianProfiles.map((tech) => (
                       <SelectItem key={tech.id} value={tech.id}>
                         {tech.name} - {tech.role}
@@ -505,14 +505,14 @@ export default function OrdenesPage() {
               <div>
                 <Label htmlFor="technicianId">Técnico Asignado</Label>
                 <Select 
-                  value={createForm.technicianId || ""} 
-                  onValueChange={(v) => setCreateForm({ ...createForm, technicianId: v || null })}
+                  value={createForm.technicianId || "none"} 
+                  onValueChange={(v) => setCreateForm({ ...createForm, technicianId: v === "none" ? null : v })}
                 >
                   <SelectTrigger id="technicianId">
                     <SelectValue placeholder="Seleccionar técnico..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Sin asignar</SelectItem>
+                    <SelectItem value="none">Sin asignar</SelectItem>
                     {technicianProfiles.map((tech) => (
                       <SelectItem key={tech.id} value={tech.id}>
                         {tech.name} - {tech.role}
