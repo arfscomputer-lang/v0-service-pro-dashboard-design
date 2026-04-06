@@ -6,7 +6,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url)
     const period = searchParams.get('period') || 'semana'
 
-    // Calculate date range based on period
+    // Calculate date range based on period for additional context
     let daysAgo = 7
     if (period === 'mes') daysAgo = 30
     if (period === 'trimestre') daysAgo = 90
@@ -15,7 +15,7 @@ export async function GET(req: Request) {
     startDate.setDate(startDate.getDate() - daysAgo)
     const startDateStr = startDate.toISOString().split('T')[0]
 
-    // Get productivity data by day (filtered by period)
+    // Get productivity data by day - ALL orders (not filtered by period) for accurate reporting
     const productivityResult = await query(
       `SELECT 
         DATE(created_at) as date,
@@ -23,10 +23,10 @@ export async function GET(req: Request) {
         SUM(CASE WHEN status = 'completada' THEN 1 ELSE 0 END) as completed,
         SUM(CASE WHEN status = 'pendiente' THEN 1 ELSE 0 END) as pending
       FROM work_orders
-      WHERE DATE(created_at) >= $1::date
       GROUP BY DATE(created_at)
-      ORDER BY date ASC`,
-      [startDateStr]
+      ORDER BY date ASC
+      LIMIT 90`,
+      []
     )
 
     // Get ALL pending orders (no date filter) for KPI
@@ -35,7 +35,7 @@ export async function GET(req: Request) {
       []
     )
 
-    // Get technician ranking with actual stats (filtered by period)
+    // Get technician ranking with actual stats - ALL orders
     const techRankingResult = await query(
       `SELECT 
         t.id,
@@ -43,35 +43,35 @@ export async function GET(req: Request) {
         COUNT(wo.id) as total_orders,
         SUM(CASE WHEN wo.status = 'completada' THEN 1 ELSE 0 END) as completed_orders
       FROM technicians t
-      LEFT JOIN work_orders wo ON wo.technician_id = t.id AND DATE(wo.created_at) >= $1::date
+      LEFT JOIN work_orders wo ON wo.technician_id = t.id
       GROUP BY t.id, t.name
       HAVING COUNT(wo.id) > 0
       ORDER BY completed_orders DESC
       LIMIT 10`,
-      [startDateStr]
+      []
     )
 
-    // Get work order status distribution
+    // Get work order status distribution - ALL orders
     const statusResult = await query(
       `SELECT 
         status,
         COUNT(*) as count
       FROM work_orders
-      WHERE DATE(created_at) >= $1::date
       GROUP BY status`,
-      [startDateStr]
+      []
     )
 
-    // Get response time metrics - calculate average time between creation and completion
+    // Get response time metrics - calculate average time between creation and completion - ALL orders
     const responseTimeResult = await query(
       `SELECT 
         DATE(created_at) as date,
         ROUND(AVG(EXTRACT(EPOCH FROM (updated_at - created_at))/3600)::numeric, 1) as avg_response_hours
       FROM work_orders
-      WHERE DATE(created_at) >= $1::date AND status = 'completada'
+      WHERE status = 'completada'
       GROUP BY DATE(created_at)
-      ORDER BY date ASC`,
-      [startDateStr]
+      ORDER BY date DESC
+      LIMIT 90`,
+      []
     )
 
     // Format productivity data for chart
