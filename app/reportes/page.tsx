@@ -265,7 +265,6 @@ export default function ReportesPage() {
                     <span className="text-xs text-muted-foreground">Promedio</span>
                   </div>
                 </div>
-                </div>
               </CardContent>
             </Card>
           </div>
