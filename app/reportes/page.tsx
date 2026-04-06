@@ -162,7 +162,7 @@ export default function ReportesPage() {
             />
             <KpiCard
               title="Órdenes Pendientes"
-              value={data?.productivityData?.reduce((a: number, d: any) => a + (d.pendientes || 0), 0) || "0"}
+              value={data?.totalPending || "0"}
               change="+3%"
               trend="down"
               icon={AlertTriangle}

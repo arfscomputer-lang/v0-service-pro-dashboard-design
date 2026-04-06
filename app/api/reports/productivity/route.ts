@@ -15,7 +15,7 @@ export async function GET(req: Request) {
     startDate.setDate(startDate.getDate() - daysAgo)
     const startDateStr = startDate.toISOString().split('T')[0]
 
-    // Get productivity data by day
+    // Get productivity data by day (filtered by period)
     const productivityResult = await query(
       `SELECT 
         DATE(created_at) as date,
@@ -29,7 +29,13 @@ export async function GET(req: Request) {
       [startDateStr]
     )
 
-    // Get technician ranking with actual stats
+    // Get ALL pending orders (no date filter) for KPI
+    const totalPendingResult = await query(
+      `SELECT COUNT(*) as count FROM work_orders WHERE status = 'pendiente'`,
+      []
+    )
+
+    // Get technician ranking with actual stats (filtered by period)
     const techRankingResult = await query(
       `SELECT 
         t.id,
@@ -114,6 +120,7 @@ export async function GET(req: Request) {
       techRanking,
       satisfactionData,
       responseTimeData,
+      totalPending: parseInt(totalPendingResult.rows[0]?.count) || 0,
       period,
     })
   } catch (error) {
