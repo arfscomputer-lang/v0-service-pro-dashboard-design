@@ -259,39 +259,12 @@ export default function ReportesPage() {
                     />
                   </LineChart>
                 </ResponsiveContainer>
-                        border: "1px solid #e2e8f0",
-                        borderRadius: 8,
-                        fontSize: 12,
-                      }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="promedio"
-                      stroke={CHART_BLUE}
-                      strokeWidth={2.5}
-                      dot={{ r: 4, fill: CHART_BLUE }}
-                      name="Promedio"
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="objetivo"
-                      stroke={CHART_AMBER}
-                      strokeDasharray="6 4"
-                      strokeWidth={2}
-                      dot={false}
-                      name="Objetivo"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
                 <div className="flex items-center justify-center gap-6 mt-2">
                   <div className="flex items-center gap-2">
                     <span className="h-0.5 w-4 rounded" style={{ backgroundColor: CHART_BLUE }} />
                     <span className="text-xs text-muted-foreground">Promedio</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="h-0.5 w-4 rounded border-t-2 border-dashed" style={{ borderColor: CHART_AMBER }} />
-                    <span className="text-xs text-muted-foreground">Objetivo</span>
-                  </div>
+                </div>
                 </div>
               </CardContent>
             </Card>
