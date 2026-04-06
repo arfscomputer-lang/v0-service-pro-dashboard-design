@@ -56,13 +56,13 @@ export async function GET(req: Request) {
       [startDateStr]
     )
 
-    // Get response time metrics
+    // Get response time metrics - calculate average time between creation and completion
     const responseTimeResult = await query(
       `SELECT 
         DATE(created_at) as date,
-        ROUND(AVG(EXTRACT(EPOCH FROM (CAST(scheduled_date AS timestamp) - created_at))/3600)::numeric, 1) as avg_response_hours
+        ROUND(AVG(EXTRACT(EPOCH FROM (updated_at - created_at))/3600)::numeric, 1) as avg_response_hours
       FROM work_orders
-      WHERE DATE(created_at) >= $1::date AND scheduled_date IS NOT NULL
+      WHERE DATE(created_at) >= $1::date AND status = 'completada'
       GROUP BY DATE(created_at)
       ORDER BY date ASC`,
       [startDateStr]
@@ -104,7 +104,7 @@ export async function GET(req: Request) {
     // Format response time data
     const responseTimeData = responseTimeResult.rows.map(row => ({
       date: new Date(row.date).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }),
-      promedio: Math.round(parseFloat(row.avg_response_hours) * 60) || 0,
+      promedio: Math.max(0, Math.round(parseFloat(row.avg_response_hours) * 60)) || 0,
     }))
 
     console.log('[v0] Productivity report generated for period:', period, '- Orders:', productivityData.length)
