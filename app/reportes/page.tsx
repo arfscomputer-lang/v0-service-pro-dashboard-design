@@ -56,7 +56,7 @@ export default function ReportesPage() {
     const fetchReportData = async () => {
       try {
         setLoading(true)
-        const response = await fetch('/api/reports/productivity')
+        const response = await fetch(`/api/reports/productivity?period=${period}`)
         if (!response.ok) throw new Error('Failed to fetch report data')
         const data = await response.json()
         setReportData(data)
@@ -69,7 +69,7 @@ export default function ReportesPage() {
     }
 
     fetchReportData()
-  }, [])
+  }, [period])
 
   const periods = [
     { key: "semana" as const, label: "Ultima Semana" },
@@ -144,7 +144,7 @@ export default function ReportesPage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <KpiCard
               title="Trabajos Completados"
-              value="278"
+              value={data?.techRanking?.reduce((a: number, t: any) => a + (t.completadas || 0), 0) || "0"}
               change="+12%"
               trend="up"
               icon={CheckCircle2}
@@ -153,7 +153,7 @@ export default function ReportesPage() {
             />
             <KpiCard
               title="Tiempo Resp. Promedio"
-              value="22 min"
+              value={`${data?.responseTimeData?.[data.responseTimeData.length - 1]?.promedio || 0} min`}
               change="-8%"
               trend="up"
               icon={Clock}
@@ -161,22 +161,26 @@ export default function ReportesPage() {
               iconColor="text-blue-600"
             />
             <KpiCard
-              title="Satisfaccion Cliente"
-              value="4.6"
+              title="Órdenes Pendientes"
+              value={data?.productivityData?.reduce((a: number, d: any) => a + (d.pendientes || 0), 0) || "0"}
               change="+3%"
-              trend="up"
-              icon={Star}
+              trend="down"
+              icon={AlertTriangle}
               iconBg="bg-amber-50"
               iconColor="text-amber-600"
             />
             <KpiCard
-              title="Incidencias Abiertas"
-              value="7"
-              change="+2"
-              trend="down"
-              icon={AlertTriangle}
-              iconBg="bg-red-50"
-              iconColor="text-red-600"
+              title="Tasa Completación"
+              value={(() => {
+                const total = data?.productivityData?.reduce((a: number, d: any) => a + (d.total || 0), 0) || 0
+                const completed = data?.productivityData?.reduce((a: number, d: any) => a + (d.completadas || 0), 0) || 0
+                return total > 0 ? `${Math.round((completed / total) * 100)}%` : "0%"
+              })()}
+              change="+5%"
+              trend="up"
+              icon={TrendingUp}
+              iconBg="bg-blue-50"
+              iconColor="text-blue-600"
             />
           </div>
 
@@ -194,7 +198,7 @@ export default function ReportesPage() {
                 <ResponsiveContainer width="100%" height={260}>
                   <BarChart data={data.productivityData} barGap={4}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                    <XAxis dataKey="week" tick={{ fontSize: 12 }} stroke="#94a3b8" />
+                    <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#94a3b8" />
                     <YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" />
                     <Tooltip
                       contentStyle={{
@@ -204,18 +208,18 @@ export default function ReportesPage() {
                         fontSize: 12,
                       }}
                     />
-                    <Bar dataKey="asignados" fill={CHART_BLUE_LIGHT} radius={[4, 4, 0, 0]} name="Asignados" />
-                    <Bar dataKey="completados" fill={CHART_BLUE} radius={[4, 4, 0, 0]} name="Completados" />
+                    <Bar dataKey="pendientes" fill={CHART_BLUE_LIGHT} radius={[4, 4, 0, 0]} name="Pendientes" />
+                    <Bar dataKey="completadas" fill={CHART_BLUE} radius={[4, 4, 0, 0]} name="Completadas" />
                   </BarChart>
                 </ResponsiveContainer>
                 <div className="flex items-center justify-center gap-6 mt-2">
                   <div className="flex items-center gap-2">
                     <span className="h-3 w-3 rounded-sm" style={{ backgroundColor: CHART_BLUE_LIGHT }} />
-                    <span className="text-xs text-muted-foreground">Asignados</span>
+                    <span className="text-xs text-muted-foreground">Pendientes</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="h-3 w-3 rounded-sm" style={{ backgroundColor: CHART_BLUE }} />
-                    <span className="text-xs text-muted-foreground">Completados</span>
+                    <span className="text-xs text-muted-foreground">Completadas</span>
                   </div>
                 </div>
               </CardContent>
@@ -233,11 +237,28 @@ export default function ReportesPage() {
                 <ResponsiveContainer width="100%" height={260}>
                   <LineChart data={data.responseTimeData}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                    <XAxis dataKey="day" tick={{ fontSize: 12 }} stroke="#94a3b8" />
-                    <YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" domain={[0, 40]} />
+                    <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#94a3b8" />
+                    <YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" domain={[0, 60]} />
                     <Tooltip
                       contentStyle={{
                         background: "white",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: 8,
+                        fontSize: 12,
+                      }}
+                      formatter={(value: any) => [`${value} min`, 'Promedio']}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="promedio" 
+                      stroke={CHART_BLUE} 
+                      dot={{ fill: CHART_BLUE, r: 4 }} 
+                      activeDot={{ r: 6 }} 
+                      name="Promedio"
+                      strokeWidth={2}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
                         border: "1px solid #e2e8f0",
                         borderRadius: 8,
                         fontSize: 12,
@@ -354,8 +375,9 @@ export default function ReportesPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {techRanking.map((tech, i) => {
-                        const index = Math.round((tech.jobs * 0.4 + tech.rating * 20 * 0.3 + (40 - tech.responseMin) * 0.3) * 10) / 10
+                      {data.techRanking?.slice(0, 5).map((tech, i) => {
+                        const index = Math.round(tech.tasa * 1.2)
+                        const initials = tech.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
                         return (
                           <tr key={tech.name} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                             <td className="px-4 py-3">
@@ -373,36 +395,37 @@ export default function ReportesPage() {
                               <div className="flex items-center gap-2.5">
                                 <Avatar className="h-8 w-8">
                                   <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                                    {tech.initials}
+                                    {initials}
                                   </AvatarFallback>
                                 </Avatar>
                                 <span className="font-medium text-foreground">{tech.name}</span>
                               </div>
                             </td>
-                            <td className="px-4 py-3 text-center font-semibold text-foreground">{tech.jobs}</td>
+                            <td className="px-4 py-3 text-center font-semibold text-foreground">{tech.ordenes}</td>
                             <td className="px-4 py-3 text-center">
                               <div className="flex items-center justify-center gap-1">
-                                <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                                <span className="font-medium text-foreground">{tech.rating}</span>
+                                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                                <span className="font-medium text-foreground">{tech.completadas}</span>
                               </div>
                             </td>
                             <td className="px-4 py-3 text-center">
-                              <span className="text-foreground">{tech.responseMin} min</span>
+                              <span className="text-foreground font-semibold">{tech.tasa}%</span>
                             </td>
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-2">
                                 <div className="h-2 w-20 rounded-full bg-muted">
                                   <div
                                     className="h-2 rounded-full bg-primary"
-                                    style={{ width: `${Math.min(100, index * 2)}%` }}
+                                    style={{ width: `${Math.min(100, tech.tasa)}%` }}
                                   />
                                 </div>
-                                <span className="text-xs font-bold text-foreground">{index}</span>
+                                <span className="text-xs font-bold text-foreground">{tech.tasa}%</span>
                               </div>
                             </td>
                           </tr>
                         )
                       })}
+                    </tbody>
                     </tbody>
                   </table>
                 </div>

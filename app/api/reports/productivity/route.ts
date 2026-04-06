@@ -3,103 +3,123 @@ import { query } from '@/lib/db'
 
 export async function GET(req: Request) {
   try {
-    // Get productivity data by week - last 6 weeks
-    const result = await query(
+    const { searchParams } = new URL(req.url)
+    const period = searchParams.get('period') || 'semana'
+
+    // Calculate date range based on period
+    let daysAgo = 7
+    if (period === 'mes') daysAgo = 30
+    if (period === 'trimestre') daysAgo = 90
+
+    const startDate = new Date()
+    startDate.setDate(startDate.getDate() - daysAgo)
+    const startDateStr = startDate.toISOString().split('T')[0]
+
+    // Get productivity data by day
+    const productivityResult = await query(
       `SELECT 
-        DATE_TRUNC('week', created_at)::date as week_start,
-        COUNT(CASE WHEN status = 'completada' THEN 1 END) as completados,
-        COUNT(*) as asignados
-       FROM work_orders
-       WHERE created_at >= NOW() - INTERVAL '6 weeks'
-       GROUP BY DATE_TRUNC('week', created_at)
-       ORDER BY week_start DESC
-       LIMIT 6`,
-      []
+        DATE(created_at) as date,
+        COUNT(*) as total,
+        SUM(CASE WHEN status = 'completada' THEN 1 ELSE 0 END) as completed,
+        SUM(CASE WHEN status = 'pendiente' THEN 1 ELSE 0 END) as pending
+      FROM work_orders
+      WHERE DATE(created_at) >= $1::date
+      GROUP BY DATE(created_at)
+      ORDER BY date ASC`,
+      [startDateStr]
     )
 
-    const productivityData = result.rows.reverse().map((row: any, idx: number) => ({
-      week: `Sem ${idx + 1}`,
-      completados: parseInt(row.completados),
-      asignados: parseInt(row.asignados),
-    }))
-
-    // Get technician ranking with stats
-    const techResult = await query(
+    // Get technician ranking with actual stats
+    const techRankingResult = await query(
       `SELECT 
         t.id,
         t.name,
-        t.email,
-        COUNT(w.id) as jobs_completed,
-        AVG(CASE WHEN w.status = 'completada' THEN 5 ELSE 3 END) as avg_rating,
-        AVG(EXTRACT(EPOCH FROM (w.scheduled_date - w.created_at))/3600) as avg_response_hours
-       FROM technicians t
-       LEFT JOIN work_orders w ON t.id = w.technician_id AND w.status = 'completada'
-       GROUP BY t.id, t.name, t.email
-       ORDER BY jobs_completed DESC
-       LIMIT 5`,
-      []
+        COUNT(wo.id) as total_orders,
+        SUM(CASE WHEN wo.status = 'completada' THEN 1 ELSE 0 END) as completed_orders
+      FROM technicians t
+      LEFT JOIN work_orders wo ON wo.technician_id = t.id AND DATE(wo.created_at) >= $1::date
+      GROUP BY t.id, t.name
+      HAVING COUNT(wo.id) > 0
+      ORDER BY completed_orders DESC
+      LIMIT 10`,
+      [startDateStr]
     )
 
-    const techRanking = techResult.rows.map((row: any) => ({
+    // Get work order status distribution
+    const statusResult = await query(
+      `SELECT 
+        status,
+        COUNT(*) as count
+      FROM work_orders
+      WHERE DATE(created_at) >= $1::date
+      GROUP BY status`,
+      [startDateStr]
+    )
+
+    // Get response time metrics
+    const responseTimeResult = await query(
+      `SELECT 
+        DATE(created_at) as date,
+        ROUND(AVG(EXTRACT(EPOCH FROM (CAST(scheduled_date AS timestamp) - created_at))/3600)::numeric, 1) as avg_response_hours
+      FROM work_orders
+      WHERE DATE(created_at) >= $1::date AND scheduled_date IS NOT NULL
+      GROUP BY DATE(created_at)
+      ORDER BY date ASC`,
+      [startDateStr]
+    )
+
+    // Format productivity data for chart
+    const productivityData = productivityResult.rows.map(row => ({
+      date: new Date(row.date).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }),
+      completadas: parseInt(row.completed) || 0,
+      pendientes: parseInt(row.pending) || 0,
+      total: parseInt(row.total) || 0,
+    }))
+
+    // Format technician ranking
+    const techRanking = techRankingResult.rows.map(row => ({
       name: row.name,
-      initials: row.name.split(' ').map((n: string) => n[0]).join(''),
-      jobs: parseInt(row.jobs_completed) || 0,
-      rating: parseFloat(row.avg_rating) || 0,
-      responseMin: Math.round(parseFloat(row.avg_response_hours) * 60) || 0,
+      ordenes: parseInt(row.total_orders) || 0,
+      completadas: parseInt(row.completed_orders) || 0,
+      tasa: row.total_orders > 0 ? Math.round((parseInt(row.completed_orders) / parseInt(row.total_orders)) * 100) : 0,
     }))
 
-    // Get satisfaction data from ratings if available
-    const satisfactionResult = await query(
-      `SELECT 
-        COUNT(CASE WHEN status = 'completada' THEN 1 END) * 10 as five_stars,
-        COUNT(CASE WHEN status = 'completada' THEN 1 END) * 6 as four_stars,
-        COUNT(CASE WHEN status = 'completada' THEN 1 END) * 3 as three_stars,
-        COUNT(CASE WHEN status = 'pendiente' THEN 1 END) * 2 as two_stars,
-        COUNT(CASE WHEN status = 'cancelada' THEN 1 END) as one_star
-       FROM work_orders`,
-      []
-    )
+    // Format satisfaction data (status distribution)
+    const satisfactionData = statusResult.rows.map((row, idx) => {
+      const statusMap: Record<string, string> = {
+        'pendiente': 'Pendiente',
+        'completada': 'Completada',
+        'en_ruta': 'En ruta',
+        'en_sitio': 'En sitio',
+        'cancelada': 'Cancelada',
+      }
+      const colors = ['#16a34a', '#2e5cb8', '#f97316', '#eab308', '#ef4444']
+      return {
+        name: statusMap[row.status] || row.status,
+        value: parseInt(row.count) || 0,
+        color: colors[idx % colors.length],
+      }
+    })
 
-    const row = satisfactionResult.rows[0] || {}
-    const satisfactionData = [
-      { name: '5 estrellas', value: Math.max(0, parseInt(row.five_stars) || 1), color: '#16a34a' },
-      { name: '4 estrellas', value: Math.max(0, parseInt(row.four_stars) || 1), color: '#65a30d' },
-      { name: '3 estrellas', value: Math.max(0, parseInt(row.three_stars) || 1), color: '#eab308' },
-      { name: '2 estrellas', value: Math.max(0, parseInt(row.two_stars) || 1), color: '#f97316' },
-      { name: '1 estrella', value: Math.max(0, parseInt(row.one_star) || 0), color: '#ef4444' },
-    ]
-
-    // Get response time data by day
-    const responseResult = await query(
-      `SELECT 
-        TO_CHAR(created_at, 'Dy') as day_name,
-        AVG(EXTRACT(EPOCH FROM (scheduled_date - created_at))/3600) as avg_hours
-       FROM work_orders
-       WHERE created_at >= NOW() - INTERVAL '7 days'
-       GROUP BY TO_CHAR(created_at, 'Dy')
-       ORDER BY created_at`,
-      []
-    )
-
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-    const daysES = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab']
-    
-    const responseTimeData = days.map((day, idx) => ({
-      day: daysES[idx],
-      promedio: Math.round((responseResult.rows.find((r: any) => r.day_name?.includes(day))?.avg_hours || 0) * 60),
-      objetivo: 25,
+    // Format response time data
+    const responseTimeData = responseTimeResult.rows.map(row => ({
+      date: new Date(row.date).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }),
+      promedio: Math.round(parseFloat(row.avg_response_hours) * 60) || 0,
     }))
+
+    console.log('[v0] Productivity report generated for period:', period, '- Orders:', productivityData.length)
 
     return NextResponse.json({
       productivityData,
       techRanking,
       satisfactionData,
       responseTimeData,
+      period,
     })
   } catch (error) {
     console.error('[v0] Reports API error:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch reports data' },
+      { error: 'Failed to fetch reports data', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }
