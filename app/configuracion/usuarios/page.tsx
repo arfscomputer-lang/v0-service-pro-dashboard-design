@@ -22,7 +22,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Plus, AlertCircle, CheckCircle2, Mail, User, Lock, Shield } from "lucide-react"
+import { Plus, AlertCircle, CheckCircle2, Mail, User, Lock, Shield, Trash2 } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
+
+interface UserData {
+  id: string
+  name: string
+  email: string
+  role: string
+  status: string
+  created_at: string
+  updated_at: string
+}
 
 export default function UsuariosConfigPage() {
   const [formData, setFormData] = useState({
@@ -37,6 +49,28 @@ export default function UsuariosConfigPage() {
   const [success, setSuccess] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [users, setUsers] = useState<UserData[]>([])
+  const [loadingUsers, setLoadingUsers] = useState(true)
+
+  // Cargar usuarios
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setLoadingUsers(true)
+        const response = await fetch('/api/users/list')
+        if (!response.ok) throw new Error('Failed to fetch users')
+        const data = await response.json()
+        setUsers(data.data || [])
+        console.log('[v0] Loaded users:', data.count)
+      } catch (error) {
+        console.error('[v0] Error loading users:', error)
+      } finally {
+        setLoadingUsers(false)
+      }
+    }
+
+    fetchUsers()
+  }, [])
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -110,6 +144,11 @@ export default function UsuariosConfigPage() {
         role: "tecnico",
         status: "activo",
       })
+
+      // Recargar lista de usuarios
+      const listResponse = await fetch('/api/users/list')
+      const listData = await listResponse.json()
+      setUsers(listData.data || [])
 
       setTimeout(() => {
         setIsDialogOpen(false)
@@ -343,6 +382,72 @@ export default function UsuariosConfigPage() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Users List */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Usuarios Registrados</CardTitle>
+                <CardDescription>Lista de todos los usuarios del sistema</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loadingUsers ? (
+                  <div className="text-center py-8 text-muted-foreground">Cargando usuarios...</div>
+                ) : users.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">No hay usuarios registrados aún</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border">
+                          <th className="text-left py-3 px-4 font-semibold text-foreground">Nombre</th>
+                          <th className="text-left py-3 px-4 font-semibold text-foreground">Email</th>
+                          <th className="text-left py-3 px-4 font-semibold text-foreground">Rol</th>
+                          <th className="text-left py-3 px-4 font-semibold text-foreground">Estado</th>
+                          <th className="text-left py-3 px-4 font-semibold text-foreground">Creado</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {users.map((user) => (
+                          <tr key={user.id} className="border-b border-border hover:bg-muted/50 transition-colors">
+                            <td className="py-3 px-4 font-medium text-foreground">{user.name}</td>
+                            <td className="py-3 px-4 text-muted-foreground">{user.email}</td>
+                            <td className="py-3 px-4">
+                              <Badge variant={
+                                user.role === 'admin' ? 'default' :
+                                user.role === 'supervisor' ? 'secondary' :
+                                user.role === 'tecnico' ? 'outline' :
+                                'secondary'
+                              }>
+                                {user.role === 'admin' ? 'Administrador' :
+                                 user.role === 'supervisor' ? 'Supervisor' :
+                                 user.role === 'tecnico' ? 'Técnico' :
+                                 user.role === 'cliente' ? 'Cliente' :
+                                 user.role}
+                              </Badge>
+                            </td>
+                            <td className="py-3 px-4">
+                              <Badge variant={
+                                user.status === 'activo' ? 'outline' :
+                                user.status === 'inactivo' ? 'secondary' :
+                                'destructive'
+                              }>
+                                {user.status === 'activo' ? 'Activo' :
+                                 user.status === 'inactivo' ? 'Inactivo' :
+                                 user.status === 'suspendido' ? 'Suspendido' :
+                                 user.status}
+                              </Badge>
+                            </td>
+                            <td className="py-3 px-4 text-xs text-muted-foreground">
+                              {new Date(user.created_at).toLocaleDateString('es-ES')}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </main>
       </div>
