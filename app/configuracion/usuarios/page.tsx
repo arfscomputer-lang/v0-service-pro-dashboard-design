@@ -1,8 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { SidebarNav } from "@/components/dashboard/sidebar-nav"
-import { TopHeader } from "@/components/dashboard/top-header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -162,14 +160,8 @@ export default function UsuariosConfigPage() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      <SidebarNav />
-
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <TopHeader />
-
-        <main className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-6xl mx-auto space-y-6">
+    <main className="flex-1 overflow-y-auto p-6">
+      <div className="max-w-6xl mx-auto space-y-6">
             {/* Header */}
             <div className="space-y-2">
               <h1 className="text-3xl font-bold tracking-tight text-foreground">
@@ -450,7 +442,5 @@ export default function UsuariosConfigPage() {
             </Card>
           </div>
         </main>
-      </div>
-    </div>
   )
 }
