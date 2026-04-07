@@ -428,6 +428,55 @@ export async function getNextWorkOrderId() {
 }
 
 // ============================================
+// ROLES AND PERMISSIONS
+// ============================================
+
+export async function getRolesWithPermissions() {
+  return query(
+    `SELECT 
+      r.id,
+      r.name,
+      r.description,
+      r.is_system,
+      json_agg(json_build_object('id', p.id, 'name', p.name)) as permissions
+    FROM roles r
+    LEFT JOIN role_permissions rp ON r.id = rp.role_id
+    LEFT JOIN permissions p ON rp.permission_id = p.id
+    GROUP BY r.id, r.name, r.description, r.is_system
+    ORDER BY r.is_system DESC, r.name`,
+    []
+  )
+}
+
+export async function getUserPermissions(userId: string) {
+  return query(
+    `SELECT DISTINCT p.id, p.name, p.description
+    FROM users u
+    JOIN roles r ON u.role = r.name
+    LEFT JOIN role_permissions rp ON r.id = rp.role_id
+    LEFT JOIN permissions p ON rp.permission_id = p.id
+    WHERE u.id = $1`,
+    [userId]
+  )
+}
+
+export async function hasPermission(userId: string, permissionName: string): Promise<boolean> {
+  const result = await query(
+    `SELECT EXISTS(
+      SELECT 1
+      FROM users u
+      JOIN roles r ON u.role = r.name
+      JOIN role_permissions rp ON r.id = rp.role_id
+      JOIN permissions p ON rp.permission_id = p.id
+      WHERE u.id = $1 AND p.name = $2
+    )`,
+    [userId, permissionName]
+  )
+  return result.rows[0]?.exists || false
+}
+
+
+// ============================================
 // SESSIONS
 // ============================================
 
