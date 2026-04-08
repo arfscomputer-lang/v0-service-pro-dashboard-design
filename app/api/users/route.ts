@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { listUsers, createUser } from "@/lib/db"
+import bcrypt from "bcryptjs"
 
 export async function GET(request: Request) {
   try {
@@ -29,10 +30,13 @@ export async function POST(request: Request) {
       )
     }
 
-    // Create user (password stored as-is; auth is handled client-side via sessionStorage)
+    // Hash password with bcryptjs (12 salt rounds)
+    const hashed = await bcrypt.hash(password, 12)
+
+    // Create user with hashed password
     const user = await createUser({
       email,
-      password_hash: password,
+      password_hash: hashed,
       name,
       role,
       customer_id,
