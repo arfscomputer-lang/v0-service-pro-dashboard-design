@@ -20,17 +20,16 @@ export interface AuthUser {
 /* ─── Seed users reference (now in database) ─── */
 // Users are now stored in Neon PostgreSQL database
 // Kept here for reference:
-// admin@servicepro.mx / admin123 (Admin)
-// supervisor@servicepro.mx / super123 (Supervisor)
-// tecnico@servicepro.mx / tecnico123 (Tecnico)
-// cliente@empresaalfa.mx / cliente123 (Cliente)
+// admin@servicepro.mx (Admin)
+// supervisor@servicepro.mx (Supervisor)
+// tecnico@servicepro.mx (Tecnico)
+// cliente@empresaalfa.mx (Cliente)
 
-export const SEED_USERS: (AuthUser & { password: string })[] = [
+const SEED_USERS: AuthUser[] = [
   {
     id: "u-001",
     name: "Carlos Rodriguez",
     email: "admin@servicepro.mx",
-    password: "admin123",
     role: "admin",
     initials: "CR",
   },
@@ -38,7 +37,6 @@ export const SEED_USERS: (AuthUser & { password: string })[] = [
     id: "u-002",
     name: "Laura Sanchez",
     email: "supervisor@servicepro.mx",
-    password: "super123",
     role: "supervisor",
     initials: "LS",
   },
@@ -46,7 +44,6 @@ export const SEED_USERS: (AuthUser & { password: string })[] = [
     id: "u-003",
     name: "Miguel Torres",
     email: "tecnico@servicepro.mx",
-    password: "tecnico123",
     role: "tecnico",
     initials: "MT",
     technicianId: "tech-001",
@@ -55,7 +52,6 @@ export const SEED_USERS: (AuthUser & { password: string })[] = [
     id: "u-004",
     name: "Ana Empresa Alfa",
     email: "cliente@empresaalfa.mx",
-    password: "cliente123",
     role: "cliente",
     initials: "EA",
     customerId: "cli-001",
