@@ -1,7 +1,6 @@
 'use client'
 
 import React, { createContext, useContext, useCallback, useState, useEffect } from 'react'
-import { authenticatedFetch } from '@/lib/authenticated-fetch'
 
 export interface WorkOrder {
   id: string
@@ -36,7 +35,7 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
     const fetchWorkOrders = async () => {
       try {
         console.log('[v0] Fetching work orders from API...')
-        const res = await authenticatedFetch('/api/work-orders')
+        const res = await fetch('/api/work-orders')
         console.log('[v0] API response status:', res.status)
         if (!res.ok) {
           throw new Error(`HTTP error! status: ${res.status}`)
@@ -64,7 +63,7 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
           throw error
         }
         
-        const res = await authenticatedFetch('/api/work-orders', {
+        const res = await fetch('/api/work-orders', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

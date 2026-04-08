@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from "react"
 import type { InventoryItem, StockMovement, ItemCategory, StockLocation } from "@/lib/data/inventory"
-import { authenticatedFetch } from "@/lib/authenticated-fetch"
 
 interface InventoryContextValue {
   items: InventoryItem[]
@@ -56,7 +55,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
   const refreshItems = useCallback(async () => {
     setIsLoading(true)
     try {
-      const response = await authenticatedFetch("/api/inventory")
+      const response = await fetch("/api/inventory")
       if (!response.ok) throw new Error("Failed to fetch inventory")
       const data = await response.json()
       setItems((data.items || []).map(normalizeItem))
@@ -81,7 +80,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
 
   const addItem = useCallback(async (data: Omit<InventoryItem, "id">) => {
     try {
-      const response = await authenticatedFetch("/api/inventory", {
+      const response = await fetch("/api/inventory", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

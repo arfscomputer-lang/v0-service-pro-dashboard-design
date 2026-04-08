@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react"
 import type { Customer, CustomerType, CustomerTag, Interaction, ServiceRecord } from "@/lib/data/customers"
-import { authenticatedFetch } from "@/lib/authenticated-fetch"
 
 interface CustomersContextValue {
   customers: Customer[]
@@ -60,7 +59,7 @@ export function CustomersProvider({ children }: { children: React.ReactNode }) {
   const refreshCustomers = useCallback(async () => {
     setIsLoading(true)
     try {
-      const response = await authenticatedFetch("/api/customers")
+      const response = await fetch("/api/customers")
       if (!response.ok) throw new Error("Failed to fetch customers")
       const data = await response.json()
       setCustomers((data.customers || []).map(normalizeCustomer))
@@ -85,7 +84,7 @@ export function CustomersProvider({ children }: { children: React.ReactNode }) {
 
   const addCustomer = useCallback(async (data: Omit<Customer, "id" | "initials">) => {
     try {
-      const response = await authenticatedFetch("/api/customers", {
+      const response = await fetch("/api/customers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -133,7 +132,7 @@ export function CustomersProvider({ children }: { children: React.ReactNode }) {
         rating: patch.nps,
       }
       console.log("[v0] updateCustomer called with id:", id, "payload:", JSON.stringify(payload))
-      const response = await authenticatedFetch(`/api/customers/${id}`, {
+      const response = await fetch(`/api/customers/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -161,7 +160,7 @@ export function CustomersProvider({ children }: { children: React.ReactNode }) {
 
   const deleteCustomer = useCallback(async (id: string) => {
     try {
-      const response = await authenticatedFetch(`/api/customers/${id}`, {
+      const response = await fetch(`/api/customers/${id}`, {
         method: "DELETE",
       })
 

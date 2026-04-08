@@ -26,7 +26,6 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useWorkOrders, type WorkOrder } from "@/lib/context/work-orders-context"
-import { authenticatedFetch } from "@/lib/authenticated-fetch"
 
 interface Technician {
   id: string
@@ -81,7 +80,7 @@ export default function OrdenesPage() {
     const fetchTechnicians = async () => {
       try {
         setLoadingTechnicians(true)
-        const response = await authenticatedFetch('/api/technicians')
+        const response = await fetch('/api/technicians')
         if (!response.ok) throw new Error('Failed to fetch technicians')
         const json = await response.json()
         setTechnicians(json.data || [])
