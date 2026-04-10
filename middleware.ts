@@ -39,8 +39,9 @@ export async function middleware(request: NextRequest) {
       // Validate token against sessions table
       const session = await getSessionByToken(token)
       
-      if (!session || !session.rows[0]) {
-        console.log('[v0] Middleware: Invalid token for', pathname)
+      // getOne returns the row directly or undefined, not a {rows: []} object
+      if (!session) {
+        console.log('[v0] Middleware: Invalid or expired token for', pathname)
         return NextResponse.json(
           { error: 'Unauthorized' },
           { status: 401 }
@@ -48,7 +49,7 @@ export async function middleware(request: NextRequest) {
       }
 
       // Token is valid, continue to next middleware/route
-      console.log('[v0] Middleware: Valid session for user', session.rows[0].user_id)
+      console.log('[v0] Middleware: Valid session for user', session.user_id)
       return NextResponse.next()
     } catch (error) {
       console.error('[v0] Middleware: Error validating token:', error)
