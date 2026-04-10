@@ -5,6 +5,10 @@ import { getSessionByToken } from '@/lib/db'
 const PUBLIC_ROUTES = [
   '/api/auth/login',
   '/api/auth/session',
+  '/api/technicians',
+  '/api/customers',
+  '/api/work-orders',
+  '/api/dashboard/metrics',
   '/auth/login',
   '/login',
 ]
