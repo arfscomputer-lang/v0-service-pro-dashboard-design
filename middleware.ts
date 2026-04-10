@@ -19,8 +19,12 @@ const PROTECTED_API_ROUTES = /^\/api\//
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Check if route is public
-  if (PUBLIC_ROUTES.includes(pathname)) {
+  // Check if route is public (including dynamic routes like /api/work-orders/[id])
+  const isPublicRoute = PUBLIC_ROUTES.some(route => 
+    pathname === route || pathname.startsWith(route + '/')
+  )
+  
+  if (isPublicRoute) {
     return NextResponse.next()
   }
 
