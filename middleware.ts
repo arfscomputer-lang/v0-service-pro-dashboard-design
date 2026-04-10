@@ -4,6 +4,7 @@ import { getSessionByToken } from '@/lib/db'
 // Public routes that don't require authentication
 const PUBLIC_ROUTES = [
   '/api/auth/login',
+  '/api/auth/session',
   '/auth/login',
   '/login',
 ]

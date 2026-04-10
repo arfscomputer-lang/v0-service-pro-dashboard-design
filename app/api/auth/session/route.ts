@@ -7,37 +7,39 @@ export async function GET(req: NextRequest) {
     const token = req.headers.get('authorization')?.replace('Bearer ', '')
     
     if (!token) {
-      return NextResponse.json(
-        { error: 'No session token provided' },
-        { status: 401 }
-      )
+      // No token provided - return null session (user not logged in)
+      return NextResponse.json({
+        success: true,
+        user: null,
+      })
     }
 
     const session = await getSessionByToken(token)
     
-    if (!session) {
-      return NextResponse.json(
-        { error: 'Session expired or invalid' },
-        { status: 401 }
-      )
+    if (!session || !session.rows || session.rows.length === 0) {
+      return NextResponse.json({
+        success: true,
+        user: null,
+      })
     }
 
+    const sessionData = session.rows[0]
     return NextResponse.json({
       success: true,
       user: {
-        id: session.id,
-        email: session.email,
-        name: session.name,
-        role: session.role,
-        status: session.status,
+        id: sessionData.user_id || sessionData.id,
+        email: sessionData.email,
+        name: sessionData.name,
+        role: sessionData.role,
+        status: sessionData.status,
       },
     })
   } catch (error) {
     console.error('[v0] Error validating session:', error)
-    return NextResponse.json(
-      { error: 'Error validating session' },
-      { status: 500 }
-    )
+    return NextResponse.json({
+      success: true,
+      user: null,
+    })
   }
 }
 
