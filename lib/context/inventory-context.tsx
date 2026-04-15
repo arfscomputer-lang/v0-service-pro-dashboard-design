@@ -111,26 +111,34 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const updateItem = useCallback(async (id: string, patch: Partial<InventoryItem>) => {
+    // Optimistic update
+    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...patch } : i)))
     try {
-      // Update local state immediately
-      setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...patch } : i)))
-      console.log("[v0] Updated item locally:", id)
-      // TODO: Add PUT /api/inventory/:id when backend is ready
+      const response = await fetch(`/api/inventory/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      })
+      if (!response.ok) throw new Error("Failed to update item")
+      console.log("[v0] Updated item in database:", id)
     } catch (error) {
-      console.error("[v0] Error updating item:", error)
+      console.error("[v0] Error updating item, reverting:", error)
+      await refreshItems()
     }
-  }, [])
+  }, [refreshItems])
 
   const deleteItem = useCallback(async (id: string) => {
+    // Optimistic update
+    setItems((prev) => prev.filter((i) => i.id !== id))
     try {
-      // Delete locally
-      setItems((prev) => prev.filter((i) => i.id !== id))
-      console.log("[v0] Deleted item locally:", id)
-      // TODO: Add DELETE /api/inventory/:id when backend is ready
+      const response = await fetch(`/api/inventory/${id}`, { method: "DELETE" })
+      if (!response.ok) throw new Error("Failed to delete item")
+      console.log("[v0] Deleted item from database:", id)
     } catch (error) {
-      console.error("[v0] Error deleting item:", error)
+      console.error("[v0] Error deleting item, reverting:", error)
+      await refreshItems()
     }
-  }, [])
+  }, [refreshItems])
 
   // Local-only operations (not yet persisted to DB)
   const addMovement = useCallback((itemId: string, mov: Omit<StockMovement, "id">) => {
@@ -138,12 +146,12 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     setItems((prev) =>
       prev.map((item) => {
         if (item.id !== itemId) return item
-        let newTotal = item.stockTotal
+        let newTotal = item.totalStock
         if (mov.type === "entrada") newTotal += mov.qty
         else if (mov.type === "salida") newTotal -= mov.qty
         return {
           ...item,
-          stockTotal: Math.max(0, newTotal),
+          totalStock: Math.max(0, newTotal),
           movements: [{ ...mov, id }, ...item.movements],
         }
       })
@@ -158,7 +166,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
           l.id === locationId ? { ...l, qty: newQty } : l
         )
         const newTotal = newLocations.reduce((sum, l) => sum + l.qty, 0)
-        return { ...item, locations: newLocations, stockTotal: newTotal }
+        return { ...item, locations: newLocations, totalStock: newTotal }
       })
     )
   }, [])
@@ -170,19 +178,19 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
         return {
           ...item,
           locations: [...item.locations, loc],
-          stockTotal: item.stockTotal + loc.qty,
+          totalStock: item.totalStock + loc.qty,
         }
       })
     )
   }, [])
 
   const lowStockItems = useMemo(
-    () => items.filter((i) => i.isActive && i.stockTotal <= i.minStock),
+    () => items.filter((i) => i.isActive && i.totalStock <= i.minStock),
     [items]
   )
 
   const totalValue = useMemo(
-    () => items.reduce((sum, i) => sum + i.stockTotal * i.costUnit, 0),
+    () => items.reduce((sum, i) => sum + i.totalStock * i.costUnit, 0),
     [items]
   )
 

@@ -253,7 +253,7 @@ function SectionTable({ title, icon, items, setItems, color, currency, catalogIt
                             savePriceHistory(item.desc, convertedValue, 'USD')
                           }
                         }
-                        setEditingPrice({ ...editingPrice, [item.id]: undefined })
+                        setEditingPrice({ ...editingPrice, [item.id]: "" })
                       }}
                       className="text-sm text-right"
                       placeholder="0.00"

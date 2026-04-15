@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSessionByToken, deleteSession } from '@/lib/db'
-import crypto from 'crypto'
+
+interface SessionRow {
+  id: string
+  email: string
+  name: string
+  role: string
+  status: string
+  [key: string]: unknown
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -13,8 +21,8 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    const session = await getSessionByToken(token)
-    
+    const session = await getSessionByToken(token) as SessionRow | null
+
     if (!session) {
       return NextResponse.json(
         { error: 'Session expired or invalid' },

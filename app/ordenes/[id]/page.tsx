@@ -265,7 +265,7 @@ export default function OrderDetailPage() {
                       <div>
                         <Label className="text-xs md:text-sm">Status</Label>
                         {isEditing ? (
-                          <Select value={editForm.status || 'pendiente'} onValueChange={(v) => setEditForm({ ...editForm, status: v })}>
+                          <Select value={editForm.status || 'pendiente'} onValueChange={(v) => setEditForm({ ...editForm, status: v as WorkOrder['status'] })}>
                             <SelectTrigger className="mt-1 text-xs md:text-sm">
                               <SelectValue />
                             </SelectTrigger>
@@ -409,7 +409,7 @@ export default function OrderDetailPage() {
                   </CardHeader>
                   <CardContent>
                     {isEditing ? (
-                      <Select value={editForm.priority || 'normal'} onValueChange={(v) => setEditForm({ ...editForm, priority: v })}>
+                      <Select value={editForm.priority || 'normal'} onValueChange={(v) => setEditForm({ ...editForm, priority: v as WorkOrder['priority'] })}>
                         <SelectTrigger className="text-xs md:text-sm">
                           <SelectValue />
                         </SelectTrigger>

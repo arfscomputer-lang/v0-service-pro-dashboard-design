@@ -22,8 +22,8 @@ import { Separator } from "@/components/ui/separator"
 import { Save, X } from "lucide-react"
 
 export interface OrderFormData {
-  status: "pendiente" | "en_progreso" | "completada" | "cancelada"
-  priority: "alta" | "media" | "baja"
+  status: "pendiente" | "asignada" | "en_ruta" | "en_sitio" | "completada" | "cancelada"
+  priority: "baja" | "normal" | "alta" | "urgente"
   type: string
   category: string
   scheduledDate: string
@@ -83,7 +83,9 @@ export function OrderEditSheet({ open, onClose, data, onSave, orderId }: Props) 
                 <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="pendiente">Pendiente</SelectItem>
-                  <SelectItem value="en_progreso">En Progreso</SelectItem>
+                  <SelectItem value="asignada">Asignada</SelectItem>
+                  <SelectItem value="en_ruta">En Ruta</SelectItem>
+                  <SelectItem value="en_sitio">En Sitio</SelectItem>
                   <SelectItem value="completada">Completada</SelectItem>
                   <SelectItem value="cancelada">Cancelada</SelectItem>
                 </SelectContent>
@@ -94,8 +96,9 @@ export function OrderEditSheet({ open, onClose, data, onSave, orderId }: Props) 
               <Select value={form.priority} onValueChange={(v) => set("priority", v as OrderFormData["priority"])}>
                 <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="urgente">Urgente</SelectItem>
                   <SelectItem value="alta">Alta</SelectItem>
-                  <SelectItem value="media">Media</SelectItem>
+                  <SelectItem value="normal">Normal</SelectItem>
                   <SelectItem value="baja">Baja</SelectItem>
                 </SelectContent>
               </Select>

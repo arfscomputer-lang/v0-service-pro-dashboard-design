@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server"
-import { inventorySeed } from "@/lib/data/inventory"
+import { getInventoryItemById } from "@/lib/db"
 
 /**
  * POST /api/inventory/reorder
- * Simula una integracion con proveedor (Shopify, webhook personalizado).
+ * Simula una integracion con proveedor.
  * Recibe { itemId, quantity } y registra una orden de reabastecimiento.
- * En produccion esto dispararia un webhook al proveedor.
  */
 export async function POST(req: Request) {
   const { itemId, quantity } = await req.json()
@@ -14,32 +13,29 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Campos requeridos: itemId, quantity" }, { status: 400 })
   }
 
-  const item = inventorySeed.find((i) => i.id === itemId)
+  const item = await getInventoryItemById(itemId) as any
   if (!item) {
     return NextResponse.json({ error: "Articulo no encontrado" }, { status: 404 })
   }
 
-  // Simulate webhook payload to supplier
+  const supplierName = item.supplier_name ?? item.supplier?.name ?? "Proveedor desconocido"
+  const unitCost = item.unit_cost ?? item.costUnit ?? 0
+
   const webhookPayload = {
     orderId: `PO-${Date.now()}`,
-    supplier: item.supplier.name,
-    supplierSku: item.supplier.sku,
+    supplier: supplierName,
     item: item.name,
     sku: item.sku,
     quantityOrdered: Number(quantity),
-    unitCost: item.supplier.unitCost,
-    totalCost: Number(quantity) * item.supplier.unitCost,
+    unitCost,
+    totalCost: Number(quantity) * unitCost,
     currency: "MXN",
-    estimatedDelivery: new Date(Date.now() + item.supplier.leadTimeDays * 86400000).toISOString().slice(0, 10),
-    webhookUrl: item.supplier.apiEndpoint,
     status: "enviada",
     createdAt: new Date().toISOString(),
   }
 
-  // In production: await fetch(item.supplier.apiEndpoint, { method: "POST", body: JSON.stringify(webhookPayload) })
-
   return NextResponse.json({
-    message: `Orden de compra ${webhookPayload.orderId} creada para ${item.supplier.name}`,
+    message: `Orden de compra ${webhookPayload.orderId} creada para ${supplierName}`,
     order: webhookPayload,
   })
 }

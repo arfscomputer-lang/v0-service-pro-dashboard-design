@@ -53,6 +53,40 @@ import {
   Plus,
 } from "lucide-react"
 
+// ── Helpers ──────────────────────────────────────────────────
+const statusConfig: Record<string, { label: string; dot: string; bg: string }> = {
+  disponible: { label: "Disponible", dot: "bg-emerald-500", bg: "bg-emerald-50 text-emerald-700" },
+  ocupado: { label: "Ocupado", dot: "bg-amber-500", bg: "bg-amber-50 text-amber-700" },
+  en_viaje: { label: "En Viaje", dot: "bg-blue-500", bg: "bg-blue-50 text-blue-700" },
+  en_ruta: { label: "En Ruta", dot: "bg-blue-500", bg: "bg-blue-50 text-blue-700" },
+  en_sitio: { label: "En Sitio", dot: "bg-violet-500", bg: "bg-violet-50 text-violet-700" },
+  desconectado: { label: "Desconectado", dot: "bg-gray-400", bg: "bg-gray-100 text-gray-500" },
+  descuento: { label: "Descanso", dot: "bg-gray-400", bg: "bg-gray-100 text-gray-500" },
+  inactivo: { label: "Inactivo", dot: "bg-red-400", bg: "bg-red-50 text-red-600" },
+}
+const defaultStatus = { label: "Desconocido", dot: "bg-gray-400", bg: "bg-gray-100 text-gray-500" }
+
+const ALL_SPECIALTIES = ["HVAC", "Electricidad", "Plomeria", "Gas", "Solar", "General"] as const
+
+const specialtyIcons: Record<string, React.ReactNode> = {
+  HVAC: <Wind className="h-4 w-4" />,
+  Electricidad: <Zap className="h-4 w-4" />,
+  Plomeria: <Droplets className="h-4 w-4" />,
+  Gas: <Flame className="h-4 w-4" />,
+  Solar: <Sun className="h-4 w-4" />,
+  General: <Wrench className="h-4 w-4" />,
+}
+
+const specialtyLabels: Record<string, string> = {
+  HVAC: "HVAC", Electricidad: "Electricidad", Plomeria: "Plomeria",
+  Gas: "Gas", Solar: "Solar", General: "General",
+  refrigeracion: "Refrigeracion", aire_acondicionado: "Aire Acondicionado",
+  calefaccion: "Calefaccion", electricidad: "Electricidad",
+  plomeria: "Plomeria", gas: "Gas", paneles_solares: "Paneles Solares",
+}
+
+const ALL_DAYS = ["Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom"]
+
 const jobHistory = [
   { id: "OT-1042", customer: "Empresa Alfa S.A.", type: "Reparacion HVAC", date: "2026-02-11", status: "completado", rating: 5 },
   { id: "OT-1038", customer: "Roberto Martinez", type: "Mantenimiento Preventivo", date: "2026-02-10", status: "completado", rating: 4 },
@@ -259,6 +293,11 @@ interface InfoTabProps {
 }
 
 function InfoTab({ tech, onUpdateTech, onAddSpecialty, onRemoveSpecialty, onAddCert, onRemoveCert, onUpdateAvailability }: InfoTabProps) {
+  // ── Date hydration (prevents SSR mismatch) ──
+  const [mounted, setMounted] = useState(false)
+  const [clientNow, setClientNow] = useState<number | null>(null)
+  useEffect(() => { setMounted(true); setClientNow(Date.now()) }, [])
+
   // ── Inline edit states ──
   const [editingContact, setEditingContact] = useState(false)
   const [contactDraft, setContactDraft] = useState({ phone: "", email: "", address: "" })
@@ -429,7 +468,7 @@ function InfoTab({ tech, onUpdateTech, onAddSpecialty, onRemoveSpecialty, onAddC
             <div className="flex flex-col gap-3">
               {(tech.certifications || []).map((cert) => {
                 const expires = new Date(cert.expires)
-                const refNow = window.clientNow ?? expires.getTime() // safe fallback for SSR
+                const refNow = clientNow ?? expires.getTime()
                 const daysLeft = Math.ceil((expires.getTime() - refNow) / (1000 * 60 * 60 * 24))
                 const isExpiring = daysLeft < 90
                 return (
@@ -446,10 +485,10 @@ function InfoTab({ tech, onUpdateTech, onAddSpecialty, onRemoveSpecialty, onAddC
                     <div className="flex items-center gap-3">
                       <div className="text-right">
                         <p className="text-xs text-muted-foreground">Vence</p>
-                        <p className={cn("text-sm font-medium", window.mounted && isExpiring ? "text-amber-600" : "text-foreground")}>
+                        <p className={cn("text-sm font-medium", mounted && isExpiring ? "text-amber-600" : "text-foreground")}>
                           {cert.expires}
                         </p>
-                        {window.mounted && isExpiring && <p className="text-[10px] text-amber-500 font-semibold mt-0.5">{daysLeft} dias restantes</p>}
+                        {mounted && isExpiring && <p className="text-[10px] text-amber-500 font-semibold mt-0.5">{daysLeft} dias restantes</p>}
                       </div>
                       <Button
                         variant="ghost"

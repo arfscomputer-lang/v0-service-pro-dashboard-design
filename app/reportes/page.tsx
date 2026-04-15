@@ -40,6 +40,8 @@ interface ReportData {
   techRanking: any[]
   satisfactionData: any[]
   responseTimeData: any[]
+  totalPending?: number | string
+  [key: string]: any
 }
 
 const CHART_BLUE = "#2e5cb8"
@@ -162,7 +164,7 @@ export default function ReportesPage() {
             />
             <KpiCard
               title="Órdenes Pendientes"
-              value={data?.totalPending || "0"}
+              value={String(data?.totalPending ?? "0")}
               change="+3%"
               trend="down"
               icon={AlertTriangle}

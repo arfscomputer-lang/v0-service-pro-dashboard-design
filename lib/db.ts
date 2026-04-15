@@ -150,6 +150,55 @@ export async function createInventoryItem(data: {
   return result.rows[0]
 }
 
+export async function updateInventoryItem(id: string, data: Record<string, any>) {
+  const allowedFields: Record<string, string> = {
+    sku: "sku", name: "name", category: "category", description: "description",
+    unit_cost: "unit_cost", price_unit: "price_unit",
+    min_threshold: "min_threshold", max_stock: "max_stock",
+    total_stock: "total_stock", is_active: "is_active",
+    barcode: "barcode", unit: "unit", image_url: "image_url",
+  }
+  const sets: string[] = []
+  const values: any[] = []
+  let idx = 1
+
+  // Accept both camelCase (frontend) and snake_case (DB) field names
+  const fieldMap: Record<string, string> = {
+    costUnit: "unit_cost", priceUnit: "price_unit",
+    minStock: "min_threshold", maxStock: "max_stock",
+    totalStock: "total_stock", isActive: "is_active",
+    imageUrl: "image_url",
+  }
+
+  const normalized: Record<string, any> = {}
+  for (const [k, v] of Object.entries(data)) {
+    const dbKey = fieldMap[k] ?? k
+    normalized[dbKey] = v
+  }
+
+  for (const [key, col] of Object.entries(allowedFields)) {
+    if (normalized[key] !== undefined) {
+      sets.push(`${col} = $${idx}`)
+      values.push(normalized[key])
+      idx++
+    }
+  }
+
+  if (sets.length === 0) return getInventoryItemById(id)
+
+  values.push(id)
+  const result = await query(
+    `UPDATE inventory_items SET ${sets.join(", ")} WHERE id = $${idx} RETURNING *`,
+    values
+  )
+  return result.rows[0] || null
+}
+
+export async function deleteInventoryItem(id: string) {
+  await query(`DELETE FROM stock_movements WHERE item_id = $1`, [id])
+  await query(`DELETE FROM inventory_items WHERE id = $1`, [id])
+}
+
 export async function recordStockMovement(data: {
   item_id: string; type: string; quantity: number; from_location?: string; to_location?: string; reference_id?: string; notes?: string; created_by?: string
 }) {

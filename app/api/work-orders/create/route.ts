@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createWorkOrder, getNextWorkOrderId } from '@/lib/db'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    console.log('[v0] Creating work order with data:', body)
 
     const {
       customerId,
@@ -13,37 +13,41 @@ export async function POST(request: NextRequest) {
       type,
       priority,
       description,
+      scheduledDate,
+      scheduledTime,
+      technicianId,
     } = body
 
-    // Validate required fields
-    if (!customerId || !locationId || !type) {
+    if (!type || !address || !city) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Missing required fields: type, address, city' },
         { status: 400 }
       )
     }
 
-    // TODO: In a real app, save to database
-    // For now, we'll just return a success response
-    const orderId = `OT-${Date.now()}`
+    const orderId = await getNextWorkOrderId()
 
+    const workOrder = await createWorkOrder({
+      order_id: orderId,
+      type,
+      description: description || '',
+      status: 'pendiente',
+      priority: priority || 'normal',
+      address,
+      city,
+      scheduled_date: scheduledDate || '',
+      scheduled_time: scheduledTime || '',
+      customer_id: customerId || locationId || undefined,
+      technician_id: technicianId || undefined,
+    })
+
+    console.log('[v0] Work order created in database:', workOrder.id)
     return NextResponse.json(
       {
         success: true,
-        orderId,
+        orderId: workOrder.orderId,
         message: 'Orden creada exitosamente',
-        data: {
-          id: orderId,
-          customerId,
-          locationId,
-          address,
-          city,
-          type,
-          priority,
-          description,
-          status: 'pendiente',
-          createdAt: new Date().toISOString(),
-        },
+        data: workOrder,
       },
       { status: 201 }
     )

@@ -28,7 +28,7 @@ const tabs = [
 
 function getInitialData(): OrderFormData {
   return {
-    status: "en_progreso",
+    status: "en_sitio",
     priority: "alta",
     type: "Reparacion HVAC",
     category: "Climatizacion",

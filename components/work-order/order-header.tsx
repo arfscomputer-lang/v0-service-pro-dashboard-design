@@ -12,47 +12,32 @@ import {
 } from "@/components/ui/dropdown-menu"
 import Link from "next/link"
 
+type OrderStatus = "pendiente" | "asignada" | "en_ruta" | "en_sitio" | "completada" | "cancelada"
+type OrderPriority = "baja" | "normal" | "alta" | "urgente"
+
 interface OrderHeaderProps {
   orderId: string
-  status: "pendiente" | "en_progreso" | "completada" | "cancelada"
-  priority: "alta" | "media" | "baja"
+  status: OrderStatus
+  priority: OrderPriority
   createdAt: string
   onEdit: () => void
-  onStatusChange?: (status: "pendiente" | "en_progreso" | "completada" | "cancelada") => void
+  onStatusChange?: (status: OrderStatus) => void
 }
 
 const statusConfig: Record<string, { label: string; className: string }> = {
-  pendiente: {
-    label: "Pendiente",
-    className: "bg-amber-100 text-amber-800 border-amber-200",
-  },
-  en_progreso: {
-    label: "En Progreso",
-    className: "bg-blue-100 text-blue-800 border-blue-200",
-  },
-  completada: {
-    label: "Completada",
-    className: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  },
-  cancelada: {
-    label: "Cancelada",
-    className: "bg-red-100 text-red-800 border-red-200",
-  },
+  pendiente: { label: "Pendiente", className: "bg-amber-100 text-amber-800 border-amber-200" },
+  asignada: { label: "Asignada", className: "bg-blue-100 text-blue-800 border-blue-200" },
+  en_ruta: { label: "En Ruta", className: "bg-violet-100 text-violet-800 border-violet-200" },
+  en_sitio: { label: "En Sitio", className: "bg-indigo-100 text-indigo-800 border-indigo-200" },
+  completada: { label: "Completada", className: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+  cancelada: { label: "Cancelada", className: "bg-red-100 text-red-800 border-red-200" },
 }
 
 const priorityConfig: Record<string, { label: string; className: string }> = {
-  alta: {
-    label: "Prioridad Alta",
-    className: "bg-red-50 text-red-700 border-red-200",
-  },
-  media: {
-    label: "Prioridad Media",
-    className: "bg-amber-50 text-amber-700 border-amber-200",
-  },
-  baja: {
-    label: "Prioridad Baja",
-    className: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  },
+  urgente: { label: "Urgente", className: "bg-red-100 text-red-700 border-red-200" },
+  alta: { label: "Prioridad Alta", className: "bg-red-50 text-red-700 border-red-200" },
+  normal: { label: "Normal", className: "bg-amber-50 text-amber-700 border-amber-200" },
+  baja: { label: "Prioridad Baja", className: "bg-emerald-50 text-emerald-700 border-emerald-200" },
 }
 
 export function OrderHeader({ orderId, status, priority, createdAt, onEdit, onStatusChange }: OrderHeaderProps) {
