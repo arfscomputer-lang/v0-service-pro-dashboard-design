@@ -590,6 +590,28 @@ export async function getAssetById(id: string) {
   )
 }
 
+export async function getAssetsByCustomer(customer_id: string) {
+  return query(
+    `SELECT * FROM assets 
+    WHERE customer_id = $1 
+    AND status = 'active' 
+    ORDER BY name`,
+    [customer_id]
+  )
+}
+
+export async function getAssetsDueForMaintenance(customer_id: string, days_ahead: number = 7) {
+  return query(
+    `SELECT * FROM assets
+    WHERE customer_id = $1
+    AND has_maintenance_plan = true
+    AND status = 'active'
+    AND next_maintenance_date <= NOW() + INTERVAL '1 day' * $2
+    ORDER BY next_maintenance_date ASC`,
+    [customer_id, days_ahead]
+  )
+}
+
 export async function updateAsset(id: string, data: Partial<any>) {
   const fields: string[] = []
   const values: any[] = []
