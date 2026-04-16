@@ -7,7 +7,6 @@ import { TechniciansProvider } from "@/lib/context/technicians-context"
 import { CustomersProvider } from "@/lib/context/customers-context"
 import { InventoryProvider } from "@/lib/context/inventory-context"
 import { WorkOrdersProvider } from "@/lib/context/work-orders-context"
-import { AssetsProvider } from "@/lib/context/assets-context"
 
 import './globals.css'
 
@@ -27,33 +26,12 @@ function DataProviders({ children }: { children: React.ReactNode }) {
     <TechniciansProvider>
       <CustomersProvider>
         <InventoryProvider>
-          <WorkOrdersProvider>
-            <AssetsProvider>{children}</AssetsProvider>
-          </WorkOrdersProvider>
+          <WorkOrdersProvider>{children}</WorkOrdersProvider>
         </InventoryProvider>
       </CustomersProvider>
     </TechniciansProvider>
   )
 }
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode
-}>) {
-  return (
-    <html lang="es">
-      <body className="font-sans antialiased">
-        <AuthProvider>
-          <RouteGuard>
-            <DataProviders>{children}</DataProviders>
-          </RouteGuard>
-        </AuthProvider>
-      </body>
-    </html>
-  )
-}
-
 
 export default function RootLayout({
   children,
