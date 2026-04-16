@@ -514,7 +514,6 @@ export async function cleanupExpiredSessions() {
   await query(`DELETE FROM sessions WHERE expires_at <= NOW()`)
 }
 
-
 // ============================================
 // ASSETS / EQUIPMENT MANAGEMENT
 // ============================================
