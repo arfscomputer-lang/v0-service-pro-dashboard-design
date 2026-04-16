@@ -526,52 +526,54 @@ export async function createAsset(data: {
   model?: string
   serial_number: string
   year_manufactured: number
-  type: string
+  asset_type: string
   category: string
   status: 'active' | 'inactive' | 'in_repair' | 'retired'
   criticality: 'low' | 'medium' | 'high' | 'critical'
   customer_id?: string
-  site_location?: string
+  location?: string
   capacity?: string
   has_maintenance_plan: boolean
   recurrence_type?: 'monthly' | 'quarterly' | 'biannual' | 'annual' | 'by_hours' | 'by_cycles' | 'mixed'
-  interval_months?: number
-  interval_hours?: number
-  interval_cycles?: number
-  hours_threshold_alert?: number
+  recurrence_months?: number
+  recurrence_hours?: number
+  recurrence_cycles?: number
+  hours_threshold?: number
+  estimated_service_time?: number
 }) {
   return query(
     `INSERT INTO assets (
       asset_id, name, description, brand, model, serial_number, year_manufactured,
-      type, category, status, criticality, customer_id, site_location, capacity,
-      has_maintenance_plan, recurrence_type, interval_months, interval_hours,
-      interval_cycles, hours_threshold_alert,
+      asset_type, category, status, criticality, customer_id, location, capacity,
+      has_maintenance_plan, recurrence_type, recurrence_months, recurrence_hours,
+      recurrence_cycles, hours_threshold, estimated_service_time,
       created_at, updated_at
     ) VALUES (
       $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
-      $15, $16, $17, $18, $19, $20, NOW(), NOW()
+      $15, $16, $17, $18, $19, $20, $21, NOW(), NOW()
     ) RETURNING *`,
     [
       data.asset_id,
       data.name,
-      data.description || null,
-      data.brand || null,
-      data.model || null,
+      data.description,
+      data.brand,
+      data.model,
       data.serial_number,
       data.year_manufactured,
-      data.type,
+      data.asset_type,
       data.category,
       data.status,
       data.criticality,
-      data.customer_id || null,
-      data.site_location || null,
-      data.capacity || null,
+      data.customer_id,
+      data.location,
+      data.capacity,
       data.has_maintenance_plan,
-      data.recurrence_type || null,
-      data.interval_months || null,
-      data.interval_hours || null,
-      data.interval_cycles || null,
-      data.hours_threshold_alert || null
+      data.recurrence_type,
+      data.recurrence_months,
+      data.recurrence_hours,
+      data.recurrence_cycles,
+      data.hours_threshold,
+      data.estimated_service_time
     ]
   )
 }
