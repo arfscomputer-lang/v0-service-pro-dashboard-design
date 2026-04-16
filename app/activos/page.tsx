@@ -53,6 +53,123 @@ const EMPTY_FORM = {
   interval_months: 1,
 }
 
+function AssetForm({ form, setForm }: { form: typeof EMPTY_FORM, setForm: (f: typeof EMPTY_FORM) => void }) {
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label className="font-semibold">ID Activo *</Label>
+          <Input value={form.asset_id} onChange={e => setForm({ ...form, asset_id: e.target.value })} placeholder="AC-2024-001" />
+        </div>
+        <div>
+          <Label className="font-semibold">Nombre *</Label>
+          <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Compresor Atlas Copco" />
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-4">
+        <div>
+          <Label className="font-semibold">Serial *</Label>
+          <Input value={form.serial_number} onChange={e => setForm({ ...form, serial_number: e.target.value })} placeholder="AB123456" />
+        </div>
+        <div>
+          <Label className="font-semibold">Tipo *</Label>
+          <Select value={form.type} onValueChange={v => setForm({ ...form, type: v })}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="compresor">Compresor</SelectItem>
+              <SelectItem value="bomba">Bomba</SelectItem>
+              <SelectItem value="caldera">Caldera</SelectItem>
+              <SelectItem value="hvac">HVAC</SelectItem>
+              <SelectItem value="filtro">Filtro</SelectItem>
+              <SelectItem value="otro">Otro</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="font-semibold">Categoría *</Label>
+          <Select value={form.category} onValueChange={v => setForm({ ...form, category: v })}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="reactivo">Reactivo</SelectItem>
+              <SelectItem value="preventivo">Preventivo</SelectItem>
+              <SelectItem value="predictivo">Predictivo</SelectItem>
+              <SelectItem value="instalacion">Instalación</SelectItem>
+              <SelectItem value="inspeccion">Inspección</SelectItem>
+              <SelectItem value="proyecto">Proyecto</SelectItem>
+              <SelectItem value="garantia">Garantía</SelectItem>
+              <SelectItem value="otros">Otros</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label>Marca</Label>
+          <Input value={form.brand} onChange={e => setForm({ ...form, brand: e.target.value })} placeholder="Atlas Copco" />
+        </div>
+        <div>
+          <Label>Modelo</Label>
+          <Input value={form.model} onChange={e => setForm({ ...form, model: e.target.value })} placeholder="GA15" />
+        </div>
+      </div>
+      <div>
+        <Label>Descripción</Label>
+        <Textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Detalles del equipo..." rows={3} />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label>Estado</Label>
+          <Select value={form.status} onValueChange={v => setForm({ ...form, status: v })}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="activo">Activo</SelectItem>
+              <SelectItem value="inactivo">Inactivo</SelectItem>
+              <SelectItem value="en_reparacion">En Reparación</SelectItem>
+              <SelectItem value="retirado">Retirado</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Criticidad</Label>
+          <Select value={form.criticality} onValueChange={v => setForm({ ...form, criticality: v })}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="bajo">Baja</SelectItem>
+              <SelectItem value="medio">Media</SelectItem>
+              <SelectItem value="alto">Alta</SelectItem>
+              <SelectItem value="critico">Crítica</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="flex items-center space-x-2">
+        <input type="checkbox" id="has_plan" checked={form.has_maintenance_plan} onChange={e => setForm({ ...form, has_maintenance_plan: e.target.checked })} />
+        <Label htmlFor="has_plan" className="cursor-pointer">Tiene Plan de Mantenimiento</Label>
+      </div>
+      {form.has_maintenance_plan && (
+        <div className="grid grid-cols-2 gap-4 p-3 bg-blue-50 rounded">
+          <div>
+            <Label>Recurrencia</Label>
+            <Select value={form.recurrence_type} onValueChange={v => setForm({ ...form, recurrence_type: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="mensual">Mensual</SelectItem>
+                <SelectItem value="trimestral">Trimestral</SelectItem>
+                <SelectItem value="semestral">Semestral</SelectItem>
+                <SelectItem value="anual">Anual</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Intervalo (meses)</Label>
+            <Input type="number" value={form.interval_months} onChange={e => setForm({ ...form, interval_months: parseInt(e.target.value) })} min="1" />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function ActivosPage() {
   const auth = useAuth()
   const { customers } = useCustomers()
@@ -198,121 +315,6 @@ export default function ActivosPage() {
   }, [])
 
   const canSelectCustomer = auth?.user?.role === 'admin' || auth?.user?.role === 'supervisor'
-
-  const AssetForm = ({ form, setForm }: { form: typeof EMPTY_FORM, setForm: (f: any) => void }) => (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label className="font-semibold">ID Activo *</Label>
-          <Input value={form.asset_id} onChange={e => setForm({ ...form, asset_id: e.target.value })} placeholder="AC-2024-001" />
-        </div>
-        <div>
-          <Label className="font-semibold">Nombre *</Label>
-          <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Compresor Atlas Copco" />
-        </div>
-      </div>
-      <div className="grid grid-cols-3 gap-4">
-        <div>
-          <Label className="font-semibold">Serial *</Label>
-          <Input value={form.serial_number} onChange={e => setForm({ ...form, serial_number: e.target.value })} placeholder="AB123456" />
-        </div>
-        <div>
-          <Label className="font-semibold">Tipo *</Label>
-          <Select value={form.type} onValueChange={v => setForm({ ...form, type: v })}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="compresor">Compresor</SelectItem>
-              <SelectItem value="bomba">Bomba</SelectItem>
-              <SelectItem value="caldera">Caldera</SelectItem>
-              <SelectItem value="hvac">HVAC</SelectItem>
-              <SelectItem value="filtro">Filtro</SelectItem>
-              <SelectItem value="otro">Otro</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label className="font-semibold">Categoría *</Label>
-          <Select value={form.category} onValueChange={v => setForm({ ...form, category: v })}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="reactivo">Reactivo</SelectItem>
-              <SelectItem value="preventivo">Preventivo</SelectItem>
-              <SelectItem value="predictivo">Predictivo</SelectItem>
-              <SelectItem value="instalacion">Instalación</SelectItem>
-              <SelectItem value="inspeccion">Inspección</SelectItem>
-              <SelectItem value="proyecto">Proyecto</SelectItem>
-              <SelectItem value="garantia">Garantía</SelectItem>
-              <SelectItem value="otros">Otros</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label>Marca</Label>
-          <Input value={form.brand} onChange={e => setForm({ ...form, brand: e.target.value })} placeholder="Atlas Copco" />
-        </div>
-        <div>
-          <Label>Modelo</Label>
-          <Input value={form.model} onChange={e => setForm({ ...form, model: e.target.value })} placeholder="GA15" />
-        </div>
-      </div>
-      <div>
-        <Label>Descripción</Label>
-        <Textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Detalles del equipo..." rows={3} />
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label>Estado</Label>
-          <Select value={form.status} onValueChange={v => setForm({ ...form, status: v })}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="activo">Activo</SelectItem>
-              <SelectItem value="inactivo">Inactivo</SelectItem>
-              <SelectItem value="en_reparacion">En Reparación</SelectItem>
-              <SelectItem value="retirado">Retirado</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>Criticidad</Label>
-          <Select value={form.criticality} onValueChange={v => setForm({ ...form, criticality: v })}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="bajo">Baja</SelectItem>
-              <SelectItem value="medio">Media</SelectItem>
-              <SelectItem value="alto">Alta</SelectItem>
-              <SelectItem value="critico">Crítica</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="flex items-center space-x-2">
-        <input type="checkbox" id="has_plan" checked={form.has_maintenance_plan} onChange={e => setForm({ ...form, has_maintenance_plan: e.target.checked })} />
-        <Label htmlFor="has_plan" className="cursor-pointer">Tiene Plan de Mantenimiento</Label>
-      </div>
-      {form.has_maintenance_plan && (
-        <div className="grid grid-cols-2 gap-4 p-3 bg-blue-50 rounded">
-          <div>
-            <Label>Recurrencia</Label>
-            <Select value={form.recurrence_type} onValueChange={v => setForm({ ...form, recurrence_type: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="mensual">Mensual</SelectItem>
-                <SelectItem value="trimestral">Trimestral</SelectItem>
-                <SelectItem value="semestral">Semestral</SelectItem>
-                <SelectItem value="anual">Anual</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label>Intervalo (meses)</Label>
-            <Input type="number" value={form.interval_months} onChange={e => setForm({ ...form, interval_months: parseInt(e.target.value) })} min="1" />
-          </div>
-        </div>
-      )}
-    </div>
-  )
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 p-6">
