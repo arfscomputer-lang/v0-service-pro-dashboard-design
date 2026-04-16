@@ -81,26 +81,19 @@ export default function ActivosPage() {
   // Crear activo
   const handleCreate = useCallback(async () => {
     if (!createForm.name || !createForm.asset_id || !createForm.serial_number) {
-      console.log('[v0] Validation failed - missing required fields')
       alert('Por favor completa los campos obligatorios')
       return
     }
 
     try {
-      console.log('[v0] Sending asset creation request:', createForm)
       const res = await fetch('/api/assets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(createForm),
       })
 
-      console.log('[v0] Response status:', res.status)
-      const data = await res.json()
-      console.log('[v0] Response data:', data)
-
       if (res.ok) {
-        const newAsset = data
-        console.log('[v0] Asset created successfully:', newAsset)
+        const newAsset = await res.json()
         setAssets([newAsset, ...assets])
         setIsCreateOpen(false)
         setCreateForm({
@@ -123,13 +116,10 @@ export default function ActivosPage() {
           recurrence_months: 1,
         })
         alert('Activo creado exitosamente')
-      } else {
-        console.error('[v0] Create failed with status', res.status, data)
-        alert(`Error al crear activo: ${data.error || 'Error desconocido'}`)
       }
     } catch (error) {
       console.error('[v0] Error creating asset:', error)
-      alert('Error al crear activo: ' + String(error))
+      alert('Error al crear activo')
     }
   }, [createForm, assets])
 

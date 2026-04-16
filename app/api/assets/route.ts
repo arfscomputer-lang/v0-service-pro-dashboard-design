@@ -14,7 +14,6 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    console.log('[v0] Creating asset with data:', body)
     
     const result = await createAsset({
       asset_id: body.asset_id,
@@ -40,16 +39,9 @@ export async function POST(req: NextRequest) {
       estimated_service_time: body.estimated_service_time,
     })
 
-    console.log('[v0] Asset created result:', result)
-    
-    if (!result.rows || !result.rows[0]) {
-      console.error('[v0] No rows returned from create asset')
-      return NextResponse.json({ error: "Failed to create asset - no rows returned" }, { status: 500 })
-    }
-
     return NextResponse.json(result.rows[0], { status: 201 })
   } catch (error) {
     console.error("[v0] Error creating asset:", error)
-    return NextResponse.json({ error: "Failed to create asset", details: String(error) }, { status: 500 })
+    return NextResponse.json({ error: "Failed to create asset" }, { status: 500 })
   }
 }
