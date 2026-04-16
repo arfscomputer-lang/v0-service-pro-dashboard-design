@@ -55,20 +55,3 @@ export default function RootLayout({
 }
 
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode
-}>) {
-  return (
-    <html lang="es">
-      <body className="font-sans antialiased">
-        <AuthProvider>
-          <RouteGuard>
-            <DataProviders>{children}</DataProviders>
-          </RouteGuard>
-        </AuthProvider>
-      </body>
-    </html>
-  )
-}
