@@ -513,3 +513,127 @@ export async function deleteUserSessions(user_id: string) {
 export async function cleanupExpiredSessions() {
   await query(`DELETE FROM sessions WHERE expires_at <= NOW()`)
 }
+
+// ============================================
+// ASSETS / EQUIPMENT MANAGEMENT
+// ============================================
+
+export async function createAsset(data: {
+  asset_id: string
+  name: string
+  customer_id: string
+  type: string
+  category: string
+  serial_number: string
+  status?: 'active' | 'inactive' | 'in_repair' | 'retired'
+  criticality?: 'low' | 'medium' | 'high' | 'critical'
+  description?: string
+  brand?: string
+  model?: string
+  year_manufactured?: number
+  site_location?: string
+  capacity?: string
+  has_maintenance_plan?: boolean
+  recurrence_type?: string
+  interval_months?: number
+  interval_hours?: number
+  interval_cycles?: number
+  hours_threshold_alert?: number
+}) {
+  const result = await query(
+    `INSERT INTO assets (
+      asset_id, name, customer_id, type, category, serial_number, status, 
+      criticality, description, brand, model, year_manufactured, 
+      site_location, capacity, has_maintenance_plan, recurrence_type, 
+      interval_months, interval_hours, interval_cycles, hours_threshold_alert,
+      created_at, updated_at
+    ) VALUES (
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 
+      $15, $16, $17, $18, $19, $20, NOW(), NOW()
+    ) RETURNING *`,
+    [
+      data.asset_id,
+      data.name,
+      data.customer_id,
+      data.type,
+      data.category,
+      data.serial_number,
+      data.status || 'active',
+      data.criticality || 'medium',
+      data.description || null,
+      data.brand || null,
+      data.model || null,
+      data.year_manufactured || null,
+      data.site_location || null,
+      data.capacity || null,
+      data.has_maintenance_plan || false,
+      data.recurrence_type || null,
+      data.interval_months || null,
+      data.interval_hours || null,
+      data.interval_cycles || null,
+      data.hours_threshold_alert || null,
+    ]
+  )
+  return result.rows[0]
+}
+
+export async function getAssets() {
+  return getMany(`SELECT * FROM assets ORDER BY created_at DESC`)
+}
+
+export async function getAssetById(id: string) {
+  return getOne(`SELECT * FROM assets WHERE id = $1`, [id])
+}
+
+export async function getAssetsByCustomer(customer_id: string) {
+  return getMany(
+    `SELECT * FROM assets 
+     WHERE customer_id = $1 AND status = 'active' 
+     ORDER BY name ASC`,
+    [customer_id]
+  )
+}
+
+export async function updateAsset(id: string, data: Partial<any>) {
+  const fields: string[] = []
+  const values: any[] = []
+  let paramIndex = 1
+
+  Object.entries(data).forEach(([key, value]) => {
+    if (key !== 'id' && key !== 'created_at') {
+      fields.push(`${key} = $${paramIndex}`)
+      values.push(value)
+      paramIndex++
+    }
+  })
+
+  if (fields.length === 0) return { rows: [] }
+
+  fields.push(`updated_at = $${paramIndex}`)
+  values.push(new Date())
+  paramIndex++
+  values.push(id)
+
+  const result = await query(
+    `UPDATE assets SET ${fields.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
+    values
+  )
+  return result.rows[0]
+}
+
+export async function deleteAsset(id: string) {
+  await query(`DELETE FROM assets WHERE id = $1`, [id])
+}
+
+export async function getAssetsDueForMaintenance(customer_id: string, days_ahead: number = 7) {
+  return getMany(
+    `SELECT * FROM assets
+     WHERE customer_id = $1
+     AND has_maintenance_plan = true
+     AND status = 'active'
+     AND next_maintenance_date <= NOW() + INTERVAL '1 day' * $2
+     ORDER BY next_maintenance_date ASC`,
+    [customer_id, days_ahead]
+  )
+}
+}
