@@ -7,6 +7,7 @@ export interface WorkOrder {
   id: string
   orderId: string
   type: string
+  category: 'reactivo' | 'preventivo' | 'predictivo' | 'instalacion' | 'inspeccion' | 'proyecto' | 'garantia' | 'otros'
   description: string
   status: 'pendiente' | 'asignada' | 'en_ruta' | 'en_sitio' | 'completada' | 'cancelada'
   priority: 'baja' | 'normal' | 'alta' | 'urgente'

@@ -63,6 +63,7 @@ export default function OrdenesPage() {
   const [createForm, setCreateForm] = useState<Omit<WorkOrder, 'id' | 'createdAt' | 'updatedAt'>>({
     orderId: '',
     type: '',
+    category: 'otros',
     description: '',
     status: 'pendiente',
     priority: 'normal',
@@ -113,6 +114,7 @@ export default function OrdenesPage() {
     setCreateForm({
       orderId: '',
       type: '',
+      category: 'otros',
       description: '',
       status: 'pendiente',
       priority: 'normal',
@@ -344,6 +346,27 @@ export default function OrdenesPage() {
                   onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                 />
               </div>
+              <div>
+                <Label htmlFor="edit-category">Categoría de Trabajo</Label>
+                <Select 
+                  value={editForm.category || 'otros'} 
+                  onValueChange={(v) => setEditForm({ ...editForm, category: v as any })}
+                >
+                  <SelectTrigger id="edit-category">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="reactivo">Reactivo / Correctivo</SelectItem>
+                    <SelectItem value="preventivo">Preventivo</SelectItem>
+                    <SelectItem value="predictivo">Predictivo</SelectItem>
+                    <SelectItem value="instalacion">Instalación / Puesta en Marcha</SelectItem>
+                    <SelectItem value="inspeccion">Inspección / Auditoría</SelectItem>
+                    <SelectItem value="proyecto">Proyecto / Mejora</SelectItem>
+                    <SelectItem value="garantia">Garantía</SelectItem>
+                    <SelectItem value="otros">Otros</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="status">Estado</Label>
@@ -472,6 +495,27 @@ export default function OrdenesPage() {
                   placeholder="Detalles del trabajo..."
                   rows={3}
                 />
+              </div>
+              <div>
+                <Label htmlFor="category">Categoría de Trabajo</Label>
+                <Select 
+                  value={createForm.category || 'otros'} 
+                  onValueChange={(v) => setCreateForm({ ...createForm, category: v as any })}
+                >
+                  <SelectTrigger id="category">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="reactivo">Reactivo / Correctivo</SelectItem>
+                    <SelectItem value="preventivo">Preventivo</SelectItem>
+                    <SelectItem value="predictivo">Predictivo</SelectItem>
+                    <SelectItem value="instalacion">Instalación / Puesta en Marcha</SelectItem>
+                    <SelectItem value="inspeccion">Inspección / Auditoría</SelectItem>
+                    <SelectItem value="proyecto">Proyecto / Mejora</SelectItem>
+                    <SelectItem value="garantia">Garantía</SelectItem>
+                    <SelectItem value="otros">Otros</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
