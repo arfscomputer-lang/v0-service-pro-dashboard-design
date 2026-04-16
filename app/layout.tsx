@@ -39,7 +39,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es">
+    <html lang="es" className="bg-background">
       <body className="font-sans antialiased">
         <AuthProvider>
           <RouteGuard>
