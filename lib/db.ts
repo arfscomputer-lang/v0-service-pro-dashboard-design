@@ -588,7 +588,7 @@ export async function getAssetById(id: string) {
 export async function getAssetsByCustomer(customer_id: string) {
   return getMany(
     `SELECT * FROM assets 
-     WHERE customer_id = $1 AND status = 'active' 
+     WHERE customer_id = $1 AND status != 'retirado' 
      ORDER BY name ASC`,
     [customer_id]
   )
