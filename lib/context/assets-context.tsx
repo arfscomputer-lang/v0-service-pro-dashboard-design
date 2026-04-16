@@ -75,14 +75,8 @@ export function AssetsProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   useEffect(() => {
-    // Only load assets if user is authenticated
-    if (auth?.user) {
-      refreshAssets()
-    } else {
-      setAssets([])
-      setIsLoading(false)
-    }
-  }, [auth?.user, refreshAssets])
+    refreshAssets()
+  }, [refreshAssets])
 
   const getAsset = useCallback((id: string) => {
     return assets.find(a => a.id === id)
