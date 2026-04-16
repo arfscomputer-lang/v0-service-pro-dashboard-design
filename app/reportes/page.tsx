@@ -144,7 +144,7 @@ export default function ReportesPage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <KpiCard
               title="Trabajos Completados"
-              value={data?.techRanking?.reduce((a: number, t: any) => a + (t.completadas || 0), 0) || "0"}
+              value={data?.productivityData?.reduce((a: number, d: any) => a + (d.completadas || 0), 0) || "0"}
               change="+12%"
               trend="up"
               icon={CheckCircle2}
