@@ -14,7 +14,10 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    console.log('[v0] Creating asset with data:', body)
+    
+    if (!body.customer_id) {
+      return NextResponse.json({ error: "Customer ID is required" }, { status: 400 })
+    }
     
     const result = await createAsset({
       asset_id: body.asset_id,
@@ -39,11 +42,8 @@ export async function POST(req: NextRequest) {
       hours_threshold_alert: body.hours_threshold_alert,
     })
 
-    console.log('[v0] Asset created result:', result)
-    
     if (!result.rows || !result.rows[0]) {
-      console.error('[v0] No rows returned from create asset')
-      return NextResponse.json({ error: "Failed to create asset - no rows returned" }, { status: 500 })
+      return NextResponse.json({ error: "Failed to create asset" }, { status: 500 })
     }
 
     return NextResponse.json(result.rows[0], { status: 201 })
