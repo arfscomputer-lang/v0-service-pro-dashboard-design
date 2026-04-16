@@ -636,4 +636,3 @@ export async function getAssetsDueForMaintenance(customer_id: string, days_ahead
     [customer_id, days_ahead]
   )
 }
-}
