@@ -236,10 +236,9 @@ export default function ActivosPage() {
         const data = await res.json()
         throw new Error(data.error || 'Failed to create asset')
       }
-      const newAsset = await res.json()
-      setAssets(prev => [newAsset, ...prev])
       setIsCreateOpen(false)
       setCreateForm({ ...EMPTY_FORM, customer_id: selectedCustomerId })
+      await loadAssets(selectedCustomerId)
     } catch (err) {
       setError(String(err))
     } finally {
@@ -289,16 +288,15 @@ export default function ActivosPage() {
         const data = await res.json()
         throw new Error(data.error || 'Failed to update asset')
       }
-      const updated = await res.json()
-      setAssets(prev => prev.map(a => a.id === editingAsset.id ? updated : a))
       setIsEditOpen(false)
       setEditingAsset(null)
+      await loadAssets(selectedCustomerId)
     } catch (err) {
       setError(String(err))
     } finally {
       setIsSaving(false)
     }
-  }, [editingAsset, editForm])
+  }, [editingAsset, editForm, selectedCustomerId, loadAssets])
 
   const handleDeleteAsset = useCallback(async (assetId: string) => {
     if (!confirm('¿Estás seguro de que quieres eliminar este activo?')) return
@@ -306,13 +304,13 @@ export default function ActivosPage() {
     try {
       const res = await fetch(`/api/assets/${assetId}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('Failed to delete asset')
-      setAssets(prev => prev.filter(a => a.id !== assetId))
+      await loadAssets(selectedCustomerId)
     } catch (err) {
       setError(String(err))
     } finally {
       setIsDeleting(null)
     }
-  }, [])
+  }, [selectedCustomerId, loadAssets])
 
   const canSelectCustomer = auth?.user?.role === 'admin' || auth?.user?.role === 'supervisor'
 
