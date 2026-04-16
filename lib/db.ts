@@ -612,13 +612,14 @@ export async function updateAsset(id: string, data: Partial<any>) {
   fields.push(`updated_at = $${paramIndex}`)
   values.push(new Date())
   paramIndex++
+
   values.push(id)
 
   const result = await query(
     `UPDATE assets SET ${fields.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
     values
   )
-  return result.rows[0]
+  return result.rows[0] ?? null
 }
 
 export async function deleteAsset(id: string) {

@@ -26,12 +26,16 @@ export async function PUT(
     const { id } = await params
     const body = await req.json()
 
+    console.log("[v0] PUT /api/assets/[id] - id:", id)
+
     const asset = await getAssetById(id)
+    console.log("[v0] getAssetById result:", asset ? "found" : "NOT FOUND")
     if (!asset) {
       return NextResponse.json({ error: "Asset not found" }, { status: 404 })
     }
 
     const updated = await updateAsset(id, body)
+    console.log("[v0] updateAsset result:", updated ? "updated" : "FAILED")
     if (!updated) {
       return NextResponse.json({ error: "Failed to update asset" }, { status: 500 })
     }
