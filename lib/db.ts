@@ -630,9 +630,63 @@ export async function getAssetsDueForMaintenance(customer_id: string, days_ahead
     `SELECT * FROM assets
      WHERE customer_id = $1
      AND has_maintenance_plan = true
-     AND status = 'active'
+     AND status != 'retirado'
      AND next_maintenance_date <= NOW() + INTERVAL '1 day' * $2
      ORDER BY next_maintenance_date ASC`,
     [customer_id, days_ahead]
+  )
+}
+
+export async function updateAssetMaintenanceDates(
+  id: string,
+  next_maintenance_date: Date | null
+) {
+  return getOne(
+    `UPDATE assets SET next_maintenance_date = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
+    [next_maintenance_date, id]
+  )
+}
+
+export async function getAssetsWithMaintenancePlan(customer_id: string) {
+  return getMany(
+    `SELECT id, asset_id, name, customer_id, has_maintenance_plan, recurrence_type,
+            interval_months, last_maintenance_date, next_maintenance_date, created_at
+     FROM assets
+     WHERE customer_id = $1
+     AND has_maintenance_plan = true
+     AND status != 'retirado'
+     ORDER BY next_maintenance_date ASC NULLS LAST`,
+    [customer_id]
+  )
+}
+
+export async function createPreventiveWorkOrder(data: {
+  order_id: string
+  customer_id: string
+  asset_id: string
+  asset_name: string
+  scheduled_date: Date
+}) {
+  // Verify no pending preventive order already exists for this asset
+  const existing = await getOne<{ id: string }>(
+    `SELECT id FROM work_orders
+     WHERE customer_id = $1
+     AND description LIKE $2
+     AND type = 'preventivo'
+     AND status IN ('pendiente', 'en_progreso')`,
+    [data.customer_id, `%${data.asset_id}%`]
+  )
+  if (existing) return null
+
+  return getOne(
+    `INSERT INTO work_orders (order_id, customer_id, type, status, description, scheduled_date, created_at, updated_at)
+     VALUES ($1, $2, 'preventivo', 'pendiente', $3, $4, NOW(), NOW())
+     RETURNING *`,
+    [
+      data.order_id,
+      data.customer_id,
+      `Mantenimiento preventivo: ${data.asset_name} (${data.asset_id})`,
+      data.scheduled_date,
+    ]
   )
 }

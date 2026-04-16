@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getAssetById, updateAsset, deleteAsset } from "@/lib/db"
+import { getAssetById, updateAsset, deleteAsset, updateAssetMaintenanceDates } from "@/lib/db"
+import { calculateNextMaintenanceDate, AssetMaintenanceInfo } from "@/lib/maintenance"
 
 export async function GET(
   req: NextRequest,
@@ -35,6 +36,15 @@ export async function PUT(
     const updated = await updateAsset(params.id, body)
     if (!updated) {
       return NextResponse.json({ error: "Failed to update asset" }, { status: 500 })
+    }
+
+    // Recalculate next_maintenance_date if plan changed
+    if (updated.has_maintenance_plan) {
+      const nextDate = calculateNextMaintenanceDate(updated as AssetMaintenanceInfo)
+      if (nextDate) {
+        const withDates = await updateAssetMaintenanceDates(updated.id, nextDate)
+        if (withDates) return NextResponse.json(withDates)
+      }
     }
 
     return NextResponse.json(updated)

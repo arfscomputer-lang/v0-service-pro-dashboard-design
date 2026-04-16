@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getAssets, getAssetsByCustomer, createAsset } from "@/lib/db"
+import { getAssets, getAssetsByCustomer, createAsset, updateAssetMaintenanceDates } from "@/lib/db"
+import { calculateNextMaintenanceDate, AssetMaintenanceInfo } from "@/lib/maintenance"
 
 export async function GET(req: NextRequest) {
   try {
@@ -57,6 +58,15 @@ export async function POST(req: NextRequest) {
 
     if (!asset) {
       return NextResponse.json({ error: "Failed to create asset" }, { status: 500 })
+    }
+
+    // Auto-calculate next_maintenance_date if asset has a maintenance plan
+    if (asset.has_maintenance_plan) {
+      const nextDate = calculateNextMaintenanceDate(asset as AssetMaintenanceInfo)
+      if (nextDate) {
+        const updated = await updateAssetMaintenanceDates(asset.id, nextDate)
+        if (updated) return NextResponse.json(updated, { status: 201 })
+      }
     }
 
     return NextResponse.json(asset, { status: 201 })
