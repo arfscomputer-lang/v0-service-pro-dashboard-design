@@ -144,7 +144,7 @@ export default function ReportesPage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <KpiCard
               title="Trabajos Completados"
-              value={data?.productivityData?.reduce((a: number, d: any) => a + (d.completadas || 0), 0) || "0"}
+              value={reportData?.productivityData?.reduce((a: number, d: any) => a + (d.completadas || 0), 0) || "0"}
               change="+12%"
               trend="up"
               icon={CheckCircle2}
@@ -153,7 +153,7 @@ export default function ReportesPage() {
             />
             <KpiCard
               title="Tiempo Resp. Promedio"
-              value={`${data?.responseTimeData?.[data.responseTimeData.length - 1]?.promedio || 0} min`}
+              value={`${Math.round((reportData?.responseTimeData?.[reportData.responseTimeData.length - 1]?.promedio || 0) / 60)} min`}
               change="-8%"
               trend="up"
               icon={Clock}
@@ -162,7 +162,7 @@ export default function ReportesPage() {
             />
             <KpiCard
               title="Órdenes Pendientes"
-              value={data?.totalPending || "0"}
+              value={reportData?.totalPending || "0"}
               change="+3%"
               trend="down"
               icon={AlertTriangle}
@@ -172,8 +172,8 @@ export default function ReportesPage() {
             <KpiCard
               title="Tasa Completación"
               value={(() => {
-                const total = data?.productivityData?.reduce((a: number, d: any) => a + (d.total || 0), 0) || 0
-                const completed = data?.productivityData?.reduce((a: number, d: any) => a + (d.completadas || 0), 0) || 0
+                const total = reportData?.productivityData?.reduce((a: number, d: any) => a + (d.total || 0), 0) || 0
+                const completed = reportData?.productivityData?.reduce((a: number, d: any) => a + (d.completadas || 0), 0) || 0
                 return total > 0 ? `${Math.round((completed / total) * 100)}%` : "0%"
               })()}
               change="+5%"
@@ -196,7 +196,7 @@ export default function ReportesPage() {
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={data.productivityData} barGap={4}>
+                  <BarChart data={reportData.productivityData} barGap={4}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                     <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#94a3b8" />
                     <YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" />
@@ -235,7 +235,7 @@ export default function ReportesPage() {
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={260}>
-                  <LineChart data={data.responseTimeData}>
+                  <LineChart data={reportData.responseTimeData}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                     <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#94a3b8" />
                     <YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" domain={[0, 60]} />
@@ -283,7 +283,7 @@ export default function ReportesPage() {
                 <ResponsiveContainer width="100%" height={220}>
                   <PieChart>
                     <Pie
-                      data={data.satisfactionData}
+                      data={reportData.satisfactionData}
                       cx="50%"
                       cy="50%"
                       innerRadius={55}
@@ -291,7 +291,7 @@ export default function ReportesPage() {
                       paddingAngle={3}
                       dataKey="value"
                     >
-                      {data.satisfactionData.map((entry) => (
+                      {reportData.satisfactionData.map((entry) => (
                         <Cell key={entry.name} fill={entry.color} />
                       ))}
                     </Pie>
@@ -307,7 +307,7 @@ export default function ReportesPage() {
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="flex flex-wrap justify-center gap-x-4 gap-y-1.5 mt-2">
-                  {data.satisfactionData.map((d) => (
+                  {reportData.satisfactionData.map((d) => (
                     <div key={d.name} className="flex items-center gap-1.5">
                       <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: d.color }} />
                       <span className="text-[11px] text-muted-foreground">{d.name} ({d.value})</span>
@@ -347,7 +347,7 @@ export default function ReportesPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {data.techRanking?.slice(0, 5).map((tech, i) => {
+                      {reportData.techRanking?.slice(0, 5).map((tech, i) => {
                         const index = Math.round(tech.tasa * 1.2)
                         const initials = tech.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
                         return (
