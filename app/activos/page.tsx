@@ -44,8 +44,8 @@ export default function ActivosPage() {
     type: 'compresor',
     category: 'reactivo',
     serial_number: '',
-    status: 'active',
-    criticality: 'normal',
+    status: 'activo',
+    criticality: 'medio',
     brand: '',
     model: '',
     year_manufactured: new Date().getFullYear(),
@@ -53,7 +53,7 @@ export default function ActivosPage() {
     capacity: '',
     description: '',
     has_maintenance_plan: false,
-    recurrence_type: 'monthly',
+    recurrence_type: 'mensual',
     interval_months: 1,
   })
 
@@ -120,8 +120,8 @@ export default function ActivosPage() {
         type: 'compresor',
         category: 'reactivo',
         serial_number: '',
-        status: 'active',
-        criticality: 'normal',
+        status: 'activo',
+        criticality: 'medio',
         brand: '',
         model: '',
         year_manufactured: new Date().getFullYear(),
@@ -129,7 +129,7 @@ export default function ActivosPage() {
         capacity: '',
         description: '',
         has_maintenance_plan: false,
-        recurrence_type: 'monthly',
+        recurrence_type: 'mensual',
         interval_months: 1,
       })
     } catch (err) {
@@ -389,8 +389,10 @@ export default function ActivosPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="active">Activo</SelectItem>
-                      <SelectItem value="inactive">Inactivo</SelectItem>
+                      <SelectItem value="activo">Activo</SelectItem>
+                      <SelectItem value="inactivo">Inactivo</SelectItem>
+                      <SelectItem value="en_reparacion">En Reparacion</SelectItem>
+                      <SelectItem value="retirado">Retirado</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -401,10 +403,10 @@ export default function ActivosPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="low">Baja</SelectItem>
-                      <SelectItem value="normal">Normal</SelectItem>
-                      <SelectItem value="high">Alta</SelectItem>
-                      <SelectItem value="critical">Crítica</SelectItem>
+                      <SelectItem value="bajo">Baja</SelectItem>
+                      <SelectItem value="medio">Normal/Medio</SelectItem>
+                      <SelectItem value="alto">Alta</SelectItem>
+                      <SelectItem value="critico">Crítica</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -432,10 +434,10 @@ export default function ActivosPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="monthly">Mensual</SelectItem>
-                        <SelectItem value="quarterly">Trimestral</SelectItem>
-                        <SelectItem value="biannual">Semestral</SelectItem>
-                        <SelectItem value="annual">Anual</SelectItem>
+                        <SelectItem value="mensual">Mensual</SelectItem>
+                        <SelectItem value="trimestral">Trimestral</SelectItem>
+                        <SelectItem value="semestral">Semestral</SelectItem>
+                        <SelectItem value="anual">Anual</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

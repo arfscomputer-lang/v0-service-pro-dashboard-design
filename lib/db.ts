@@ -525,8 +525,8 @@ export async function createAsset(data: {
   type: string
   category: string
   serial_number: string
-  status?: 'active' | 'inactive' | 'in_repair' | 'retired'
-  criticality?: 'low' | 'normal' | 'high' | 'critical'
+  status?: string
+  criticality?: string
   description?: string
   brand?: string
   model?: string
@@ -558,8 +558,8 @@ export async function createAsset(data: {
       data.type,
       data.category,
       data.serial_number,
-      data.status || 'active',
-      data.criticality || 'normal',
+      data.status || 'activo',
+      data.criticality || 'medio',
       data.description || null,
       data.brand || '',
       data.model || '',
