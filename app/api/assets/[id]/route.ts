@@ -4,36 +4,34 @@ import { calculateNextMaintenanceDate, AssetMaintenanceInfo } from "@/lib/mainte
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const asset = await getAssetById(params.id)
-    
+    const { id } = await params
+    const asset = await getAssetById(id)
     if (!asset) {
       return NextResponse.json({ error: "Asset not found" }, { status: 404 })
     }
-
     return NextResponse.json(asset)
   } catch (error) {
-    console.error("[v0] Error fetching asset:", error)
     return NextResponse.json({ error: "Failed to fetch asset" }, { status: 500 })
   }
 }
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const body = await req.json()
 
-    // Get current asset to verify existence
-    const asset = await getAssetById(params.id)
+    const asset = await getAssetById(id)
     if (!asset) {
       return NextResponse.json({ error: "Asset not found" }, { status: 404 })
     }
 
-    const updated = await updateAsset(params.id, body)
+    const updated = await updateAsset(id, body)
     if (!updated) {
       return NextResponse.json({ error: "Failed to update asset" }, { status: 500 })
     }
@@ -49,26 +47,25 @@ export async function PUT(
 
     return NextResponse.json(updated)
   } catch (error) {
-    console.error("[v0] Error updating asset:", error)
     return NextResponse.json({ error: "Failed to update asset" }, { status: 500 })
   }
 }
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const asset = await getAssetById(params.id)
+    const { id } = await params
+
+    const asset = await getAssetById(id)
     if (!asset) {
       return NextResponse.json({ error: "Asset not found" }, { status: 404 })
     }
 
-    await deleteAsset(params.id)
+    await deleteAsset(id)
     return NextResponse.json({ message: "Asset deleted" })
   } catch (error) {
-    console.error("[v0] Error deleting asset:", error)
     return NextResponse.json({ error: "Failed to delete asset" }, { status: 500 })
   }
 }
-
