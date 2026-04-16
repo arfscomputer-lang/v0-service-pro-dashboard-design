@@ -71,7 +71,7 @@ export default function ActivosPage() {
   const displayedAssets = useMemo(() => {
     if (!displayCustomerId) return []
     return getAssetsByCustomer(displayCustomerId)
-  }, [displayCustomerId, getAsse tsByCustomer])
+  }, [displayCustomerId, getAssetsByCustomer])
 
   const selectedCustomer = useMemo(
     () => customers.find(c => c.id === displayCustomerId),
