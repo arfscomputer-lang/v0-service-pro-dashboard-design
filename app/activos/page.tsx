@@ -19,16 +19,16 @@ interface Asset {
   model?: string
   serial_number: string
   year_manufactured: number
-  asset_type: string
+  type: string
   category: string
   status: 'active' | 'inactive' | 'in_repair' | 'retired'
   criticality: 'low' | 'medium' | 'high' | 'critical'
   customer_id?: string
-  location?: string
+  site_location?: string
   capacity?: string
   has_maintenance_plan: boolean
   recurrence_type?: string
-  recurrence_months?: number
+  interval_months?: number
   created_at: string
   updated_at: string
 }
@@ -49,16 +49,16 @@ export default function ActivosPage() {
     model: '',
     serial_number: '',
     year_manufactured: new Date().getFullYear(),
-    asset_type: 'compresor',
+    type: 'compresor',
     category: 'reactivo',
     status: 'active',
     criticality: 'medium',
     customer_id: '',
-    location: '',
+    site_location: '',
     capacity: '',
     has_maintenance_plan: false,
     recurrence_type: 'monthly',
-    recurrence_months: 1,
+    interval_months: 1,
   })
 
   // Cargar activos
@@ -111,16 +111,16 @@ export default function ActivosPage() {
           model: '',
           serial_number: '',
           year_manufactured: new Date().getFullYear(),
-          asset_type: 'compresor',
+          type: 'compresor',
           category: 'reactivo',
           status: 'active',
           criticality: 'medium',
           customer_id: '',
-          location: '',
+          site_location: '',
           capacity: '',
           has_maintenance_plan: false,
           recurrence_type: 'monthly',
-          recurrence_months: 1,
+          interval_months: 1,
         })
         alert('Activo creado exitosamente')
       } else {
@@ -276,7 +276,7 @@ export default function ActivosPage() {
                 </div>
                 <div>
                   <Label>Tipo de Activo</Label>
-                  <Select value={createForm.asset_type} onValueChange={(v) => setCreateForm({ ...createForm, asset_type: v })}>
+                  <Select value={createForm.type} onValueChange={(v) => setCreateForm({ ...createForm, type: v })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -380,8 +380,8 @@ export default function ActivosPage() {
                     <Label>Intervalo (meses)</Label>
                     <Input
                       type="number"
-                      value={createForm.recurrence_months}
-                      onChange={(e) => setCreateForm({ ...createForm, recurrence_months: parseInt(e.target.value) })}
+                      value={createForm.interval_months}
+                      onChange={(e) => setCreateForm({ ...createForm, interval_months: parseInt(e.target.value) })}
                       min="1"
                     />
                   </div>
@@ -440,7 +440,7 @@ export default function ActivosPage() {
                     </div>
                     <div>
                       <p className="text-muted-foreground">Ubicación</p>
-                      <p>{asset.location || '—'}</p>
+                      <p>{asset.site_location || '—'}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Capacidad</p>
@@ -458,7 +458,7 @@ export default function ActivosPage() {
                   {asset.has_maintenance_plan && (
                     <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                       <p className="text-sm font-semibold text-blue-900">Plan de Mantenimiento</p>
-                      <p className="text-sm text-blue-800">Recurrencia: {asset.recurrence_type} • {asset.recurrence_months} meses</p>
+                      <p className="text-sm text-blue-800">Recurrencia: {asset.recurrence_type} • {asset.interval_months} meses</p>
                     </div>
                   )}
 
