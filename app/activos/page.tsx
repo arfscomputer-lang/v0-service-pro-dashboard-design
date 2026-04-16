@@ -45,7 +45,7 @@ export default function ActivosPage() {
     category: 'reactivo',
     serial_number: '',
     status: 'active',
-    criticality: 'medium',
+    criticality: 'normal',
     brand: '',
     model: '',
     year_manufactured: new Date().getFullYear(),
@@ -121,7 +121,7 @@ export default function ActivosPage() {
         category: 'reactivo',
         serial_number: '',
         status: 'active',
-        criticality: 'medium',
+        criticality: 'normal',
         brand: '',
         model: '',
         year_manufactured: new Date().getFullYear(),
@@ -402,7 +402,7 @@ export default function ActivosPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="low">Baja</SelectItem>
-                      <SelectItem value="medium">Media</SelectItem>
+                      <SelectItem value="normal">Normal</SelectItem>
                       <SelectItem value="high">Alta</SelectItem>
                       <SelectItem value="critical">Crítica</SelectItem>
                     </SelectContent>

@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
     if (!body.asset_id || !body.name || !body.serial_number || !body.customer_id || !body.type || !body.category) {
       return NextResponse.json(
-        { error: "asset_id, name, serial_number, customer_id, type, and category are required" },
+        { error: "Missing required fields: asset_id, name, serial_number, customer_id, type, category" },
         { status: 400 }
       )
     }
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
       category: body.category,
       serial_number: body.serial_number,
       status: body.status || 'active',
-      criticality: body.criticality || 'medium',
+      criticality: body.criticality || 'normal',
       description: body.description,
       brand: body.brand,
       model: body.model,
