@@ -1,6 +1,8 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
+import { SidebarNav } from '@/components/dashboard/sidebar-nav'
+import { TopHeader } from '@/components/dashboard/top-header'
 import { useAuth } from '@/lib/context/auth-context'
 import { useCustomers } from '@/lib/context/customers-context'
 import { Button } from '@/components/ui/button'
@@ -395,7 +397,11 @@ export default function ActivosPage() {
   const upcomingAssets = assets.filter(a => a.has_maintenance_plan && getMaintenanceStatus(a as any, 7) === 'proximo')
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6">
+    <div className="flex h-screen overflow-hidden bg-background">
+      <SidebarNav />
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <TopHeader />
+        <main className="flex-1 overflow-y-auto bg-slate-50 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
 
         {/* Header */}
@@ -645,6 +651,8 @@ export default function ActivosPage() {
           </DialogContent>
         </Dialog>
 
+      </div>
+        </main>
       </div>
     </div>
   )

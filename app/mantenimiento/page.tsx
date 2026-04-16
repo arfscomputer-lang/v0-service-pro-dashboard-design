@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useEffect, useCallback, useMemo } from "react"
+import { SidebarNav } from "@/components/dashboard/sidebar-nav"
+import { TopHeader } from "@/components/dashboard/top-header"
 import {
   Calendar,
   Search,
@@ -801,7 +803,11 @@ export default function MantenimientoPage() {
   }
 
   return (
-    <div className="flex flex-col h-full min-h-screen bg-background">
+    <div className="flex h-screen overflow-hidden bg-background">
+      <SidebarNav />
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <TopHeader />
+        <div className="flex flex-col flex-1 overflow-hidden bg-background">
       {/* ── Header ─────────────────────────────────────────── */}
       <div className="border-b bg-card px-6 py-5">
         <h1 className="text-2xl font-bold tracking-tight mb-4">Planes de Mantenimiento</h1>
@@ -979,6 +985,8 @@ export default function MantenimientoPage() {
           onSuccess={handleCompleteSuccess}
         />
       )}
+        </div>
+      </div>
     </div>
   )
 }
