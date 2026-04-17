@@ -575,16 +575,49 @@ function CompleteModal({
   onClose: () => void
   onSuccess: () => void
 }) {
+  const [allAssets, setAllAssets] = useState<PlanDeMantenimiento[]>([])
+  const [loadingAssets, setLoadingAssets] = useState(false)
   const [form, setForm] = useState<CompleteFormData>({
     completed_date: new Date().toISOString().split("T")[0],
     technician_name: "",
     notes: "",
     was_overdue: plan.maintenance_status === "vencido",
     planned_date: plan.next_maintenance_date || "",
-    asset_id_selected: plan.asset_id,
+    asset_id_selected: plan.id,
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Load all assets with maintenance plans on mount
+  useEffect(() => {
+    async function loadAssets() {
+      setLoadingAssets(true)
+      try {
+        const res = await fetch(`/api/maintenance/plans?customer_id=${plan.customer_id}`)
+        const data = await res.json()
+        if (data.plans) {
+          setAllAssets(data.plans)
+        }
+      } catch (err) {
+        console.error("Error loading assets:", err)
+      } finally {
+        setLoadingAssets(false)
+      }
+    }
+    loadAssets()
+  }, [plan.customer_id])
+
+  // Update planned_date when asset selection changes
+  const handleAssetChange = (assetInternalId: string) => {
+    const selectedAsset = allAssets.find((a) => a.id === assetInternalId)
+    if (selectedAsset) {
+      setForm({
+        ...form,
+        asset_id_selected: assetInternalId,
+        planned_date: selectedAsset.next_maintenance_date || "",
+      })
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -634,13 +667,18 @@ function CompleteModal({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="asset_id">Activo *</Label>
-              <Input
-                id="asset_id"
-                type="text"
-                value={form.asset_id_selected}
-                disabled
-                className="bg-muted text-muted-foreground"
-              />
+              <Select value={form.asset_id_selected} onValueChange={handleAssetChange} disabled={loadingAssets}>
+                <SelectTrigger id="asset_id">
+                  <SelectValue placeholder="Seleccionar activo..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {allAssets.map((asset) => (
+                    <SelectItem key={asset.id} value={asset.id}>
+                      {asset.name} ({asset.asset_id})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="planned_date">Fecha Planeada</Label>
@@ -648,8 +686,14 @@ function CompleteModal({
                 id="planned_date"
                 type="date"
                 value={form.planned_date}
-                onChange={(e) => setForm({ ...form, planned_date: e.target.value })}
+                disabled
+                className="bg-muted text-muted-foreground"
               />
+              {form.planned_date && (
+                <p className="text-xs text-gray-500">
+                  Próximo mantenimiento programado
+                </p>
+              )}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
