@@ -160,22 +160,19 @@ function AssetForm({ form, setForm }: { form: typeof EMPTY_FORM, setForm: (f: ty
         <Label htmlFor="has_plan" className="cursor-pointer">Tiene Plan de Mantenimiento</Label>
       </div>
       {form.has_maintenance_plan && (
-        <div className="grid grid-cols-2 gap-4 p-3 bg-blue-50 rounded border border-blue-100">
+        <div className="grid grid-cols-1 gap-4 p-3 bg-blue-50 rounded border border-blue-100">
           <div>
             <Label>Recurrencia</Label>
             <Select value={form.recurrence_type} onValueChange={v => setForm({ ...form, recurrence_type: v })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="mensual">Mensual</SelectItem>
-                <SelectItem value="trimestral">Trimestral</SelectItem>
-                <SelectItem value="semestral">Semestral</SelectItem>
-                <SelectItem value="anual">Anual</SelectItem>
+                <SelectItem value="mensual">Mensual (cada 1 mes)</SelectItem>
+                <SelectItem value="trimestral">Trimestral (cada 3 meses)</SelectItem>
+                <SelectItem value="semestral">Semestral (cada 6 meses)</SelectItem>
+                <SelectItem value="anual">Anual (cada 12 meses)</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-          <div>
-            <Label>Intervalo (meses)</Label>
-            <Input type="number" value={form.interval_months} onChange={e => setForm({ ...form, interval_months: parseInt(e.target.value) || 1 })} min="1" />
+            <p className="text-xs text-gray-500 mt-1">El intervalo se calcula automáticamente según la recurrencia</p>
           </div>
         </div>
       )}

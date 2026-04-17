@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from "next/server"
 import { getAssets, getAssetsByCustomer, createAsset, updateAssetMaintenanceDates } from "@/lib/db"
 import { calculateNextMaintenanceDate, AssetMaintenanceInfo } from "@/lib/maintenance"
 
+// Auto-calculate interval_months from recurrence_type
+const RECURRENCE_TO_MONTHS: Record<string, number> = {
+  mensual: 1,
+  trimestral: 3,
+  semestral: 6,
+  anual: 12,
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
@@ -50,7 +58,10 @@ export async function POST(req: NextRequest) {
       capacity: body.capacity,
       has_maintenance_plan: body.has_maintenance_plan || false,
       recurrence_type: body.recurrence_type,
-      interval_months: body.interval_months,
+      // Auto-calculate interval_months from recurrence_type if plan exists
+      interval_months: body.has_maintenance_plan && body.recurrence_type 
+        ? RECURRENCE_TO_MONTHS[body.recurrence_type] || body.interval_months 
+        : body.interval_months,
       interval_hours: body.interval_hours,
       interval_cycles: body.interval_cycles,
       hours_threshold_alert: body.hours_threshold_alert,

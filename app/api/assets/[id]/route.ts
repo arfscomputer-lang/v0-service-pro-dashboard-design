@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from "next/server"
 import { getAssetById, updateAsset, deleteAsset, updateAssetMaintenanceDates } from "@/lib/db"
 import { calculateNextMaintenanceDate, AssetMaintenanceInfo } from "@/lib/maintenance"
 
+// Auto-calculate interval_months from recurrence_type
+const RECURRENCE_TO_MONTHS: Record<string, number> = {
+  mensual: 1,
+  trimestral: 3,
+  semestral: 6,
+  anual: 12,
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -26,16 +34,17 @@ export async function PUT(
     const { id } = await params
     const body = await req.json()
 
-    console.log("[v0] PUT /api/assets/[id] - id:", id)
-
     const asset = await getAssetById(id)
-    console.log("[v0] getAssetById result:", asset ? "found" : "NOT FOUND")
     if (!asset) {
       return NextResponse.json({ error: "Asset not found" }, { status: 404 })
     }
 
+    // Auto-calculate interval_months from recurrence_type if plan exists
+    if (body.has_maintenance_plan && body.recurrence_type) {
+      body.interval_months = RECURRENCE_TO_MONTHS[body.recurrence_type] || body.interval_months
+    }
+
     const updated = await updateAsset(id, body)
-    console.log("[v0] updateAsset result:", updated ? "updated" : "FAILED")
     if (!updated) {
       return NextResponse.json({ error: "Failed to update asset" }, { status: 500 })
     }
