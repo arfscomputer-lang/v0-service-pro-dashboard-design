@@ -100,6 +100,8 @@ interface CompleteFormData {
   technician_name: string
   notes: string
   was_overdue: boolean
+  planned_date: string
+  asset_id_selected: string
 }
 
 interface Customer {
@@ -574,8 +576,12 @@ function CompleteModal({
   onSuccess: () => void
 }) {
   const [form, setForm] = useState<CompleteFormData>({
-    ...EMPTY_FORM,
+    completed_date: new Date().toISOString().split("T")[0],
+    technician_name: "",
+    notes: "",
     was_overdue: plan.maintenance_status === "vencido",
+    planned_date: plan.next_maintenance_date || "",
+    asset_id_selected: plan.asset_id,
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -625,6 +631,27 @@ function CompleteModal({
           </p>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="asset_id">Activo *</Label>
+              <Input
+                id="asset_id"
+                type="text"
+                value={form.asset_id_selected}
+                disabled
+                className="bg-muted text-muted-foreground"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="planned_date">Fecha Planeada</Label>
+              <Input
+                id="planned_date"
+                type="date"
+                value={form.planned_date}
+                onChange={(e) => setForm({ ...form, planned_date: e.target.value })}
+              />
+            </div>
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="completed_date">Fecha de ejecucion *</Label>
