@@ -59,6 +59,8 @@ export default function OrdenesPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [technicians, setTechnicians] = useState<Technician[]>([])
   const [loadingTechnicians, setLoadingTechnicians] = useState(true)
+  const [assets, setAssets] = useState<any[]>([])
+  const [loadingAssets, setLoadingAssets] = useState(false)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [createForm, setCreateForm] = useState<Omit<WorkOrder, 'id' | 'createdAt' | 'updatedAt'>>({
     orderId: '',
@@ -96,6 +98,26 @@ export default function OrdenesPage() {
     }
 
     fetchTechnicians()
+  }, [])
+
+  // Load assets with maintenance plans
+  useEffect(() => {
+    const fetchAssets = async () => {
+      try {
+        setLoadingAssets(true)
+        const res = await fetch('/api/maintenance/plans')
+        const data = await res.json()
+        if (data.plans) {
+          setAssets(data.plans)
+        }
+      } catch (error) {
+        console.error('Error loading assets:', error)
+        setAssets([])
+      } finally {
+        setLoadingAssets(false)
+      }
+    }
+    fetchAssets()
   }, [])
 
   const filteredOrders = workOrders.filter(
@@ -346,6 +368,37 @@ export default function OrdenesPage() {
                   onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                 />
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="assetId">Activo / Equipo</Label>
+                  <Select 
+                    value={editForm.assetId || "none"}
+                    onValueChange={(v) => setEditForm({ 
+                      ...editForm, 
+                      assetId: v === "none" ? null : v,
+                      scheduledDate: assets.find(a => a.id === v)?.next_maintenance_date || editForm.scheduledDate
+                    })}
+                  >
+                    <SelectTrigger id="assetId">
+                      <SelectValue placeholder="Seleccionar activo..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sin asignar</SelectItem>
+                      {assets.map((asset) => (
+                        <SelectItem key={asset.id} value={asset.id}>
+                          {asset.name} ({asset.asset_id})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {editForm.assetId && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Próximo mantenimiento: {assets.find(a => a.id === editForm.assetId)?.next_maintenance_date || 'N/A'}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-1.5" />
+              </div>
               <div>
                 <Label htmlFor="edit-category">Categoría de Trabajo</Label>
                 <Select 
@@ -495,6 +548,34 @@ export default function OrdenesPage() {
                   placeholder="Detalles del trabajo..."
                   rows={3}
                 />
+              </div>
+              <div>
+                <Label htmlFor="create-asset">Activo / Equipo</Label>
+                <Select 
+                  value={createForm.assetId || "none"}
+                  onValueChange={(v) => setCreateForm({ 
+                    ...createForm, 
+                    assetId: v === "none" ? null : v,
+                    scheduledDate: assets.find(a => a.id === v)?.next_maintenance_date || createForm.scheduledDate
+                  })}
+                >
+                  <SelectTrigger id="create-asset">
+                    <SelectValue placeholder="Seleccionar activo..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sin asignar</SelectItem>
+                    {assets.map((asset) => (
+                      <SelectItem key={asset.id} value={asset.id}>
+                        {asset.name} ({asset.asset_id})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {createForm.assetId && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Próximo mantenimiento: {assets.find(a => a.id === createForm.assetId)?.next_maintenance_date || 'N/A'}
+                  </p>
+                )}
               </div>
               <div>
                 <Label htmlFor="category">Categoría de Trabajo</Label>
