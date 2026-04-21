@@ -790,9 +790,9 @@ function PrintPreview({
     </div>
   )
 
+  // PrintPreview component JSX
   return (
-    <div className="p-8">
-      {/* Header Section */}
+    <div className="p-8 bg-white">
       <div className="mb-8">
         <div className="mb-4">
           <h1 className="text-3xl font-bold text-gray-900">PRESUPUESTO DE PROYECTO</h1>
