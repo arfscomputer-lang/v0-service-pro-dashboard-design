@@ -755,18 +755,18 @@ function PrintPreview({
   const total = subtotal + tax
 
   const renderTable = (title: string, items: Item[], color: string) => (
-    <div className="mb-6">
+    <div>
       <div
-        className="text-white px-4 py-2 font-bold text-sm"
+        className="text-white px-6 py-2.5 font-bold text-sm"
         style={{ backgroundColor: color }}
       >
         {title}
       </div>
-      <table className="w-full text-sm">
+      <table className="w-full text-xs">
         <thead>
-          <tr className="bg-gray-100">
+          <tr className="bg-gray-50 border-b border-gray-300">
             {['#', 'Descripción', 'Und', 'Cant.', 'P.Unit', 'Total'].map((h) => (
-              <th key={h} className="px-3 py-2 text-left font-semibold text-xs border-b">
+              <th key={h} className="px-4 py-2.5 text-left font-semibold text-gray-900">
                 {h}
               </th>
             ))}
@@ -775,12 +775,12 @@ function PrintPreview({
         <tbody>
           {items.map((item, idx) => (
             <tr key={item.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-              <td className="px-3 py-2 border-b text-xs">{idx + 1}</td>
-              <td className="px-3 py-2 border-b text-xs">{item.desc}</td>
-              <td className="px-3 py-2 border-b text-xs">{item.unit}</td>
-              <td className="px-3 py-2 border-b text-right text-xs">{item.qty}</td>
-              <td className="px-3 py-2 border-b text-right text-xs">{fmt(item.price, currency)}</td>
-              <td className="px-3 py-2 border-b text-right font-semibold text-xs">
+              <td className="px-4 py-2 border-b border-gray-200 text-gray-700">{idx + 1}</td>
+              <td className="px-4 py-2 border-b border-gray-200 text-gray-900">{item.desc}</td>
+              <td className="px-4 py-2 border-b border-gray-200 text-gray-700 text-center">{item.unit}</td>
+              <td className="px-4 py-2 border-b border-gray-200 text-gray-700 text-right">{item.qty}</td>
+              <td className="px-4 py-2 border-b border-gray-200 text-gray-900 text-right font-semibold">{fmt(item.price, currency)}</td>
+              <td className="px-4 py-2 border-b border-gray-200 text-gray-900 text-right font-bold">
                 {fmt(item.qty * item.price, currency)}
               </td>
             </tr>
@@ -792,66 +792,103 @@ function PrintPreview({
 
   return (
     <div className="p-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">PRESUPUESTO DE PROYECTO</h1>
-        <p className="text-gray-600 text-sm">Provisión de Materiales e Instalación — Sistema CCTV</p>
+      {/* Header Section */}
+      <div className="mb-8">
+        <div className="mb-4">
+          <h1 className="text-3xl font-bold text-gray-900">PRESUPUESTO DE PROYECTO</h1>
+          <p className="text-sm text-gray-600 mt-1">Provisión de Materiales e Instalación — Sistema CCTV</p>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-8 border-b-2 border-gray-300 pb-6">
+          {/* Left: Company Info */}
+          <div>
+            <div className="mb-4">
+              <h2 className="font-bold text-sm text-gray-900 mb-2">Empresa</h2>
+              {company.name && <p className="text-sm font-semibold text-gray-900">{company.name}</p>}
+              {company.rif && <p className="text-xs text-gray-700">RIF: {company.rif}</p>}
+              {company.address && <p className="text-xs text-gray-700">{company.address}</p>}
+              {company.phone && <p className="text-xs text-gray-700">Tel: {company.phone}</p>}
+              {company.email && <p className="text-xs text-gray-700">{company.email}</p>}
+            </div>
+          </div>
+          
+          {/* Right: Project Info - Aligned Right */}
+          <div className="text-right">
+            <table className="ml-auto text-sm">
+              <tbody>
+                <tr>
+                  <td className="font-bold pr-3 text-gray-900">Nº:</td>
+                  <td className="text-gray-900">{project.number}</td>
+                </tr>
+                <tr>
+                  <td className="font-bold pr-3 text-gray-900">Fecha:</td>
+                  <td className="text-gray-900">{project.date}</td>
+                </tr>
+                <tr>
+                  <td className="font-bold pr-3 text-gray-900">Vigencia:</td>
+                  <td className="text-gray-900">{project.validity}</td>
+                </tr>
+                <tr>
+                  <td className="font-bold pr-3 text-gray-900">Cliente:</td>
+                  <td className="text-gray-700">{project.client || '—'}</td>
+                </tr>
+                <tr>
+                  <td className="font-bold pr-3 text-gray-900">Ubicación:</td>
+                  <td className="text-gray-700">{project.location || '—'}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-6 mb-6 pb-6 border-b-2">
-        <div>
-          <div className="font-bold text-sm mb-1">{company.name || 'Empresa'}</div>
-          {company.rif && <div className="text-xs">RIF: {company.rif}</div>}
-          {company.address && <div className="text-xs">{company.address}</div>}
-          {company.phone && <div className="text-xs">Tel: {company.phone}</div>}
-          {company.email && <div className="text-xs">{company.email}</div>}
-        </div>
-        <div className="text-right text-sm">
-          <div><strong>Nº:</strong> {project.number}</div>
-          <div><strong>Fecha:</strong> {project.date}</div>
-          <div><strong>Vigencia:</strong> {project.validity}</div>
-          <div><strong>Cliente:</strong> {project.client || '—'}</div>
-          <div><strong>Ubicación:</strong> {project.location || '—'}</div>
-        </div>
-      </div>
-
-      <div className="mb-6">
+      {/* Tables Section */}
+      <div className="space-y-6">
         {renderTable('1. EQUIPOS PRINCIPALES', equipment, '#1a1a2e')}
         {renderTable('2. MATERIALES DE INSTALACIÓN', materials, '#2d4a7a')}
         {renderTable('3. MANO DE OBRA E INSTALACIÓN', labor, '#3a6b5a')}
       </div>
 
-      <div className="border-2 border-gray-900 rounded mb-6">
-        <div className="bg-gray-900 text-white px-4 py-2 font-bold">RESUMEN</div>
-        {[
-          ['Equipos Principales', sub1],
-          ['Materiales de Instalación', sub2],
-          ['Mano de Obra', sub3],
-        ].map(([label, value]) => (
-          <div key={label} className="flex justify-between px-4 py-2 border-b text-sm">
-            <span>{label}</span>
-            <span className="font-semibold">{fmt(value as number, currency)}</span>
+      {/* Summary Section */}
+      <div className="mt-8 border-2 border-gray-900">
+        <div className="bg-gray-900 text-white px-6 py-3 font-bold">RESUMEN</div>
+        <div className="divide-y divide-gray-200">
+          {[
+            ['Equipos Principales', sub1],
+            ['Materiales de Instalación', sub2],
+            ['Mano de Obra', sub3],
+          ].map(([label, value]) => (
+            <div key={label} className="flex justify-between px-6 py-2 text-sm">
+              <span className="text-gray-900">{label}</span>
+              <span className="text-gray-900 font-semibold">{fmt(value as number, currency)}</span>
+            </div>
+          ))}
+          <div className="flex justify-between px-6 py-2 bg-gray-100 text-sm font-bold text-gray-900">
+            <span>Subtotal</span>
+            <span>{fmt(subtotal, currency)}</span>
           </div>
-        ))}
-        <div className="flex justify-between px-4 py-2 bg-gray-100 border-b font-bold">
-          <span>Subtotal</span>
-          <span>{fmt(subtotal, currency)}</span>
-        </div>
-        <div className="flex justify-between px-4 py-2 border-b text-sm">
-          <span>IVA ({taxRate}%)</span>
-          <span>{fmt(tax, currency)}</span>
-        </div>
-        <div className="flex justify-between px-4 py-3 bg-gray-900 text-white font-bold text-lg">
-          <span>TOTAL ({currency})</span>
-          <span>{fmt(total, currency)}</span>
+          <div className="flex justify-between px-6 py-2 text-sm text-gray-900">
+            <span>IVA ({taxRate}%)</span>
+            <span className="font-semibold">{fmt(tax, currency)}</span>
+          </div>
+          <div className="flex justify-between px-6 py-3 bg-gray-900 text-white font-bold text-lg">
+            <span>TOTAL ({currency})</span>
+            <span>{fmt(total, currency)}</span>
+          </div>
         </div>
       </div>
 
-      <div className="mb-8 text-xs text-gray-600">
-        <div className="font-bold text-sm mb-2">CONDICIONES COMERCIALES</div>
-        {conditions.map((c: string, i: number) => (
-          <div key={i}>• {c}</div>
-        ))}
-      </div>
+      {/* Conditions Section */}
+      {conditions.length > 0 && (
+        <div className="mt-8">
+          <h3 className="font-bold text-sm text-gray-900 mb-3">CONDICIONES COMERCIALES</h3>
+          <ul className="text-xs text-gray-700 space-y-1 list-disc list-inside">
+            {conditions.map((c, i) => (
+              <li key={i}>{c}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="flex justify-around mt-16 text-xs text-center">
         <div>
