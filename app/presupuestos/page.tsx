@@ -790,9 +790,9 @@ function PrintPreview({
     </div>
   )
 
-  // PrintPreview component JSX
+  // PrintPreview - Professional Budget Format v2
   return (
-    <div className="p-8 bg-white">
+    <div className="p-8 bg-white print:bg-white" id="print-area">
       <div className="mb-8">
         <div className="mb-4">
           <h1 className="text-3xl font-bold text-gray-900">PRESUPUESTO DE PROYECTO</h1>
