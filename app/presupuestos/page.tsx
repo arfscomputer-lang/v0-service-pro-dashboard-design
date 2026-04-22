@@ -754,6 +754,8 @@ function PrintPreview({
   const tax = (subtotal * taxRate) / 100
   const total = subtotal + tax
 
+  console.log('[v0] PrintPreview rendering - professional format enabled')
+
   const renderTable = (title: string, items: Item[], color: string) => (
     <div>
       <div
