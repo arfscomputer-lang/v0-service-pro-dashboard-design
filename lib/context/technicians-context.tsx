@@ -70,12 +70,17 @@ export function TechniciansProvider({ children }: { children: React.ReactNode })
     setIsLoading(true)
     try {
       const res = await authenticatedFetch("/api/technicians")
-      if (!res.ok) throw new Error("Failed to fetch technicians")
+      if (!res.ok) {
+        console.warn("[v0] Technicians API responded with", res.status, "— using seed data")
+        const { technicianProfiles } = await import("@/lib/data/technicians")
+        setTechnicians(technicianProfiles)
+        return
+      }
       const json = await res.json()
       const list = json.data || json.technicians || []
       setTechnicians(list.map(normalizeTech))
     } catch (error) {
-      console.error("[v0] Error fetching technicians, using seed data:", error)
+      console.warn("[v0] Error fetching technicians, using seed data:", error)
       const { technicianProfiles } = await import("@/lib/data/technicians")
       setTechnicians(technicianProfiles)
     } finally {

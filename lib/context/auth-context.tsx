@@ -128,19 +128,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           if (response.ok) {
             const data = await response.json()
-            const authUser: AuthUser = {
-              id: data.user.id,
-              name: data.user.name,
-              email: data.user.email,
-              role: data.user.role,
-              initials: data.user.name
-                .split(" ")
-                .map((n: string) => n[0])
-                .join("")
-                .toUpperCase()
-                .slice(0, 2),
+            if (data.user) {
+              const authUser: AuthUser = {
+                id: data.user.id,
+                name: data.user.name,
+                email: data.user.email,
+                role: data.user.role,
+                initials: data.user.name
+                  .split(" ")
+                  .map((n: string) => n[0])
+                  .join("")
+                  .toUpperCase()
+                  .slice(0, 2),
+              }
+              setUser(authUser)
+            } else {
+              sessionStorage.removeItem("sp_auth_token")
             }
-            setUser(authUser)
           } else {
             // Token invalid, clear it
             sessionStorage.removeItem("sp_auth_token")

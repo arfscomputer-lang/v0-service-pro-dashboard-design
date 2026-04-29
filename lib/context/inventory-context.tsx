@@ -57,12 +57,16 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true)
     try {
       const response = await authenticatedFetch("/api/inventory")
-      if (!response.ok) throw new Error("Failed to fetch inventory")
+      if (!response.ok) {
+        console.warn("[v0] Inventory API responded with", response.status, "— using seed data")
+        const { inventorySeed } = await import("@/lib/data/inventory")
+        setItems(inventorySeed)
+        return
+      }
       const data = await response.json()
       setItems((data.items || []).map(normalizeItem))
     } catch (error) {
-      console.error("[v0] Error fetching inventory, using seed data:", error)
-      // Fallback to seed data if API fails
+      console.warn("[v0] Error fetching inventory, using seed data:", error)
       const { inventorySeed } = await import("@/lib/data/inventory")
       setItems(inventorySeed)
     } finally {

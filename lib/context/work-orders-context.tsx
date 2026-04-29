@@ -48,7 +48,7 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
         console.log('[v0] Parsed work orders list:', list)
         setWorkOrders(Array.isArray(list) ? list : [])
       } catch (error) {
-        console.error('[v0] Error fetching work orders:', error)
+        console.warn('[v0] Error fetching work orders:', error)
         setWorkOrders([])
       }
     }

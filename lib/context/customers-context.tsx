@@ -61,12 +61,16 @@ export function CustomersProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true)
     try {
       const response = await authenticatedFetch("/api/customers")
-      if (!response.ok) throw new Error("Failed to fetch customers")
+      if (!response.ok) {
+        console.warn("[v0] Customers API responded with", response.status, "— using seed data")
+        const { customerSeed } = await import("@/lib/data/customers")
+        setCustomers(customerSeed)
+        return
+      }
       const data = await response.json()
       setCustomers((data.customers || []).map(normalizeCustomer))
     } catch (error) {
-      console.error("[v0] Error fetching customers, using seed data:", error)
-      // Fallback to seed data if API fails
+      console.warn("[v0] Error fetching customers, using seed data:", error)
       const { customerSeed } = await import("@/lib/data/customers")
       setCustomers(customerSeed)
     } finally {
