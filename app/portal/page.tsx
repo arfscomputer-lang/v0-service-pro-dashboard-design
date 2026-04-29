@@ -49,13 +49,28 @@ import {
   Mail,
   TrendingUp,
   Award,
+  PieChart as PieChartIcon,
 } from "lucide-react"
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line,
+} from "recharts"
 import { cn } from "@/lib/utils"
 
 const priorityMap = {
   alta: { label: "Alta", color: "bg-destructive/10 text-destructive border-destructive/20" },
-  media: { label: "Media", color: "bg-amber-50 text-amber-700 border-amber-200" },
-  baja: { label: "Baja", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  media: { label: "Media", color: "bg-amber-500/10 text-amber-700 border-amber-500/20" },
+  baja: { label: "Baja", color: "bg-emerald-500/10 text-emerald-700 border-emerald-500/20" },
 }
 const statusMap: Record<string, { label: string; color: string; icon: typeof CheckCircle2 }> = {
   completado: { label: "Completado", color: "text-emerald-600", icon: CheckCircle2 },
@@ -69,7 +84,7 @@ export default function ClientPortalPage() {
   const router = useRouter()
   const [orderOpen, setOrderOpen] = useState(false)
   const [submitted, setSubmitted] = useState(false)
-  const [tab, setTab] = useState<"dashboard" | "ordenes">("dashboard")
+  const [tab, setTab] = useState<"dashboard" | "ordenes" | "reportes">("dashboard")
 
   const customer = useMemo(() => {
     if (!user?.customerId) return null
@@ -92,10 +107,10 @@ export default function ClientPortalPage() {
     : 0
 
   const kpis = [
-    { label: "Servicios Completados", value: completedServices.length, icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50" },
-    { label: "Ordenes Pendientes", value: pendingServices.length, icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
+    { label: "Servicios Completados", value: completedServices.length, icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-500/10" },
+    { label: "Ordenes Pendientes", value: pendingServices.length, icon: Clock, color: "text-amber-600", bg: "bg-amber-500/10" },
     { label: "Calificacion Promedio", value: avgRating > 0 ? avgRating.toFixed(1) : "N/A", icon: Star, color: "text-primary", bg: "bg-primary/10" },
-    { label: "Total Invertido", value: `$${customer.totalSpent.toLocaleString()}`, icon: DollarSign, color: "text-emerald-600", bg: "bg-emerald-50" },
+    { label: "Total Invertido", value: `$${customer.totalSpent.toLocaleString()}`, icon: DollarSign, color: "text-emerald-600", bg: "bg-emerald-500/10" },
   ]
 
   function handleLogout() {
@@ -143,6 +158,19 @@ export default function ClientPortalPage() {
             <ClipboardList className="h-5 w-5 shrink-0" />
             <span>Mis Ordenes</span>
           </button>
+          <button
+            type="button"
+            onClick={() => setTab("reportes")}
+            className={cn(
+              "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+              tab === "reportes"
+                ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+            )}
+          >
+            <PieChartIcon className="h-5 w-5 shrink-0" />
+            <span>Mis Reportes</span>
+          </button>
         </nav>
 
         {/* User section */}
@@ -175,7 +203,7 @@ export default function ClientPortalPage() {
         <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6">
           <div>
             <h1 className="text-lg font-bold text-foreground">
-              {tab === "dashboard" ? "Mi Dashboard" : "Mis Ordenes de Servicio"}
+              {tab === "dashboard" ? "Mi Dashboard" : tab === "ordenes" ? "Mis Órdenes de Servicio" : "Mis Reportes"}
             </h1>
             <p className="text-xs text-muted-foreground">Bienvenido, {customer.name}</p>
           </div>
@@ -334,6 +362,169 @@ export default function ClientPortalPage() {
                 </CardContent>
               </Card>
             </div>
+          ) : tab === "reportes" ? (
+            /* ─── Reportes tab ─── */
+            (() => {
+              const servicesByMonth = (() => {
+                const map: Record<string, { mes: string; total: number; completados: number; monto: number }> = {}
+                customer.services.forEach(s => {
+                  const [y, m] = (s.date || "").split("-")
+                  if (!y || !m) return
+                  const key = `${y}-${m}`
+                  const label = new Date(parseInt(y), parseInt(m) - 1, 1).toLocaleDateString("es-ES", { month: "short", year: "2-digit" })
+                  if (!map[key]) map[key] = { mes: label, total: 0, completados: 0, monto: 0 }
+                  map[key].total++
+                  if (s.status === "completado") map[key].completados++
+                  map[key].monto += s.amount ?? 0
+                })
+                return Object.values(map).slice(-6)
+              })()
+
+              const byType = (() => {
+                const map: Record<string, number> = {}
+                customer.services.forEach(s => { map[s.type] = (map[s.type] || 0) + 1 })
+                return Object.entries(map).map(([name, value]) => ({ name, value }))
+              })()
+
+              const statusBreakdown = [
+                { name: "Completados", value: completedServices.length, color: "#10b981" },
+                { name: "Pendientes", value: pendingServices.length, color: "#f59e0b" },
+                { name: "Cancelados", value: customer.services.filter(s => s.status === "cancelado").length, color: "#6b7280" },
+              ].filter(s => s.value > 0)
+
+              const COLORS = ["#2e5cb8", "#10b981", "#f59e0b", "#8b5cf6", "#ef4444", "#06b6d4"]
+
+              return (
+                <div className="space-y-6">
+                  {/* KPI row */}
+                  <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                    {[
+                      { label: "Total solicitudes", value: customer.services.length, icon: ClipboardList, color: "text-primary", bg: "bg-primary/10" },
+                      { label: "Completados", value: completedServices.length, icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-500/10" },
+                      { label: "Tasa de éxito", value: customer.services.length ? `${Math.round(completedServices.length / customer.services.length * 100)}%` : "0%", icon: TrendingUp, color: "text-blue-600", bg: "bg-blue-500/10" },
+                      { label: "Rating promedio", value: avgRating > 0 ? `${avgRating.toFixed(1)} ★` : "N/A", icon: Star, color: "text-amber-600", bg: "bg-amber-500/10" },
+                    ].map(k => (
+                      <Card key={k.label} className="border border-border shadow-sm">
+                        <CardContent className="p-4 flex items-center gap-3">
+                          <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl", k.bg)}>
+                            <k.icon className={cn("h-5 w-5", k.color)} />
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">{k.label}</p>
+                            <p className="text-xl font-bold text-foreground">{k.value}</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    {/* Servicios por mes */}
+                    <Card className="border border-border shadow-sm">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-semibold">Solicitudes por Mes</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {servicesByMonth.length === 0 ? (
+                          <div className="flex items-center justify-center h-40 text-muted-foreground text-sm">Sin datos</div>
+                        ) : (
+                          <ResponsiveContainer width="100%" height={180}>
+                            <BarChart data={servicesByMonth} barSize={20}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                              <XAxis dataKey="mes" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                              <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                              <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
+                              <Bar dataKey="total" name="Total" fill="#2e5cb8" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="completados" name="Completados" fill="#10b981" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* Distribución por estado */}
+                    <Card className="border border-border shadow-sm">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-semibold">Estado de Solicitudes</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {statusBreakdown.length === 0 ? (
+                          <div className="flex items-center justify-center h-40 text-muted-foreground text-sm">Sin datos</div>
+                        ) : (
+                          <div className="flex items-center gap-6">
+                            <ResponsiveContainer width={150} height={150}>
+                              <PieChart>
+                                <Pie data={statusBreakdown} cx="50%" cy="50%" innerRadius={40} outerRadius={65} dataKey="value" paddingAngle={3}>
+                                  {statusBreakdown.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                                </Pie>
+                                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
+                              </PieChart>
+                            </ResponsiveContainer>
+                            <div className="space-y-2 flex-1">
+                              {statusBreakdown.map(s => (
+                                <div key={s.name} className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <div className="h-2.5 w-2.5 rounded-full" style={{ background: s.color }} />
+                                    <span className="text-sm text-muted-foreground">{s.name}</span>
+                                  </div>
+                                  <span className="text-sm font-semibold text-foreground">{s.value}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* Tipo de servicio */}
+                    <Card className="border border-border shadow-sm">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-semibold">Tipos de Servicio</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {byType.length === 0 ? (
+                          <div className="flex items-center justify-center h-40 text-muted-foreground text-sm">Sin datos</div>
+                        ) : (
+                          <div className="space-y-2.5">
+                            {byType.sort((a, b) => b.value - a.value).map((t, i) => (
+                              <div key={t.name} className="flex items-center gap-3">
+                                <span className="text-xs text-muted-foreground w-24 truncate">{t.name}</span>
+                                <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                                  <div className="h-full rounded-full" style={{ width: `${(t.value / customer.services.length) * 100}%`, background: COLORS[i % COLORS.length] }} />
+                                </div>
+                                <span className="text-xs font-semibold text-foreground w-4 text-right">{t.value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* Gasto mensual */}
+                    <Card className="border border-border shadow-sm">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-semibold">Gasto Mensual</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {servicesByMonth.length === 0 ? (
+                          <div className="flex items-center justify-center h-40 text-muted-foreground text-sm">Sin datos</div>
+                        ) : (
+                          <ResponsiveContainer width="100%" height={180}>
+                            <LineChart data={servicesByMonth}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                              <XAxis dataKey="mes" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                              <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} tickFormatter={v => `$${v.toLocaleString()}`} />
+                              <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} formatter={(v: any) => [`$${v.toLocaleString()}`, "Gasto"]} />
+                              <Line type="monotone" dataKey="monto" stroke="#10b981" strokeWidth={2} dot={{ r: 3, fill: "#10b981" }} />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
+              )
+            })()
           ) : (
             /* ─── Ordenes tab ─── */
             <div className="space-y-4">

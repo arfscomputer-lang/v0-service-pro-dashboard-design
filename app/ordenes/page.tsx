@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from "react"
 import Link from "next/link"
 import { SidebarNav } from "@/components/dashboard/sidebar-nav"
 import { TopHeader } from "@/components/dashboard/top-header"
+import { NewOrderDialog } from "@/components/work-orders/new-order-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -20,7 +21,6 @@ import {
   ChevronRight,
   Clock,
   MapPin,
-  Wrench,
   Edit2,
   Trash2,
 } from "lucide-react"
@@ -55,27 +55,13 @@ const priorityConfig: Record<string, { label: string; dot: string; badge: string
 }
 
 export default function OrdenesPage() {
-  const { workOrders, addWorkOrder, updateWorkOrder, deleteWorkOrder } = useWorkOrders()
+  const { workOrders, updateWorkOrder, deleteWorkOrder } = useWorkOrders()
   const [searchTerm, setSearchTerm] = useState("")
   const [technicians, setTechnicians] = useState<Technician[]>([])
   const [loadingTechnicians, setLoadingTechnicians] = useState(true)
   const [assets, setAssets] = useState<any[]>([])
   const [loadingAssets, setLoadingAssets] = useState(false)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [createForm, setCreateForm] = useState<Omit<WorkOrder, 'id' | 'createdAt' | 'updatedAt'>>({
-    orderId: '',
-    type: '',
-    category: 'otros',
-    description: '',
-    status: 'pendiente',
-    priority: 'normal',
-    address: '',
-    city: '',
-    scheduledDate: new Date().toISOString().split('T')[0],
-    scheduledTime: '09:00',
-    customerId: null,
-    technicianId: null,
-  })
   const [editingOrder, setEditingOrder] = useState<WorkOrder | null>(null)
   const [editForm, setEditForm] = useState<Partial<WorkOrder>>({})
 
@@ -125,70 +111,6 @@ export default function OrdenesPage() {
       order.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.description.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-
-  const handleCreateOpen = useCallback(() => {
-    setIsCreateOpen(true)
-  }, [])
-
-  const handleCreateClose = useCallback(() => {
-    setIsCreateOpen(false)
-    setCreateForm({
-      orderId: '',
-      type: '',
-      category: 'otros',
-      description: '',
-      status: 'pendiente',
-      priority: 'normal',
-      address: '',
-      city: '',
-      scheduledDate: new Date().toISOString().split('T')[0],
-      scheduledTime: '09:00',
-      customerId: null,
-      technicianId: null,
-    })
-  }, [])
-
-  const handleCreateSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault()
-      
-      // Validation: ensure required fields are present and not empty
-      if (!createForm.type?.trim()) {
-        console.error('[v0] Validation failed: type is required')
-        alert('Por favor completa el tipo de servicio')
-        return
-      }
-      
-      if (!createForm.address?.trim()) {
-        console.error('[v0] Validation failed: address is required')
-        alert('Por favor completa la dirección')
-        return
-      }
-      
-      if (!createForm.city?.trim()) {
-        console.error('[v0] Validation failed: city is required')
-        alert('Por favor completa la ciudad')
-        return
-      }
-      
-      try {
-        // Format date to ensure it's in YYYY-MM-DD format
-        const formattedData = { ...createForm }
-        if (formattedData.scheduledDate) {
-          const dateObj = new Date(formattedData.scheduledDate)
-          formattedData.scheduledDate = dateObj.toISOString().split('T')[0]
-        }
-        console.log('[v0] Creating work order with validated data:', JSON.stringify(formattedData))
-        await addWorkOrder(formattedData)
-        console.log('[v0] Work order added to context successfully')
-        handleCreateClose()
-      } catch (error) {
-        console.error('[v0] Error creating work order:', error)
-        alert('Error al crear la orden: ' + (error instanceof Error ? error.message : 'Error desconocido'))
-      }
-    },
-    [createForm, addWorkOrder, handleCreateClose]
   )
 
   const handleEditOpen = useCallback((order: WorkOrder) => {
@@ -249,7 +171,7 @@ export default function OrdenesPage() {
                 <p className="text-sm text-muted-foreground">{workOrders.length} órdenes · {workOrders.filter(o => o.status === 'pendiente').length} pendientes</p>
               </div>
             </div>
-            <Button onClick={handleCreateOpen} className="gap-2">
+            <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
               <Plus className="h-4 w-4" />
               Nueva Orden
             </Button>
@@ -343,7 +265,7 @@ export default function OrdenesPage() {
                     {searchTerm ? "Sin resultados para tu búsqueda" : "No hay órdenes disponibles"}
                   </p>
                   {!searchTerm && (
-                    <Button variant="outline" size="sm" onClick={handleCreateOpen} className="gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setIsCreateOpen(true)} className="gap-2">
                       <Plus className="h-4 w-4" /> Crear primera orden
                     </Button>
                   )}
@@ -529,197 +451,7 @@ export default function OrdenesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Create Dialog */}
-      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Nueva Orden de Trabajo</DialogTitle>
-            <DialogDescription>Crea una nueva orden de trabajo en el sistema</DialogDescription>
-          </DialogHeader>
-          {isCreateOpen && (
-            <form onSubmit={handleCreateSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="orderId">ID Orden</Label>
-                <Input
-                  id="orderId"
-                  value={createForm.orderId}
-                  onChange={(e) => setCreateForm({ ...createForm, orderId: e.target.value })}
-                  placeholder="OT-1001"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="type">Tipo de Servicio</Label>
-                <Input
-                  id="type"
-                  value={createForm.type}
-                  onChange={(e) => setCreateForm({ ...createForm, type: e.target.value })}
-                  placeholder="Reparación HVAC"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="description">Descripción</Label>
-                <Textarea
-                  id="description"
-                  value={createForm.description}
-                  onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
-                  placeholder="Detalles del trabajo..."
-                  rows={3}
-                />
-              </div>
-              <div>
-                <Label htmlFor="create-asset">Activo / Equipo</Label>
-                <Select 
-                  value={createForm.assetId || "none"}
-                  onValueChange={(v) => setCreateForm({ 
-                    ...createForm, 
-                    assetId: v === "none" ? null : v,
-                    scheduledDate: assets.find(a => a.id === v)?.next_maintenance_date || createForm.scheduledDate
-                  })}
-                >
-                  <SelectTrigger id="create-asset">
-                    <SelectValue placeholder="Seleccionar activo..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Sin asignar</SelectItem>
-                    {assets.map((asset) => (
-                      <SelectItem key={asset.id} value={asset.id}>
-                        {asset.name} ({asset.asset_id})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {createForm.assetId && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    Próximo mantenimiento: {assets.find(a => a.id === createForm.assetId)?.next_maintenance_date || 'N/A'}
-                  </p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="category">Categoría de Trabajo</Label>
-                <Select 
-                  value={createForm.category || 'otros'} 
-                  onValueChange={(v) => setCreateForm({ ...createForm, category: v as any })}
-                >
-                  <SelectTrigger id="category">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="reactivo">Reactivo / Correctivo</SelectItem>
-                    <SelectItem value="preventivo">Preventivo</SelectItem>
-                    <SelectItem value="predictivo">Predictivo</SelectItem>
-                    <SelectItem value="instalacion">Instalación / Puesta en Marcha</SelectItem>
-                    <SelectItem value="inspeccion">Inspección / Auditoría</SelectItem>
-                    <SelectItem value="proyecto">Proyecto / Mejora</SelectItem>
-                    <SelectItem value="garantia">Garantía</SelectItem>
-                    <SelectItem value="otros">Otros</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="status">Estado</Label>
-                  <Select value={createForm.status} onValueChange={(v) => setCreateForm({ ...createForm, status: v as any })}>
-                    <SelectTrigger id="status">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(statusConfig).map(([key, { label }]) => (
-                        <SelectItem key={key} value={key}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="priority">Prioridad</Label>
-                  <Select value={createForm.priority} onValueChange={(v) => setCreateForm({ ...createForm, priority: v as any })}>
-                    <SelectTrigger id="priority">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(priorityConfig).map(([key, { label }]) => (
-                        <SelectItem key={key} value={key}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="address">Dirección</Label>
-                <Input
-                  id="address"
-                  value={createForm.address}
-                  onChange={(e) => setCreateForm({ ...createForm, address: e.target.value })}
-                  placeholder="Calle Principal 123"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="city">Ciudad</Label>
-                <Input
-                  id="city"
-                  value={createForm.city}
-                  onChange={(e) => setCreateForm({ ...createForm, city: e.target.value })}
-                  placeholder="CDMX"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="scheduledDate">Fecha Programada</Label>
-                  <Input
-                    id="scheduledDate"
-                    type="date"
-                    value={createForm.scheduledDate}
-                    onChange={(e) => setCreateForm({ ...createForm, scheduledDate: e.target.value })}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="scheduledTime">Hora Programada</Label>
-                  <Input
-                    id="scheduledTime"
-                    type="time"
-                    value={createForm.scheduledTime}
-                    onChange={(e) => setCreateForm({ ...createForm, scheduledTime: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="technicianId">Técnico Asignado</Label>
-                <Select 
-                  value={createForm.technicianId || "none"} 
-                  onValueChange={(v) => setCreateForm({ ...createForm, technicianId: v === "none" ? null : v })}
-                >
-                  <SelectTrigger id="technicianId">
-                    <SelectValue placeholder="Seleccionar técnico..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Sin asignar</SelectItem>
-                    {technicians.map((tech) => (
-                      <SelectItem key={tech.id} value={tech.id}>
-                        {tech.name} {tech.role ? `- ${tech.role}` : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex gap-2 justify-end">
-                <Button type="button" variant="outline" onClick={handleCreateClose}>
-                  Cancelar
-                </Button>
-                <Button type="submit">Crear Orden</Button>
-              </div>
-            </form>
-          )}
-        </DialogContent>
-      </Dialog>
+      <NewOrderDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} />
     </div>
   )
 }
