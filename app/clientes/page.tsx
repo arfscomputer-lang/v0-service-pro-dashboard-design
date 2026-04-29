@@ -59,18 +59,18 @@ import { cn } from "@/lib/utils"
 // ── Helpers ──────────────────────────────────────────────
 
 const typeConfig: Record<CustomerType, { label: string; icon: typeof UserCircle; color: string }> = {
-  residencial: { label: "Residencial", icon: UserCircle, color: "text-blue-600 bg-blue-50 border-blue-200" },
-  comercial: { label: "Comercial", icon: Building2, color: "text-amber-600 bg-amber-50 border-amber-200" },
-  industrial: { label: "Industrial", icon: Factory, color: "text-slate-600 bg-slate-50 border-slate-200" },
-  gobierno: { label: "Gobierno", icon: Landmark, color: "text-emerald-600 bg-emerald-50 border-emerald-200" },
+  residencial: { label: "Residencial", icon: UserCircle, color: "text-blue-600 bg-blue-500/10 border-blue-500/20" },
+  comercial: { label: "Comercial", icon: Building2, color: "text-amber-600 bg-amber-500/10 border-amber-500/20" },
+  industrial: { label: "Industrial", icon: Factory, color: "text-muted-foreground bg-muted border-border" },
+  gobierno: { label: "Gobierno", icon: Landmark, color: "text-emerald-600 bg-emerald-500/10 border-emerald-500/20" },
 }
 
 const tagColors: Record<CustomerTag, string> = {
-  VIP: "bg-amber-100 text-amber-700 border-amber-300",
-  nuevo: "bg-sky-100 text-sky-700 border-sky-300",
-  frecuente: "bg-emerald-100 text-emerald-700 border-emerald-300",
-  moroso: "bg-red-100 text-red-700 border-red-300",
-  corporativo: "bg-indigo-100 text-indigo-700 border-indigo-300",
+  VIP: "bg-amber-500/10 text-amber-700 border-amber-500/20",
+  nuevo: "bg-blue-500/10 text-blue-700 border-blue-500/20",
+  frecuente: "bg-emerald-500/10 text-emerald-700 border-emerald-500/20",
+  moroso: "bg-destructive/10 text-destructive border-destructive/20",
+  corporativo: "bg-primary/10 text-primary border-primary/20",
 }
 
 function formatCurrency(n: number) {
@@ -453,7 +453,7 @@ export default function ClientesPage() {
 
                               {/* Branches */}
                               {(c.branches || []).map((branch) => (
-                                <div key={branch.id} className="border border-amber-200 rounded-lg p-4 bg-amber-50">
+                                <div key={branch.id} className="border border-amber-500/20 rounded-lg p-4 bg-amber-500/5">
                                   <div className="grid grid-cols-2 gap-4">
                                     <div>
                                       <p className="text-xs text-muted-foreground font-semibold">SUCURSAL</p>

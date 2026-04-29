@@ -10,6 +10,7 @@ import { DeleteTechDialog } from "@/components/technicians/delete-tech-dialog"
 import { useTechnicians } from "@/lib/context/technicians-context"
 import type { TechnicianProfile } from "@/lib/data/technicians"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Users, Plus } from "lucide-react"
 
 export default function TecnicosPage() {
@@ -64,12 +65,12 @@ export default function TecnicosPage() {
             </div>
             <div className="flex items-center gap-3">
               <div className="hidden md:flex items-center gap-2">
-                <div className="rounded-full bg-card border border-border px-3 py-1.5 text-xs font-medium text-foreground">
-                  {technicians.length} tecnicos
-                </div>
-                <div className="rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1.5 text-xs font-medium text-emerald-700">
+                <Badge variant="outline" className="rounded-full text-xs font-medium">
+                  {technicians.length} técnicos
+                </Badge>
+                <Badge variant="outline" className="rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-700 border-emerald-500/20">
                   {technicians.filter((t) => t.status === "disponible").length} disponibles
-                </div>
+                </Badge>
               </div>
               <Button onClick={handleCreate} className="gap-2">
                 <Plus className="h-4 w-4" />

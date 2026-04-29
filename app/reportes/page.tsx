@@ -18,7 +18,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   CalendarDays,
-  Loader,
+  Loader2,
 } from "lucide-react"
 import {
   BarChart,
@@ -87,7 +87,7 @@ export default function ReportesPage() {
           <TopHeader />
           <main className="flex-1 overflow-y-auto p-6 flex items-center justify-center">
             <div className="flex flex-col items-center gap-3">
-              <Loader className="h-8 w-8 animate-spin text-primary" />
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
               <p className="text-muted-foreground">Cargando reportes...</p>
             </div>
           </main>
@@ -150,7 +150,7 @@ export default function ReportesPage() {
               change="+12%"
               trend="up"
               icon={CheckCircle2}
-              iconBg="bg-emerald-50"
+              iconBg="bg-emerald-500/10"
               iconColor="text-emerald-600"
             />
             <KpiCard
@@ -159,8 +159,8 @@ export default function ReportesPage() {
               change="-8%"
               trend="up"
               icon={Clock}
-              iconBg="bg-blue-50"
-              iconColor="text-blue-600"
+              iconBg="bg-primary/10"
+              iconColor="text-primary"
             />
             <KpiCard
               title="Órdenes Pendientes"
@@ -168,7 +168,7 @@ export default function ReportesPage() {
               change="+3%"
               trend="down"
               icon={AlertTriangle}
-              iconBg="bg-amber-50"
+              iconBg="bg-amber-500/10"
               iconColor="text-amber-600"
             />
             <KpiCard
@@ -181,8 +181,8 @@ export default function ReportesPage() {
               change="+5%"
               trend="up"
               icon={TrendingUp}
-              iconBg="bg-blue-50"
-              iconColor="text-blue-600"
+              iconBg="bg-primary/10"
+              iconColor="text-primary"
             />
           </div>
 
@@ -204,10 +204,11 @@ export default function ReportesPage() {
                     <YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" />
                     <Tooltip
                       contentStyle={{
-                        background: "white",
-                        border: "1px solid #e2e8f0",
+                        background: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
                         borderRadius: 8,
                         fontSize: 12,
+                        color: "hsl(var(--foreground))",
                       }}
                     />
                     <Bar dataKey="pendientes" fill={CHART_BLUE_LIGHT} radius={[4, 4, 0, 0]} name="Pendientes" />
@@ -357,9 +358,9 @@ export default function ReportesPage() {
                             <td className="px-4 py-3">
                               <span className={cn(
                                 "flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold",
-                                i === 0 ? "bg-amber-100 text-amber-700" :
-                                i === 1 ? "bg-gray-100 text-gray-600" :
-                                i === 2 ? "bg-orange-100 text-orange-700" :
+                                i === 0 ? "bg-amber-500/15 text-amber-700" :
+                                i === 1 ? "bg-muted text-muted-foreground" :
+                                i === 2 ? "bg-orange-500/15 text-orange-700" :
                                 "bg-muted text-muted-foreground"
                               )}>
                                 {i + 1}

@@ -38,20 +38,20 @@ interface Technician {
 }
 
 const statusConfig: Record<string, { label: string; className: string }> = {
-  pendiente: { label: "Pendiente", className: "bg-amber-100 text-amber-800 border-amber-200" },
-  asignada: { label: "Asignada", className: "bg-blue-100 text-blue-800 border-blue-200" },
-  en_ruta: { label: "En Ruta", className: "bg-violet-100 text-violet-800 border-violet-200" },
-  en_sitio: { label: "En Sitio", className: "bg-indigo-100 text-indigo-800 border-indigo-200" },
-  en_proceso: { label: "En Proceso", className: "bg-indigo-100 text-indigo-800 border-indigo-200" },
-  completada: { label: "Completada", className: "bg-emerald-100 text-emerald-800 border-emerald-200" },
-  cancelada: { label: "Cancelada", className: "bg-red-100 text-red-800 border-red-200" },
+  pendiente: { label: "Pendiente", className: "bg-amber-500/10 text-amber-700 border-amber-500/20" },
+  asignada: { label: "Asignada", className: "bg-blue-500/10 text-blue-700 border-blue-500/20" },
+  en_ruta: { label: "En Ruta", className: "bg-violet-500/10 text-violet-700 border-violet-500/20" },
+  en_sitio: { label: "En Sitio", className: "bg-indigo-500/10 text-indigo-700 border-indigo-500/20" },
+  en_proceso: { label: "En Proceso", className: "bg-indigo-500/10 text-indigo-700 border-indigo-500/20" },
+  completada: { label: "Completada", className: "bg-emerald-500/10 text-emerald-700 border-emerald-500/20" },
+  cancelada: { label: "Cancelada", className: "bg-destructive/10 text-destructive border-destructive/20" },
 }
 
-const priorityConfig: Record<string, { label: string; dot: string }> = {
-  baja: { label: "Baja", dot: "bg-gray-400" },
-  normal: { label: "Normal", dot: "bg-blue-500" },
-  alta: { label: "Alta", dot: "bg-amber-500" },
-  urgente: { label: "Urgente", dot: "bg-destructive" },
+const priorityConfig: Record<string, { label: string; dot: string; badge: string }> = {
+  baja:    { label: "Baja",    dot: "bg-muted-foreground/40", badge: "bg-muted text-muted-foreground" },
+  normal:  { label: "Normal",  dot: "bg-blue-500",            badge: "bg-blue-50 text-blue-700 border-blue-200" },
+  alta:    { label: "Alta",    dot: "bg-amber-500",           badge: "bg-amber-50 text-amber-700 border-amber-200" },
+  urgente: { label: "Urgente", dot: "bg-destructive",         badge: "bg-destructive/10 text-destructive border-destructive/20" },
 }
 
 export default function OrdenesPage() {
@@ -244,8 +244,15 @@ export default function OrdenesPage() {
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
                 <ClipboardList className="h-5 w-5 text-primary" />
               </div>
-              <h1 className="text-2xl font-bold text-foreground">Órdenes de Trabajo</h1>
+              <div>
+                <h1 className="text-xl font-bold text-foreground">Órdenes de Trabajo</h1>
+                <p className="text-sm text-muted-foreground">{workOrders.length} órdenes · {workOrders.filter(o => o.status === 'pendiente').length} pendientes</p>
+              </div>
             </div>
+            <Button onClick={handleCreateOpen} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Nueva Orden
+            </Button>
           </div>
 
           {/* Filters */}
@@ -299,7 +306,9 @@ export default function OrdenesPage() {
                     </div>
 
                     <div className="flex items-center gap-2 ml-4">
-                      <div className={cn("h-2 w-2 rounded-full", pr.dot)} title={pr.label} />
+                      <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 h-5 hidden sm:flex", pr.badge)}>
+                        {pr.label}
+                      </Badge>
                       <Link href={`/orden/${order.id}`}>
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                           <ChevronRight className="h-4 w-4" />
@@ -326,8 +335,18 @@ export default function OrdenesPage() {
                 )
               })}
               {filteredOrders.length === 0 && (
-                <div className="flex items-center justify-center h-40 text-muted-foreground">
-                  No hay órdenes disponibles
+                <div className="flex flex-col items-center justify-center h-48 gap-3">
+                  <div className="p-3 rounded-full bg-muted">
+                    <ClipboardList className="h-6 w-6 text-muted-foreground/50" />
+                  </div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {searchTerm ? "Sin resultados para tu búsqueda" : "No hay órdenes disponibles"}
+                  </p>
+                  {!searchTerm && (
+                    <Button variant="outline" size="sm" onClick={handleCreateOpen} className="gap-2">
+                      <Plus className="h-4 w-4" /> Crear primera orden
+                    </Button>
+                  )}
                 </div>
               )}
             </div>

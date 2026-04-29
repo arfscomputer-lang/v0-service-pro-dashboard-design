@@ -149,37 +149,37 @@ function recurrenceLabel(type: string | null, months: number | null): string {
 const STATUS_CONFIG = {
   vencido: {
     label: "Vencido",
-    color: "text-red-600",
-    bg: "bg-red-50",
-    border: "border-red-200",
-    badge: "bg-red-100 text-red-700",
+    color: "text-destructive",
+    bg: "bg-destructive/5",
+    border: "border-destructive/20",
+    badge: "bg-destructive/10 text-destructive",
     icon: AlertTriangle,
     hex: "#ef4444",
   },
   proximo: {
     label: "Proximo",
     color: "text-amber-600",
-    bg: "bg-amber-50",
-    border: "border-amber-200",
-    badge: "bg-amber-100 text-amber-700",
+    bg: "bg-amber-500/5",
+    border: "border-amber-500/20",
+    badge: "bg-amber-500/10 text-amber-700",
     icon: Clock,
     hex: "#f59e0b",
   },
   al_dia: {
     label: "Al dia",
     color: "text-emerald-600",
-    bg: "bg-emerald-50",
-    border: "border-emerald-200",
-    badge: "bg-emerald-100 text-emerald-700",
+    bg: "bg-emerald-500/5",
+    border: "border-emerald-500/20",
+    badge: "bg-emerald-500/10 text-emerald-700",
     icon: CheckCircle2,
     hex: "#10b981",
   },
   sin_plan: {
     label: "Sin plan",
-    color: "text-gray-500",
-    bg: "bg-gray-50",
-    border: "border-gray-200",
-    badge: "bg-gray-100 text-gray-600",
+    color: "text-muted-foreground",
+    bg: "bg-muted/50",
+    border: "border-border",
+    badge: "bg-muted text-muted-foreground",
     icon: FileText,
     hex: "#6b7280",
   },
@@ -524,7 +524,7 @@ function DetailPanel({
                   <div key={h.id} className="relative">
                     <div className={cn(
                       "absolute -left-5 top-1 h-3 w-3 rounded-full border-2 border-background",
-                      h.status === "completada" ? "bg-emerald-500" : "bg-gray-400"
+                      h.status === "completada" ? "bg-emerald-500" : "bg-muted-foreground/40"
                     )} />
                     <div className="rounded-lg border bg-card p-3">
                       <div className="flex items-start justify-between gap-2 mb-1">
