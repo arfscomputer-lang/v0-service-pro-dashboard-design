@@ -6,15 +6,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Plus, Edit2, Trash2, Lock, CheckCircle2, AlertCircle } from "lucide-react"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Plus, Edit2, Trash2, Lock, CheckCircle2, AlertCircle, Users, Loader2 } from "lucide-react"
+import { authenticatedFetch } from "@/lib/authenticated-fetch"
 import { cn } from "@/lib/utils"
 
 interface Permission {
@@ -33,40 +28,60 @@ interface Role {
   permissions?: Permission[]
 }
 
+interface UserData {
+  id: string
+  name: string
+  email: string
+  role: string
+  status: string
+}
+
+const roleColors: Record<string, string> = {
+  admin: "bg-primary/10 text-primary border-primary/20",
+  supervisor: "bg-blue-500/10 text-blue-700 border-blue-500/20",
+  tecnico: "bg-amber-500/10 text-amber-700 border-amber-500/20",
+  cliente: "bg-muted text-muted-foreground border-border",
+}
+
 export default function PermisosPage() {
   const [roles, setRoles] = useState<Role[]>([])
   const [permissions, setPermissions] = useState<Permission[]>([])
+  const [users, setUsers] = useState<UserData[]>([])
   const [loading, setLoading] = useState(true)
   const [editingRole, setEditingRole] = useState<Role | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([])
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-  })
+  const [formData, setFormData] = useState({ name: "", description: "" })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState("")
 
-  // Cargar roles y permisos
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true)
-        const response = await fetch('/api/roles')
-        if (!response.ok) throw new Error('Failed to fetch')
-        const data = await response.json()
-        setRoles(data.roles || [])
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      const [rolesRes, usersRes] = await Promise.all([
+        authenticatedFetch("/api/roles"),
+        authenticatedFetch("/api/users/list"),
+      ])
+      if (rolesRes.ok) {
+        const data = await rolesRes.json()
+        setRoles((data.roles || []).map((r: Role) => ({
+          ...r,
+          permissions: (r.permissions || []).filter((p: any) => p && p.id),
+        })))
         setPermissions(data.permissions || [])
-        console.log('[v0] Loaded roles and permissions')
-      } catch (error) {
-        console.error('[v0] Error loading roles:', error)
-      } finally {
-        setLoading(false)
       }
+      if (usersRes.ok) {
+        const data = await usersRes.json()
+        setUsers(data.data || [])
+      }
+    } catch {
+      console.warn("[v0] Error loading roles/permissions")
+    } finally {
+      setLoading(false)
     }
+  }
 
-    fetchData()
-  }, [])
+  useEffect(() => { loadData() }, [])
 
   const handleEditRole = (role: Role) => {
     setEditingRole(role)
@@ -82,90 +97,68 @@ export default function PermisosPage() {
     setIsDialogOpen(true)
   }
 
-  const handlePermissionToggle = (permId: string) => {
-    setSelectedPermissions(prev =>
-      prev.includes(permId)
-        ? prev.filter(id => id !== permId)
-        : [...prev, permId]
-    )
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
-
+    setMessage("")
     try {
-      const url = editingRole ? `/api/roles/${editingRole.id}` : '/api/roles'
-      const method = editingRole ? 'PUT' : 'POST'
-
-      const response = await fetch(url, {
+      const url = editingRole ? `/api/roles/${editingRole.id}` : "/api/roles"
+      const method = editingRole ? "PUT" : "POST"
+      const res = await authenticatedFetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          permissions: selectedPermissions,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...formData, permissions: selectedPermissions }),
       })
-
-      if (!response.ok) throw new Error('Failed to save role')
-
-      const result = await response.json()
-      setMessage(editingRole ? 'Rol actualizado correctamente' : 'Rol creado correctamente')
-
-      // Recargar datos
-      const reloadResponse = await fetch('/api/roles')
-      const reloadData = await reloadResponse.json()
-      setRoles(reloadData.roles || [])
-
-      setTimeout(() => {
-        setIsDialogOpen(false)
-        setMessage("")
-      }, 2000)
-    } catch (error) {
-      console.error('[v0] Error saving role:', error)
-      setMessage('Error al guardar el rol')
+      if (!res.ok) { setMessage("Error al guardar el rol"); return }
+      setMessage(editingRole ? "Rol actualizado correctamente" : "Rol creado correctamente")
+      await loadData()
+      setTimeout(() => { setIsDialogOpen(false); setMessage("") }, 2000)
+    } catch {
+      setMessage("Error de conexión")
     } finally {
       setIsSubmitting(false)
     }
   }
 
   const handleDeleteRole = async (roleId: string, roleName: string) => {
-    if (!confirm(`¿Está seguro de que desea eliminar el rol "${roleName}"?`)) return
-
+    if (!confirm(`¿Estás seguro de eliminar el rol "${roleName}"?`)) return
     try {
-      const response = await fetch(`/api/roles/${roleId}`, { method: 'DELETE' })
-      if (!response.ok) throw new Error('Failed to delete')
-
-      setMessage('Rol eliminado correctamente')
-
-      // Recargar datos
-      const reloadResponse = await fetch('/api/roles')
-      const reloadData = await reloadResponse.json()
-      setRoles(reloadData.roles || [])
-
-      setTimeout(() => setMessage(""), 2000)
-    } catch (error) {
-      console.error('[v0] Error deleting role:', error)
-      setMessage('Error al eliminar el rol')
+      await authenticatedFetch(`/api/roles/${roleId}`, { method: "DELETE" })
+      await loadData()
+    } catch {
+      console.warn("[v0] Error deleting role")
     }
   }
 
   const groupedPermissions = permissions.reduce((acc, perm) => {
-    const category = perm.category || 'General'
-    if (!acc[category]) acc[category] = []
-    acc[category].push(perm)
+    const cat = perm.category || "General"
+    if (!acc[cat]) acc[cat] = []
+    acc[cat].push(perm)
     return acc
   }, {} as Record<string, Permission[]>)
 
+  const usersByRole = roles.reduce((acc, role) => {
+    acc[role.name] = users.filter(u => u.role === role.name ||
+      (role.name === "Administrador" && u.role === "admin") ||
+      (role.name === "Supervisor" && u.role === "supervisor") ||
+      (role.name === "Técnico" && u.role === "tecnico") ||
+      (role.name === "Cliente" && u.role === "cliente"))
+    return acc
+  }, {} as Record<string, UserData[]>)
+
+  const roleKeyMap: Record<string, string> = {
+    admin: "admin", supervisor: "supervisor", tecnico: "tecnico", cliente: "cliente",
+  }
+
   return (
-    <main className="flex-1 overflow-y-auto p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <main className="overflow-y-auto p-6">
+      <div className="max-w-5xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Roles y Permisos</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Gestiona los roles del sistema y sus permisos
+            <h1 className="text-2xl font-bold text-foreground">Roles y Permisos</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Gestioná los roles del sistema y sus permisos asignados
             </p>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -177,88 +170,62 @@ export default function PermisosPage() {
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>{editingRole ? 'Editar Rol' : 'Crear Nuevo Rol'}</DialogTitle>
+                <DialogTitle>{editingRole ? "Editar Rol" : "Crear Nuevo Rol"}</DialogTitle>
                 <DialogDescription>
-                  {editingRole ? 'Modifica los detalles y permisos del rol' : 'Crea un nuevo rol y asigna permisos'}
+                  {editingRole ? "Modificá los detalles y permisos del rol" : "Creá un nuevo rol y asigná permisos"}
                 </DialogDescription>
               </DialogHeader>
-
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Role Info */}
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="name">Nombre del Rol</Label>
-                    <Input
-                      id="name"
-                      placeholder="ej: Supervisor de Ventas"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="description">Descripción</Label>
-                    <Input
-                      id="description"
-                      placeholder="ej: Gestiona órdenes de venta y técnicos"
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      required
-                    />
-                  </div>
+              <form onSubmit={handleSubmit} className="space-y-5 pt-2">
+                <div className="space-y-2">
+                  <Label htmlFor="rname">Nombre del Rol</Label>
+                  <Input id="rname" placeholder="ej: Supervisor de Ventas"
+                    value={formData.name} onChange={e => setFormData(f => ({ ...f, name: e.target.value }))} required />
                 </div>
-
-                {/* Permissions */}
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-foreground">Permisos</h3>
-                  <div className="space-y-4 max-h-60 overflow-y-auto p-4 bg-muted/30 rounded-lg border">
-                    {Object.entries(groupedPermissions).map(([category, perms]) => (
-                      <div key={category}>
-                        <h4 className="font-medium text-sm text-foreground mb-2">{category}</h4>
-                        <div className="space-y-2 ml-2">
-                          {perms.map((perm) => (
-                            <label key={perm.id} className="flex items-center gap-3 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={selectedPermissions.includes(perm.id)}
-                                onChange={() => handlePermissionToggle(perm.id)}
-                                className="h-4 w-4 rounded border-input"
-                              />
-                              <div className="flex-1">
-                                <p className="text-sm font-medium text-foreground">{perm.name}</p>
-                                <p className="text-xs text-muted-foreground">{perm.description}</p>
-                              </div>
-                            </label>
-                          ))}
+                <div className="space-y-2">
+                  <Label htmlFor="rdesc">Descripción</Label>
+                  <Input id="rdesc" placeholder="ej: Gestiona órdenes y técnicos"
+                    value={formData.description} onChange={e => setFormData(f => ({ ...f, description: e.target.value }))} required />
+                </div>
+                {Object.keys(groupedPermissions).length > 0 && (
+                  <div className="space-y-3">
+                    <Label>Permisos</Label>
+                    <div className="max-h-56 overflow-y-auto rounded-lg border border-border bg-muted/30 p-4 space-y-4">
+                      {Object.entries(groupedPermissions).map(([category, perms]) => (
+                        <div key={category}>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">{category}</p>
+                          <div className="space-y-2 ml-1">
+                            {perms.map(perm => (
+                              <label key={perm.id} className="flex items-center gap-3 cursor-pointer">
+                                <input type="checkbox" className="h-4 w-4 rounded border-input"
+                                  checked={selectedPermissions.includes(perm.id)}
+                                  onChange={() => setSelectedPermissions(prev =>
+                                    prev.includes(perm.id) ? prev.filter(id => id !== perm.id) : [...prev, perm.id]
+                                  )}
+                                />
+                                <div>
+                                  <p className="text-sm font-medium text-foreground">{perm.name}</p>
+                                  <p className="text-xs text-muted-foreground">{perm.description}</p>
+                                </div>
+                              </label>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-
-                {/* Message */}
+                )}
                 {message && (
-                  <div className={cn(
-                    "flex items-center gap-2 p-3 rounded-lg",
-                    message.includes('Error') ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'
-                  )}>
-                    {message.includes('Error') ? (
-                      <AlertCircle className="h-4 w-4" />
-                    ) : (
-                      <CheckCircle2 className="h-4 w-4" />
-                    )}
+                  <div className={cn("flex items-center gap-2 p-3 rounded-lg text-sm",
+                    message.includes("Error") ? "bg-destructive/10 text-destructive" : "bg-emerald-500/10 text-emerald-700")}>
+                    {message.includes("Error") ? <AlertCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
                     {message}
                   </div>
                 )}
-
-                {/* Actions */}
                 <div className="flex gap-2 justify-end">
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                    Cancelar
-                  </Button>
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? 'Guardando...' : 'Guardar Rol'}
+                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+                  <Button type="submit" disabled={isSubmitting} className="gap-2">
+                    {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {isSubmitting ? "Guardando..." : "Guardar Rol"}
                   </Button>
                 </div>
               </form>
@@ -266,73 +233,102 @@ export default function PermisosPage() {
           </Dialog>
         </div>
 
-        {/* Roles List */}
         {loading ? (
           <Card>
-            <CardContent className="py-8">
-              <div className="text-center text-muted-foreground">Cargando roles...</div>
+            <CardContent className="flex items-center justify-center gap-2 py-12 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Cargando roles y permisos...
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4">
-            {roles.map((role) => (
-              <Card key={role.id} className="hover:bg-muted/50 transition-colors">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <CardTitle className="text-lg">{role.name}</CardTitle>
-                        {role.is_system && (
-                          <Badge variant="outline" className="flex items-center gap-1">
-                            <Lock className="h-3 w-3" />
-                            Sistema
-                          </Badge>
-                        )}
+          <div className="space-y-4">
+            {roles.map((role) => {
+              const assignedUsers = users.filter(u => u.role === Object.entries(roleKeyMap).find(([, v]) => role.name.toLowerCase().includes(v.toLowerCase()?.replace("admin", "administrador")))?.[0] || u.role === role.name.toLowerCase())
+              const usersForRole = users.filter(u => {
+                if (role.name === "Administrador") return u.role === "admin"
+                if (role.name === "Supervisor") return u.role === "supervisor"
+                if (role.name === "Técnico") return u.role === "tecnico"
+                if (role.name === "Cliente") return u.role === "cliente"
+                return u.role === role.name.toLowerCase()
+              })
+
+              return (
+                <Card key={role.id}>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <CardTitle className="text-base">{role.name}</CardTitle>
+                          {role.is_system && (
+                            <Badge variant="outline" className="gap-1 text-[11px]">
+                              <Lock className="h-3 w-3" /> Sistema
+                            </Badge>
+                          )}
+                        </div>
+                        <CardDescription>{role.description}</CardDescription>
                       </div>
-                      <CardDescription>{role.description}</CardDescription>
-                    </div>
-                    {!role.is_system && (
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleEditRole(role)}
-                          className="gap-1"
-                        >
-                          <Edit2 className="h-4 w-4" />
-                          Editar
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleDeleteRole(role.id, role.name)}
-                          className="gap-1"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Eliminar
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-foreground">Permisos asignados:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {(role.permissions || []).length === 0 ? (
-                        <p className="text-xs text-muted-foreground">Sin permisos asignados</p>
-                      ) : (
-                        (role.permissions || []).map((perm) => (
-                          <Badge key={perm.id} variant="secondary">
-                            {perm.name}
-                          </Badge>
-                        ))
+                      {!role.is_system && (
+                        <div className="flex gap-2 shrink-0">
+                          <Button size="sm" variant="outline" className="gap-1" onClick={() => handleEditRole(role)}>
+                            <Edit2 className="h-3.5 w-3.5" /> Editar
+                          </Button>
+                          <Button size="sm" variant="destructive" className="gap-1" onClick={() => handleDeleteRole(role.id, role.name)}>
+                            <Trash2 className="h-3.5 w-3.5" /> Eliminar
+                          </Button>
+                        </div>
                       )}
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Permissions */}
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Permisos asignados</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(role.permissions || []).length === 0 ? (
+                          <p className="text-xs text-muted-foreground">Sin permisos asignados</p>
+                        ) : (
+                          (role.permissions || []).map(perm => (
+                            <Badge key={perm.id} variant="secondary" className="text-[11px]">{perm.name}</Badge>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Users with this role */}
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1">
+                        <Users className="h-3.5 w-3.5" />
+                        Usuarios con este rol ({usersForRole.length})
+                      </p>
+                      {usersForRole.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">Ningún usuario asignado</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {usersForRole.map(user => (
+                            <div key={user.id} className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-2.5 py-1.5">
+                              <Avatar className="h-5 w-5">
+                                <AvatarFallback className="text-[9px] font-bold bg-primary/10 text-primary">
+                                  {user.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="text-xs font-medium text-foreground leading-tight">{user.name}</p>
+                                <p className="text-[10px] text-muted-foreground leading-tight">{user.email}</p>
+                              </div>
+                              <Badge variant="outline" className={cn("text-[10px] ml-1",
+                                user.status === "activo" ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/20" : "bg-muted text-muted-foreground"
+                              )}>
+                                {user.status}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
           </div>
         )}
       </div>

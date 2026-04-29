@@ -5,23 +5,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Plus, AlertCircle, CheckCircle2, Mail, User, Lock, Shield, Trash2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
+import { Plus, AlertCircle, CheckCircle2, User, Pencil, Trash2, Loader2 } from "lucide-react"
+import { authenticatedFetch } from "@/lib/authenticated-fetch"
 import { cn } from "@/lib/utils"
 
 interface UserData {
@@ -31,416 +20,356 @@ interface UserData {
   role: string
   status: string
   created_at: string
-  updated_at: string
+}
+
+const roleLabels: Record<string, string> = {
+  admin: "Administrador",
+  supervisor: "Supervisor",
+  tecnico: "Técnico",
+  cliente: "Cliente",
+}
+
+const roleColors: Record<string, string> = {
+  admin: "bg-primary/10 text-primary border-primary/20",
+  supervisor: "bg-blue-500/10 text-blue-700 border-blue-500/20",
+  tecnico: "bg-amber-500/10 text-amber-700 border-amber-500/20",
+  cliente: "bg-muted text-muted-foreground border-border",
+}
+
+const statusColors: Record<string, string> = {
+  activo: "bg-emerald-500/10 text-emerald-700 border-emerald-500/20",
+  inactivo: "bg-muted text-muted-foreground border-border",
+  suspendido: "bg-destructive/10 text-destructive border-destructive/20",
 }
 
 export default function UsuariosConfigPage() {
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    role: "tecnico",
-    status: "activo",
-  })
-  const [error, setError] = useState("")
-  const [success, setSuccess] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [users, setUsers] = useState<UserData[]>([])
   const [loadingUsers, setLoadingUsers] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [editTarget, setEditTarget] = useState<UserData | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<UserData | null>(null)
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
 
-  // Cargar usuarios
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        setLoadingUsers(true)
-        const response = await fetch('/api/users/list')
-        if (!response.ok) throw new Error('Failed to fetch users')
-        const data = await response.json()
-        setUsers(data.data || [])
-        console.log('[v0] Loaded users:', data.count)
-      } catch (error) {
-        console.error('[v0] Error loading users:', error)
-      } finally {
-        setLoadingUsers(false)
-      }
+  const [createForm, setCreateForm] = useState({
+    name: "", email: "", password: "", confirmPassword: "",
+    role: "tecnico", status: "activo",
+  })
+  const [editForm, setEditForm] = useState({ name: "", status: "activo" })
+
+  const loadUsers = async () => {
+    try {
+      setLoadingUsers(true)
+      const res = await authenticatedFetch("/api/users/list")
+      if (!res.ok) { setUsers([]); return }
+      const data = await res.json()
+      setUsers(data.data || [])
+    } catch {
+      console.warn("[v0] Error loading users")
+    } finally {
+      setLoadingUsers(false)
     }
-
-    fetchUsers()
-  }, [])
-
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }))
   }
 
-  const validateForm = () => {
-    if (!formData.name.trim()) {
-      setError("El nombre es requerido")
-      return false
-    }
-    if (!formData.email.trim()) {
-      setError("El email es requerido")
-      return false
-    }
-    if (!formData.email.includes("@")) {
-      setError("Email inválido")
-      return false
-    }
-    if (formData.password.length < 6) {
-      setError("La contraseña debe tener al menos 6 caracteres")
-      return false
-    }
-    if (formData.password !== formData.confirmPassword) {
-      setError("Las contraseñas no coinciden")
-      return false
-    }
-    return true
-  }
+  useEffect(() => { loadUsers() }, [])
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
-    setSuccess("")
-
-    if (!validateForm()) {
-      return
-    }
+    if (!createForm.name.trim()) return setError("El nombre es requerido") as undefined
+    if (!createForm.email.includes("@")) return setError("Email inválido") as undefined
+    if (createForm.password.length < 6) return setError("Contraseña mínimo 6 caracteres") as undefined
+    if (createForm.password !== createForm.confirmPassword) return setError("Las contraseñas no coinciden") as undefined
 
     setIsLoading(true)
-
     try {
-      const response = await fetch("/api/users/create", {
+      const res = await authenticatedFetch("/api/users/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-          role: formData.role,
-          status: formData.status,
+          name: createForm.name, email: createForm.email,
+          password: createForm.password, role: createForm.role, status: createForm.status,
         }),
       })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        setError(data.error || "Error al crear el usuario")
-        setIsLoading(false)
-        return
-      }
+      const data = await res.json()
+      if (!res.ok) { setError(data.error || "Error al crear el usuario"); return }
 
       setSuccess("Usuario creado exitosamente")
-      setFormData({
-        name: "",
-        email: "",
-        password: "",
-        confirmPassword: "",
-        role: "tecnico",
-        status: "activo",
-      })
-
-      // Recargar lista de usuarios
-      const listResponse = await fetch('/api/users/list')
-      const listData = await listResponse.json()
-      setUsers(listData.data || [])
-
-      setTimeout(() => {
-        setIsDialogOpen(false)
-        setSuccess("")
-      }, 2000)
-    } catch (err) {
-      setError("Error de conexión. Intente nuevamente.")
+      setCreateForm({ name: "", email: "", password: "", confirmPassword: "", role: "tecnico", status: "activo" })
+      await loadUsers()
+      setTimeout(() => { setCreateOpen(false); setSuccess("") }, 2000)
+    } catch {
+      setError("Error de conexión")
     } finally {
       setIsLoading(false)
     }
   }
 
+  const handleEdit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editTarget) return
+    setError("")
+    setIsLoading(true)
+    try {
+      const res = await authenticatedFetch(`/api/users/${editTarget.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: editForm.name, status: editForm.status }),
+      })
+      if (!res.ok) { setError("Error al actualizar usuario"); return }
+      setSuccess("Usuario actualizado")
+      await loadUsers()
+      setTimeout(() => { setEditOpen(false); setSuccess("") }, 1500)
+    } catch {
+      setError("Error de conexión")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+    try {
+      await authenticatedFetch(`/api/users/${deleteTarget.id}`, { method: "DELETE" })
+      setDeleteTarget(null)
+      await loadUsers()
+    } catch {
+      console.warn("[v0] Error deleting user")
+    }
+  }
+
   return (
-    <main className="flex-1 overflow-y-auto p-6">
-      <div className="max-w-6xl mx-auto space-y-6">
-            {/* Header */}
-            <div className="space-y-2">
-              <h1 className="text-3xl font-bold tracking-tight text-foreground">
-                Gestión de Usuarios
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Administra los usuarios del sistema. Desde aquí puedes crear nuevos usuarios con diferentes roles.
-              </p>
-            </div>
-
-            {/* Create User Dialog */}
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="gap-2" size="lg">
-                  <Plus className="h-4 w-4" />
-                  Crear Nuevo Usuario
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-lg">
-                <DialogHeader>
-                  <DialogTitle>Crear Nuevo Usuario</DialogTitle>
-                  <DialogDescription>
-                    Completa todos los campos para agregar un nuevo usuario al sistema.
-                  </DialogDescription>
-                </DialogHeader>
-
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  {/* Nombre */}
-                  <div className="space-y-2">
-                    <Label htmlFor="name" className="flex items-center gap-2">
-                      <User className="h-4 w-4" />
-                      Nombre Completo *
-                    </Label>
-                    <Input
-                      id="name"
-                      type="text"
-                      placeholder="Juan Pérez García"
-                      value={formData.name}
-                      onChange={(e) => handleInputChange("name", e.target.value)}
-                      disabled={isLoading}
-                    />
-                  </div>
-
-                  {/* Email */}
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="flex items-center gap-2">
-                      <Mail className="h-4 w-4" />
-                      Correo Electrónico *
-                    </Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="usuario@ejemplo.com"
-                      value={formData.email}
-                      onChange={(e) => handleInputChange("email", e.target.value)}
-                      disabled={isLoading}
-                    />
-                  </div>
-
-                  {/* Contraseña */}
-                  <div className="space-y-2">
-                    <Label htmlFor="password" className="flex items-center gap-2">
-                      <Lock className="h-4 w-4" />
-                      Contraseña *
-                    </Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={formData.password}
-                      onChange={(e) => handleInputChange("password", e.target.value)}
-                      disabled={isLoading}
-                    />
-                    <p className="text-xs text-muted-foreground">Mínimo 6 caracteres</p>
-                  </div>
-
-                  {/* Confirmar Contraseña */}
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword" className="flex items-center gap-2">
-                      <Lock className="h-4 w-4" />
-                      Confirmar Contraseña *
-                    </Label>
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      placeholder="••••••••"
-                      value={formData.confirmPassword}
-                      onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
-                      disabled={isLoading}
-                    />
-                  </div>
-
-                  {/* Rol */}
-                  <div className="space-y-2">
-                    <Label htmlFor="role" className="flex items-center gap-2">
-                      <Shield className="h-4 w-4" />
-                      Rol *
-                    </Label>
-                    <Select 
-                      value={formData.role} 
-                      onValueChange={(value) => handleInputChange("role", value)}
-                      disabled={isLoading}
-                    >
-                      <SelectTrigger id="role">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="admin">Administrador</SelectItem>
-                        <SelectItem value="supervisor">Supervisor</SelectItem>
-                        <SelectItem value="tecnico">Técnico</SelectItem>
-                        <SelectItem value="cliente">Cliente</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Estado */}
-                  <div className="space-y-2">
-                    <Label htmlFor="status">Estado *</Label>
-                    <Select 
-                      value={formData.status} 
-                      onValueChange={(value) => handleInputChange("status", value)}
-                      disabled={isLoading}
-                    >
-                      <SelectTrigger id="status">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="activo">Activo</SelectItem>
-                        <SelectItem value="inactivo">Inactivo</SelectItem>
-                        <SelectItem value="suspendido">Suspendido</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Error */}
-                  {error && (
-                    <div className="flex items-center gap-2 p-3 text-sm text-destructive bg-destructive/10 rounded-lg border border-destructive/20">
-                      <AlertCircle className="h-4 w-4 shrink-0" />
-                      <span>{error}</span>
-                    </div>
-                  )}
-
-                  {/* Success */}
-                  {success && (
-                    <div className="flex items-center gap-2 p-3 text-sm text-green-600 bg-green-50 rounded-lg border border-green-200">
-                      <CheckCircle2 className="h-4 w-4 shrink-0" />
-                      <span>{success}</span>
-                    </div>
-                  )}
-
-                  {/* Buttons */}
-                  <div className="flex gap-3 pt-4">
-                    <Button 
-                      type="submit" 
-                      className="flex-1" 
-                      disabled={isLoading}
-                    >
-                      {isLoading ? "Creando..." : "Crear Usuario"}
-                    </Button>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      className="flex-1"
-                      onClick={() => setIsDialogOpen(false)}
-                      disabled={isLoading}
-                    >
-                      Cancelar
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
-
-            {/* Info Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium">Campos Requeridos</CardTitle>
-                </CardHeader>
-                <CardContent className="text-sm text-muted-foreground space-y-2">
-                  <p>• Nombre completo</p>
-                  <p>• Email único</p>
-                  <p>• Contraseña (min 6 caracteres)</p>
-                  <p>• Rol del usuario</p>
-                  <p>• Estado (activo/inactivo/suspendido)</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium">Roles Disponibles</CardTitle>
-                </CardHeader>
-                <CardContent className="text-sm text-muted-foreground space-y-2">
-                  <p>• <strong>Admin:</strong> Acceso total</p>
-                  <p>• <strong>Supervisor:</strong> Gestión de órdenes y técnicos</p>
-                  <p>• <strong>Técnico:</strong> Ejecutor de órdenes</p>
-                  <p>• <strong>Cliente:</strong> Visualización de órdenes</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium">Información Almacenada</CardTitle>
-                </CardHeader>
-                <CardContent className="text-sm text-muted-foreground space-y-2">
-                  <p>Los datos se guardan en Neon PostgreSQL:</p>
-                  <p>• ID único (UUID)</p>
-                  <p>• Timestamps (creación/actualización)</p>
-                  <p>• Relación con clientes (opcional)</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Users List */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Usuarios Registrados</CardTitle>
-                <CardDescription>Lista de todos los usuarios del sistema</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loadingUsers ? (
-                  <div className="text-center py-8 text-muted-foreground">Cargando usuarios...</div>
-                ) : users.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">No hay usuarios registrados aún</div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-border">
-                          <th className="text-left py-3 px-4 font-semibold text-foreground">Nombre</th>
-                          <th className="text-left py-3 px-4 font-semibold text-foreground">Email</th>
-                          <th className="text-left py-3 px-4 font-semibold text-foreground">Rol</th>
-                          <th className="text-left py-3 px-4 font-semibold text-foreground">Estado</th>
-                          <th className="text-left py-3 px-4 font-semibold text-foreground">Creado</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {users.map((user) => (
-                          <tr key={user.id} className="border-b border-border hover:bg-muted/50 transition-colors">
-                            <td className="py-3 px-4 font-medium text-foreground">{user.name}</td>
-                            <td className="py-3 px-4 text-muted-foreground">{user.email}</td>
-                            <td className="py-3 px-4">
-                              <Badge variant={
-                                user.role === 'admin' ? 'default' :
-                                user.role === 'supervisor' ? 'secondary' :
-                                user.role === 'tecnico' ? 'outline' :
-                                'secondary'
-                              }>
-                                {user.role === 'admin' ? 'Administrador' :
-                                 user.role === 'supervisor' ? 'Supervisor' :
-                                 user.role === 'tecnico' ? 'Técnico' :
-                                 user.role === 'cliente' ? 'Cliente' :
-                                 user.role}
-                              </Badge>
-                            </td>
-                            <td className="py-3 px-4">
-                              <Badge variant={
-                                user.status === 'activo' ? 'outline' :
-                                user.status === 'inactivo' ? 'secondary' :
-                                'destructive'
-                              }>
-                                {user.status === 'activo' ? 'Activo' :
-                                 user.status === 'inactivo' ? 'Inactivo' :
-                                 user.status === 'suspendido' ? 'Suspendido' :
-                                 user.status}
-                              </Badge>
-                            </td>
-                            <td className="py-3 px-4 text-xs text-muted-foreground">
-                              {new Date(user.created_at).toLocaleDateString('es-ES')}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+    <main className="overflow-y-auto p-6">
+      <div className="max-w-5xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Gestión de Usuarios</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {users.length} usuario{users.length !== 1 ? "s" : ""} en el sistema
+            </p>
           </div>
-        </main>
+          <Button onClick={() => { setError(""); setSuccess(""); setCreateOpen(true) }} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Nuevo Usuario
+          </Button>
+        </div>
+
+        {/* Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Usuarios Registrados</CardTitle>
+            <CardDescription>Administrá el acceso, rol y estado de cada usuario</CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            {loadingUsers ? (
+              <div className="flex items-center justify-center gap-2 py-12 text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Cargando usuarios...
+              </div>
+            ) : users.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <User className="h-10 w-10 mb-2 opacity-30" />
+                <p className="text-sm">No hay usuarios registrados aún</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/40">
+                      <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Usuario</th>
+                      <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Rol</th>
+                      <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Estado</th>
+                      <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Alta</th>
+                      <th className="py-3 px-4 w-20"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map((user) => (
+                      <tr key={user.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                        <td className="py-3 px-4">
+                          <p className="font-medium text-foreground">{user.name}</p>
+                          <p className="text-xs text-muted-foreground">{user.email}</p>
+                        </td>
+                        <td className="py-3 px-4">
+                          <Badge variant="outline" className={cn("text-[11px]", roleColors[user.role] ?? "bg-muted text-muted-foreground")}>
+                            {roleLabels[user.role] ?? user.role}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4">
+                          <Badge variant="outline" className={cn("text-[11px]", statusColors[user.status] ?? statusColors.inactivo)}>
+                            {user.status === "activo" ? "Activo" : user.status === "inactivo" ? "Inactivo" : "Suspendido"}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4 text-xs text-muted-foreground">
+                          {new Date(user.created_at).toLocaleDateString("es-ES")}
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-1 justify-end">
+                            <Button
+                              variant="ghost" size="icon" className="h-7 w-7"
+                              onClick={() => { setEditTarget(user); setEditForm({ name: user.name, status: user.status }); setError(""); setSuccess(""); setEditOpen(true) }}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
+                              onClick={() => setDeleteTarget(user)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Create Dialog */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Crear Nuevo Usuario</DialogTitle>
+            <DialogDescription>Completá todos los campos para agregar un nuevo usuario.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreate} className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label htmlFor="cn-name">Nombre Completo *</Label>
+              <Input id="cn-name" placeholder="Juan Pérez" value={createForm.name}
+                onChange={e => setCreateForm(f => ({ ...f, name: e.target.value }))} disabled={isLoading} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cn-email">Email *</Label>
+              <Input id="cn-email" type="email" placeholder="usuario@ejemplo.com" value={createForm.email}
+                onChange={e => setCreateForm(f => ({ ...f, email: e.target.value }))} disabled={isLoading} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="cn-pass">Contraseña *</Label>
+                <Input id="cn-pass" type="password" placeholder="••••••••" value={createForm.password}
+                  onChange={e => setCreateForm(f => ({ ...f, password: e.target.value }))} disabled={isLoading} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cn-confirm">Confirmar *</Label>
+                <Input id="cn-confirm" type="password" placeholder="••••••••" value={createForm.confirmPassword}
+                  onChange={e => setCreateForm(f => ({ ...f, confirmPassword: e.target.value }))} disabled={isLoading} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Rol *</Label>
+                <Select value={createForm.role} onValueChange={v => setCreateForm(f => ({ ...f, role: v }))} disabled={isLoading}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">Administrador</SelectItem>
+                    <SelectItem value="supervisor">Supervisor</SelectItem>
+                    <SelectItem value="tecnico">Técnico</SelectItem>
+                    <SelectItem value="cliente">Cliente</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Estado *</Label>
+                <Select value={createForm.status} onValueChange={v => setCreateForm(f => ({ ...f, status: v }))} disabled={isLoading}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="activo">Activo</SelectItem>
+                    <SelectItem value="inactivo">Inactivo</SelectItem>
+                    <SelectItem value="suspendido">Suspendido</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            {error && (
+              <div className="flex items-center gap-2 p-3 text-sm text-destructive bg-destructive/10 rounded-lg border border-destructive/20">
+                <AlertCircle className="h-4 w-4 shrink-0" />{error}
+              </div>
+            )}
+            {success && (
+              <div className="flex items-center gap-2 p-3 text-sm text-emerald-700 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />{success}
+              </div>
+            )}
+            <div className="flex gap-2 pt-2">
+              <Button type="submit" className="flex-1 gap-2" disabled={isLoading}>
+                {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                {isLoading ? "Creando..." : "Crear Usuario"}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setCreateOpen(false)} disabled={isLoading} className="flex-1">Cancelar</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Editar Usuario</DialogTitle>
+            <DialogDescription>{editTarget?.email}</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEdit} className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label>Nombre</Label>
+              <Input value={editForm.name}
+                onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} disabled={isLoading} />
+            </div>
+            <div className="space-y-2">
+              <Label>Estado</Label>
+              <Select value={editForm.status} onValueChange={v => setEditForm(f => ({ ...f, status: v }))} disabled={isLoading}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="activo">Activo</SelectItem>
+                  <SelectItem value="inactivo">Inactivo</SelectItem>
+                  <SelectItem value="suspendido">Suspendido</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {error && (
+              <div className="flex items-center gap-2 p-3 text-sm text-destructive bg-destructive/10 rounded-lg border border-destructive/20">
+                <AlertCircle className="h-4 w-4 shrink-0" />{error}
+              </div>
+            )}
+            {success && (
+              <div className="flex items-center gap-2 p-3 text-sm text-emerald-700 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />{success}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Button type="submit" className="flex-1 gap-2" disabled={isLoading}>
+                {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                Guardar Cambios
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setEditOpen(false)} className="flex-1">Cancelar</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={v => !v && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar usuario</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se eliminará permanentemente a <strong>{deleteTarget?.name}</strong>. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={handleDelete}>
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </main>
   )
 }

@@ -12,6 +12,7 @@ const PUBLIC_ROUTES = [
   '/api/maintenance',
   '/api/dashboard/metrics',
   '/api/reports',
+  '/api/db/status',
   '/auth/login',
   '/login',
 ]
