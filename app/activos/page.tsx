@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Trash2, AlertCircle, Loader, Pencil, CalendarClock, Wrench, CheckCircle, AlertTriangle } from 'lucide-react'
+import { Plus, Trash2, AlertCircle, Loader2, Pencil, CalendarClock, Wrench, CheckCircle, AlertTriangle, X, Settings2 } from 'lucide-react'
 import { getMaintenanceStatus, daysUntilMaintenance, formatMaintenanceDate } from '@/lib/maintenance'
 
 interface Asset {
@@ -156,11 +156,11 @@ function AssetForm({ form, setForm }: { form: typeof EMPTY_FORM, setForm: (f: ty
         </div>
       </div>
       <div className="flex items-center space-x-2">
-        <input type="checkbox" id="has_plan" checked={form.has_maintenance_plan} onChange={e => setForm({ ...form, has_maintenance_plan: e.target.checked })} className="w-4 h-4" />
-        <Label htmlFor="has_plan" className="cursor-pointer">Tiene Plan de Mantenimiento</Label>
+        <input type="checkbox" id="has_plan" checked={form.has_maintenance_plan} onChange={e => setForm({ ...form, has_maintenance_plan: e.target.checked })} className="w-4 h-4 accent-primary" />
+        <Label htmlFor="has_plan" className="cursor-pointer font-medium">Tiene Plan de Mantenimiento</Label>
       </div>
       {form.has_maintenance_plan && (
-        <div className="grid grid-cols-1 gap-4 p-3 bg-blue-50 rounded border border-blue-100">
+        <div className="grid grid-cols-1 gap-4 p-4 bg-primary/5 rounded-lg border border-primary/20">
           <div>
             <Label>Recurrencia</Label>
             <Select value={form.recurrence_type} onValueChange={v => setForm({ ...form, recurrence_type: v })}>
@@ -172,7 +172,7 @@ function AssetForm({ form, setForm }: { form: typeof EMPTY_FORM, setForm: (f: ty
                 <SelectItem value="anual">Anual (cada 12 meses)</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-xs text-gray-500 mt-1">El intervalo se calcula automáticamente según la recurrencia</p>
+            <p className="text-xs text-muted-foreground mt-1">El intervalo se calcula automáticamente según la recurrencia</p>
           </div>
         </div>
       )}
@@ -398,19 +398,24 @@ export default function ActivosPage() {
       <SidebarNav />
       <div className="flex flex-1 flex-col overflow-hidden">
         <TopHeader />
-        <main className="flex-1 overflow-y-auto bg-slate-50 p-6">
+        <main className="flex-1 overflow-y-auto bg-background p-6">
       <div className="max-w-7xl mx-auto space-y-6">
 
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">{"Gestión de Activos"}</h1>
-          <p className="text-slate-500 mt-1">Equipos y máquinas bajo mantenimiento</p>
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-primary/10">
+            <Settings2 className="h-6 w-6 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">Gestión de Activos</h1>
+            <p className="text-sm text-muted-foreground">Equipos y máquinas bajo mantenimiento</p>
+          </div>
         </div>
 
         {/* Customer selector */}
         {canSelectCustomer && (
-          <div className="bg-white rounded-lg border p-4">
-            <Label className="block mb-2 font-medium text-slate-700">Seleccionar Cliente</Label>
+          <div className="bg-card rounded-lg border border-border p-4">
+            <Label className="block mb-2 font-medium text-foreground">Seleccionar Cliente</Label>
             <Select value={selectedCustomerId} onValueChange={(v) => {
               setSelectedCustomerId(v)
               setCreateForm(prev => ({ ...prev, customer_id: v }))
@@ -430,31 +435,31 @@ export default function ActivosPage() {
         {/* Maintenance summary cards */}
         {maintenanceSummary && maintenanceSummary.total > 0 && (
           <div className="grid grid-cols-3 gap-4">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
-              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                <AlertTriangle className="w-5 h-5 text-red-600" />
+            <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4 flex items-center gap-3">
+              <div className="w-10 h-10 bg-destructive/10 rounded-full flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-destructive" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-red-700">{maintenanceSummary.overdue}</p>
-                <p className="text-sm text-red-600">Vencidos</p>
+                <p className="text-2xl font-bold text-destructive">{maintenanceSummary.overdue}</p>
+                <p className="text-sm text-destructive/80 font-medium">Vencidos</p>
               </div>
             </div>
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 flex items-center gap-3">
-              <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                <CalendarClock className="w-5 h-5 text-orange-600" />
+            <div className="bg-orange-500/5 border border-orange-500/20 rounded-lg p-4 flex items-center gap-3">
+              <div className="w-10 h-10 bg-orange-500/10 rounded-full flex items-center justify-center">
+                <CalendarClock className="w-5 h-5 text-orange-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-orange-700">{maintenanceSummary.upcoming}</p>
-                <p className="text-sm text-orange-600">{"Próximos (≤7 días)"}</p>
+                <p className="text-2xl font-bold text-orange-600">{maintenanceSummary.upcoming}</p>
+                <p className="text-sm text-orange-500/80 font-medium">Próximos 7 días</p>
               </div>
             </div>
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
-              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                <CheckCircle className="w-5 h-5 text-green-600" />
+            <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-4 flex items-center gap-3">
+              <div className="w-10 h-10 bg-emerald-500/10 rounded-full flex items-center justify-center">
+                <CheckCircle className="w-5 h-5 text-emerald-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-green-700">{maintenanceSummary.up_to_date}</p>
-                <p className="text-sm text-green-600">Al dia</p>
+                <p className="text-2xl font-bold text-emerald-600">{maintenanceSummary.up_to_date}</p>
+                <p className="text-sm text-emerald-600/80 font-medium">Al día</p>
               </div>
             </div>
           </div>
@@ -485,7 +490,7 @@ export default function ActivosPage() {
                 className="bg-amber-600 hover:bg-amber-700 text-white shrink-0"
               >
                 {isGenerating
-                  ? <Loader className="w-4 h-4 mr-1 animate-spin" />
+                  ? <Loader2 className="w-4 h-4 mr-1 animate-spin" />
                   : <Wrench className="w-4 h-4 mr-1" />}
                 Generar Ordenes
               </Button>
@@ -498,7 +503,7 @@ export default function ActivosPage() {
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
             <CheckCircle className="w-5 h-5 text-green-600" />
             <p className="text-green-800 font-medium">{successMsg}</p>
-            <button onClick={() => setSuccessMsg(null)} className="ml-auto text-green-600 hover:text-green-700">x</button>
+            <button onClick={() => setSuccessMsg(null)} className="ml-auto text-green-600 hover:text-green-700"><X className="w-4 h-4" /></button>
           </div>
         )}
 
@@ -507,34 +512,38 @@ export default function ActivosPage() {
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
             <AlertCircle className="w-5 h-5 text-red-600" />
             <p className="text-red-800">{error}</p>
-            <button onClick={() => setError(null)} className="ml-auto text-red-600 hover:text-red-700">x</button>
+            <button onClick={() => setError(null)} className="ml-auto text-destructive hover:text-destructive/80"><X className="w-4 h-4" /></button>
           </div>
         )}
 
         {/* Actions bar */}
         <div className="flex items-center justify-between">
-          <Button onClick={() => setIsCreateOpen(true)} className="bg-blue-600 hover:bg-blue-700">
+          <Button onClick={() => setIsCreateOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Nuevo Activo
           </Button>
           {assets.length > 0 && (
-            <p className="text-sm text-slate-500">{assets.length} activo(s)</p>
+            <p className="text-sm text-muted-foreground">{assets.length} activo(s)</p>
           )}
         </div>
 
         {/* Assets table */}
-        <div className="bg-white rounded-lg border overflow-hidden">
+        <div className="bg-card rounded-lg border border-border overflow-hidden">
           {loading ? (
             <div className="p-10 text-center">
-              <Loader className="w-6 h-6 mx-auto animate-spin text-blue-600 mb-2" />
-              <p className="text-slate-400">Cargando activos...</p>
+              <Loader2 className="w-6 h-6 mx-auto animate-spin text-primary mb-2" />
+              <p className="text-muted-foreground text-sm">Cargando activos...</p>
             </div>
           ) : assets.length === 0 ? (
-            <div className="p-10 text-center text-slate-400">No hay activos registrados para este cliente</div>
+            <div className="p-12 text-center">
+              <Settings2 className="w-10 h-10 mx-auto text-muted-foreground/30 mb-3" />
+              <p className="text-muted-foreground text-sm font-medium">No hay activos registrados para este cliente</p>
+              <p className="text-muted-foreground/60 text-xs mt-1">Agregá un activo con el botón "Nuevo Activo"</p>
+            </div>
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="bg-slate-50">
+                <TableRow className="bg-muted/50">
                   <TableHead>Nombre / ID</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Marca / Modelo</TableHead>
@@ -547,13 +556,13 @@ export default function ActivosPage() {
               </TableHeader>
               <TableBody>
                 {assets.map(asset => (
-                  <TableRow key={asset.id} className="hover:bg-slate-50">
+                  <TableRow key={asset.id} className="hover:bg-muted/30 transition-colors">
                     <TableCell>
-                      <p className="font-medium text-slate-900">{asset.name}</p>
-                      <p className="text-xs text-slate-400">{asset.asset_id}</p>
+                      <p className="font-medium text-foreground">{asset.name}</p>
+                      <p className="text-xs text-muted-foreground">{asset.asset_id}</p>
                     </TableCell>
                     <TableCell className="capitalize text-sm">{asset.type}</TableCell>
-                    <TableCell className="text-sm text-slate-600">
+                    <TableCell className="text-sm text-muted-foreground">
                       {asset.brand || asset.model ? `${asset.brand || ''} ${asset.model || ''}`.trim() : '—'}
                     </TableCell>
                     <TableCell>
@@ -584,7 +593,7 @@ export default function ActivosPage() {
                     <TableCell>
                       <MaintenanceBadge asset={asset} />
                     </TableCell>
-                    <TableCell className="text-sm text-slate-500">
+                    <TableCell className="text-sm text-muted-foreground">
                       {asset.has_maintenance_plan
                         ? formatMaintenanceDate(asset.next_maintenance_date || null)
                         : '—'}
@@ -592,7 +601,7 @@ export default function ActivosPage() {
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
                         <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(asset)} title="Editar">
-                          <Pencil className="w-4 h-4 text-blue-500" />
+                          <Pencil className="w-4 h-4 text-primary" />
                         </Button>
                         <Button
                           variant="ghost"

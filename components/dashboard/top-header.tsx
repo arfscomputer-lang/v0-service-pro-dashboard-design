@@ -1,18 +1,37 @@
 'use client'
 
 import { useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { AlertCircle, CheckCircle2, Plus, Bell, HelpCircle } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Plus, Bell, HelpCircle, Loader2 } from 'lucide-react'
 import { useCustomers } from '@/lib/context/customers-context'
 import { useWorkOrders } from '@/lib/context/work-orders-context'
+
+const PAGE_TITLES: Record<string, string> = {
+  '/': 'Panel Principal',
+  '/despacho': 'Agenda y Despacho',
+  '/ordenes': 'Órdenes de Trabajo',
+  '/tecnicos': 'Técnicos',
+  '/clientes': 'Clientes',
+  '/clientes/reportes': 'Reportes CRM',
+  '/inventario': 'Inventario',
+  '/presupuestos': 'Presupuestos',
+  '/reportes': 'Reportes',
+  '/facturas': 'Facturas',
+  '/activos': 'Gestión de Activos',
+  '/mantenimiento': 'Mantenimiento',
+  '/configuracion': 'Configuración',
+}
 
 export function TopHeader() {
   const { customers } = useCustomers()
   const { addWorkOrder } = useWorkOrders()
+  const pathname = usePathname()
+  const pageTitle = PAGE_TITLES[pathname] ?? PAGE_TITLES[Object.keys(PAGE_TITLES).find(k => k !== '/' && pathname.startsWith(k)) ?? ''] ?? 'ServicePro'
   const [orderDialogOpen, setOrderDialogOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -112,7 +131,7 @@ export function TopHeader() {
   return (
     <header className="border-b border-border bg-background sticky top-0 z-40">
       <div className="px-6 py-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">Panel Principal</h1>
+        <h1 className="text-xl font-semibold text-foreground">{pageTitle}</h1>
 
         <div className="flex items-center gap-4">
           <Dialog open={orderDialogOpen} onOpenChange={setOrderDialogOpen}>
@@ -216,7 +235,8 @@ export function TopHeader() {
                 )}
 
                 <div className="flex gap-3 pt-4">
-                  <Button onClick={handleCreateOrder} disabled={isSubmitting} className="flex-1">
+                  <Button onClick={handleCreateOrder} disabled={isSubmitting} className="flex-1 gap-2">
+                    {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
                     {isSubmitting ? 'Creando...' : 'Crear Orden'}
                   </Button>
                   <Button variant="outline" onClick={() => setOrderDialogOpen(false)} disabled={isSubmitting} className="flex-1">

@@ -1,7 +1,12 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { Plus, X, Printer, DollarSign } from 'lucide-react'
+import {
+  Plus, X, Printer, DollarSign, Building2, FileText,
+  Cog, HardHat, Receipt, ClipboardList, Trash2, Zap,
+  Camera, FilePlus, Eye, Edit3
+} from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { SidebarNav } from '@/components/dashboard/sidebar-nav'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -101,7 +106,7 @@ interface Item {
 
 interface SectionTableProps {
   title: string
-  icon: string
+  icon: LucideIcon
   items: Item[]
   setItems: (items: Item[]) => void
   color: string
@@ -144,12 +149,12 @@ function SectionTable({ title, icon, items, setItems, color, currency, catalogIt
   return (
     <div className="bg-card border border-border rounded-lg overflow-hidden">
       <div
-        className="px-6 py-4 flex items-center gap-3 text-white"
+        className="px-6 py-3 flex items-center gap-3 text-white"
         style={{ backgroundColor: color }}
       >
-        <span className="text-xl">{icon}</span>
-        <span className="font-bold text-lg flex-1">{title}</span>
-        <span className="text-sm opacity-90">{items.length} ítems</span>
+        <icon className="h-5 w-5 shrink-0 opacity-90" />
+        <span className="font-semibold text-base flex-1 tracking-wide">{title}</span>
+        <span className="text-xs font-medium opacity-75 bg-white/20 rounded-full px-2 py-0.5">{items.length} ítems</span>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full">
@@ -411,21 +416,11 @@ export default function PresupuestosPage() {
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 md:gap-4 flex-wrap md:flex-nowrap">
           <div className="flex items-center gap-2 md:gap-3 min-w-0">
             <div className="bg-primary text-primary-foreground p-2 rounded-lg shrink-0">
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                <circle cx="12" cy="13" r="4" />
-              </svg>
+              <FileText className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-lg md:text-xl font-bold text-foreground truncate">CCTV Presupuestos</h1>
-              <p className="text-xs text-muted-foreground hidden md:block">Generador de presupuestos</p>
+              <h1 className="text-lg md:text-xl font-bold text-foreground truncate">Presupuestos CCTV</h1>
+              <p className="text-xs text-muted-foreground hidden md:block">Generador de presupuestos profesionales</p>
             </div>
           </div>
           <div className="flex items-center gap-1 md:gap-2 flex-wrap justify-end">
@@ -442,25 +437,30 @@ export default function PresupuestosPage() {
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={handleNew} variant="outline" size="sm" className="text-xs md:text-sm">
-              Nuevo
+            <Button onClick={handleNew} variant="outline" size="sm" className="gap-1.5 text-xs md:text-sm">
+              <FilePlus className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Nuevo</span>
             </Button>
-            <Button
-              onClick={() => setTab('edit')}
-              variant={tab === 'edit' ? 'default' : 'ghost'}
-              size="sm"
-              className="text-xs md:text-sm"
-            >
-              Editar
-            </Button>
-            <Button
-              onClick={() => setTab('preview')}
-              variant={tab === 'preview' ? 'default' : 'ghost'}
-              size="sm"
-              className="text-xs md:text-sm"
-            >
-              Vista previa
-            </Button>
+            <div className="flex items-center rounded-lg border border-border bg-secondary/50 p-0.5 gap-0.5">
+              <Button
+                onClick={() => setTab('edit')}
+                variant={tab === 'edit' ? 'default' : 'ghost'}
+                size="sm"
+                className="gap-1.5 text-xs md:text-sm h-7 px-2 md:px-3"
+              >
+                <Edit3 className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Editar</span>
+              </Button>
+              <Button
+                onClick={() => setTab('preview')}
+                variant={tab === 'preview' ? 'default' : 'ghost'}
+                size="sm"
+                className="gap-1.5 text-xs md:text-sm h-7 px-2 md:px-3"
+              >
+                <Eye className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Vista previa</span>
+              </Button>
+            </div>
             {tab === 'preview' && (
               <Button onClick={handlePrint} size="sm" className="gap-2 text-xs md:text-sm">
                 <Printer className="h-4 w-4" />
@@ -505,7 +505,7 @@ export default function PresupuestosPage() {
             {/* Company & Project Info */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
               <div className="bg-card border border-border rounded-lg p-4 md:p-6 space-y-4">
-                <h2 className="font-bold text-base md:text-lg text-foreground">🏢 Datos de la Empresa</h2>
+                <h2 className="font-semibold text-base text-foreground flex items-center gap-2"><Building2 className="h-4 w-4 text-primary" /> Datos de la Empresa</h2>
                 <div className="space-y-3">
                   <div>
                     <label className="text-xs md:text-sm font-medium text-foreground">Nombre</label>
@@ -556,7 +556,7 @@ export default function PresupuestosPage() {
               </div>
 
               <div className="bg-card border border-border rounded-lg p-6 space-y-4">
-                <h2 className="font-bold text-lg text-foreground">📋 Datos del Proyecto</h2>
+                <h2 className="font-semibold text-base text-foreground flex items-center gap-2"><ClipboardList className="h-4 w-4 text-primary" /> Datos del Proyecto</h2>
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -650,7 +650,7 @@ export default function PresupuestosPage() {
             </div>
             <SectionTable
               title="Equipos Principales"
-              icon="⚙️"
+              icon={Cog}
               items={equipment}
               setItems={setEquipment}
               color="#1a1a2e"
@@ -662,7 +662,7 @@ export default function PresupuestosPage() {
             />
             <SectionTable
               title="Materiales de Instalación"
-              icon="🔧"
+              icon={Zap}
               items={materials}
               setItems={setMaterials}
               color="#2d4a7a"
@@ -673,8 +673,8 @@ export default function PresupuestosPage() {
               }))}
             />
             <SectionTable
-              title="Mano de Obra"
-              icon="👷"
+              title="Mano de Obra e Instalación"
+              icon={HardHat}
               items={labor}
               setItems={setLabor}
               color="#3a6b5a"
@@ -685,7 +685,7 @@ export default function PresupuestosPage() {
             {/* Tax & Conditions */}
             <div className="grid md:grid-cols-2 gap-6">
               <div className="bg-card border border-border rounded-lg p-6">
-                <h2 className="font-bold text-lg text-foreground mb-4">💰 Impuestos</h2>
+                <h2 className="font-semibold text-base text-foreground mb-4 flex items-center gap-2"><Receipt className="h-4 w-4 text-primary" /> Impuestos</h2>
                 {isPYG ? (
                   <p className="text-sm text-muted-foreground">IVA incluido en precios (10% — se obtiene dividiendo el total entre 11).</p>
                 ) : (
@@ -703,7 +703,7 @@ export default function PresupuestosPage() {
               </div>
 
               <div className="bg-card border border-border rounded-lg p-6">
-                <h2 className="font-bold text-lg text-foreground mb-4">📝 Condiciones</h2>
+                <h2 className="font-semibold text-base text-foreground mb-4 flex items-center gap-2"><FileText className="h-4 w-4 text-primary" /> Condiciones Comerciales</h2>
                 <div className="space-y-2">
                   {conditions.map((c, i) => (
                     <div key={i} className="flex gap-2">
