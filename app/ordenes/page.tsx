@@ -26,6 +26,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useWorkOrders, type WorkOrder } from "@/lib/context/work-orders-context"
+import { authenticatedFetch } from "@/lib/authenticated-fetch"
 
 interface Technician {
   id: string
@@ -58,10 +59,13 @@ export default function OrdenesPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [technicians, setTechnicians] = useState<Technician[]>([])
   const [loadingTechnicians, setLoadingTechnicians] = useState(true)
+  const [assets, setAssets] = useState<any[]>([])
+  const [loadingAssets, setLoadingAssets] = useState(false)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [createForm, setCreateForm] = useState<Omit<WorkOrder, 'id' | 'createdAt' | 'updatedAt'>>({
     orderId: '',
     type: '',
+    category: 'otros',
     description: '',
     status: 'pendiente',
     priority: 'normal',
@@ -80,7 +84,7 @@ export default function OrdenesPage() {
     const fetchTechnicians = async () => {
       try {
         setLoadingTechnicians(true)
-        const response = await fetch('/api/technicians')
+        const response = await authenticatedFetch('/api/technicians')
         if (!response.ok) throw new Error('Failed to fetch technicians')
         const json = await response.json()
         setTechnicians(json.data || [])
@@ -94,6 +98,26 @@ export default function OrdenesPage() {
     }
 
     fetchTechnicians()
+  }, [])
+
+  // Load assets with maintenance plans
+  useEffect(() => {
+    const fetchAssets = async () => {
+      try {
+        setLoadingAssets(true)
+        const res = await fetch('/api/maintenance/plans')
+        const data = await res.json()
+        if (data.plans) {
+          setAssets(data.plans)
+        }
+      } catch (error) {
+        console.error('Error loading assets:', error)
+        setAssets([])
+      } finally {
+        setLoadingAssets(false)
+      }
+    }
+    fetchAssets()
   }, [])
 
   const filteredOrders = workOrders.filter(
@@ -112,6 +136,7 @@ export default function OrdenesPage() {
     setCreateForm({
       orderId: '',
       type: '',
+      category: 'otros',
       description: '',
       status: 'pendiente',
       priority: 'normal',
@@ -345,6 +370,58 @@ export default function OrdenesPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
+                  <Label htmlFor="assetId">Activo / Equipo</Label>
+                  <Select 
+                    value={editForm.assetId || "none"}
+                    onValueChange={(v) => setEditForm({ 
+                      ...editForm, 
+                      assetId: v === "none" ? null : v,
+                      scheduledDate: assets.find(a => a.id === v)?.next_maintenance_date || editForm.scheduledDate
+                    })}
+                  >
+                    <SelectTrigger id="assetId">
+                      <SelectValue placeholder="Seleccionar activo..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sin asignar</SelectItem>
+                      {assets.map((asset) => (
+                        <SelectItem key={asset.id} value={asset.id}>
+                          {asset.name} ({asset.asset_id})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {editForm.assetId && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Próximo mantenimiento: {assets.find(a => a.id === editForm.assetId)?.next_maintenance_date || 'N/A'}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-1.5" />
+              </div>
+              <div>
+                <Label htmlFor="edit-category">Categoría de Trabajo</Label>
+                <Select 
+                  value={editForm.category || 'otros'} 
+                  onValueChange={(v) => setEditForm({ ...editForm, category: v as any })}
+                >
+                  <SelectTrigger id="edit-category">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="reactivo">Reactivo / Correctivo</SelectItem>
+                    <SelectItem value="preventivo">Preventivo</SelectItem>
+                    <SelectItem value="predictivo">Predictivo</SelectItem>
+                    <SelectItem value="instalacion">Instalación / Puesta en Marcha</SelectItem>
+                    <SelectItem value="inspeccion">Inspección / Auditoría</SelectItem>
+                    <SelectItem value="proyecto">Proyecto / Mejora</SelectItem>
+                    <SelectItem value="garantia">Garantía</SelectItem>
+                    <SelectItem value="otros">Otros</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
                   <Label htmlFor="status">Estado</Label>
                   <Select value={editForm.status || ""} onValueChange={(v) => setEditForm({ ...editForm, status: v as any })}>
                     <SelectTrigger id="status">
@@ -471,6 +548,55 @@ export default function OrdenesPage() {
                   placeholder="Detalles del trabajo..."
                   rows={3}
                 />
+              </div>
+              <div>
+                <Label htmlFor="create-asset">Activo / Equipo</Label>
+                <Select 
+                  value={createForm.assetId || "none"}
+                  onValueChange={(v) => setCreateForm({ 
+                    ...createForm, 
+                    assetId: v === "none" ? null : v,
+                    scheduledDate: assets.find(a => a.id === v)?.next_maintenance_date || createForm.scheduledDate
+                  })}
+                >
+                  <SelectTrigger id="create-asset">
+                    <SelectValue placeholder="Seleccionar activo..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sin asignar</SelectItem>
+                    {assets.map((asset) => (
+                      <SelectItem key={asset.id} value={asset.id}>
+                        {asset.name} ({asset.asset_id})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {createForm.assetId && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Próximo mantenimiento: {assets.find(a => a.id === createForm.assetId)?.next_maintenance_date || 'N/A'}
+                  </p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="category">Categoría de Trabajo</Label>
+                <Select 
+                  value={createForm.category || 'otros'} 
+                  onValueChange={(v) => setCreateForm({ ...createForm, category: v as any })}
+                >
+                  <SelectTrigger id="category">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="reactivo">Reactivo / Correctivo</SelectItem>
+                    <SelectItem value="preventivo">Preventivo</SelectItem>
+                    <SelectItem value="predictivo">Predictivo</SelectItem>
+                    <SelectItem value="instalacion">Instalación / Puesta en Marcha</SelectItem>
+                    <SelectItem value="inspeccion">Inspección / Auditoría</SelectItem>
+                    <SelectItem value="proyecto">Proyecto / Mejora</SelectItem>
+                    <SelectItem value="garantia">Garantía</SelectItem>
+                    <SelectItem value="otros">Otros</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>

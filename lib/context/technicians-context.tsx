@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react"
 import type { TechnicianProfile, TechStatus, TechSpecialty, Certification } from "@/lib/data/technicians"
+import { authenticatedFetch } from "@/lib/authenticated-fetch"
 
 // ── Actions ──────────────────────────────────────────────────
 
@@ -68,7 +69,7 @@ export function TechniciansProvider({ children }: { children: React.ReactNode })
   const refreshTechnicians = useCallback(async () => {
     setIsLoading(true)
     try {
-      const res = await fetch("/api/technicians")
+      const res = await authenticatedFetch("/api/technicians")
       if (!res.ok) throw new Error("Failed to fetch technicians")
       const json = await res.json()
       const list = json.data || json.technicians || []
@@ -91,7 +92,7 @@ export function TechniciansProvider({ children }: { children: React.ReactNode })
 
   const addTech = useCallback(async (data: Omit<TechnicianProfile, "id" | "initials">) => {
     try {
-      const res = await fetch("/api/technicians", {
+      const res = await authenticatedFetch("/api/technicians", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

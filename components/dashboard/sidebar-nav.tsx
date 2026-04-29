@@ -20,6 +20,8 @@ import {
   PieChart,
   LogOut,
   DollarSign,
+  Zap,
+  CalendarCheck,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -38,6 +40,8 @@ const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Panel Principal", href: "/", roles: ["admin", "supervisor"] },
   { icon: CalendarClock, label: "Agenda (Despacho)", href: "/despacho", roles: ["admin", "supervisor"] },
   { icon: ClipboardList, label: "Ordenes de Trabajo", href: "/ordenes", roles: ["admin", "supervisor"] },
+  { icon: Zap, label: "Activos", href: "/activos", roles: ["admin", "supervisor", "cliente"] },
+  { icon: CalendarCheck, label: "Mantenimientos", href: "/mantenimiento", roles: ["admin", "supervisor"] },
   { icon: Users, label: "Tecnicos", href: "/tecnicos", roles: ["admin", "supervisor"] },
   { icon: UserCircle, label: "Clientes", href: "/clientes", roles: ["admin", "supervisor"] },
   { icon: PieChart, label: "Reportes CRM", href: "/clientes/reportes", roles: ["admin"] },

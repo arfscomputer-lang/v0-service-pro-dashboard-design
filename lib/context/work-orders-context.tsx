@@ -1,11 +1,13 @@
 'use client'
 
 import React, { createContext, useContext, useCallback, useState, useEffect } from 'react'
+import { authenticatedFetch } from '@/lib/authenticated-fetch'
 
 export interface WorkOrder {
   id: string
   orderId: string
   type: string
+  category: 'reactivo' | 'preventivo' | 'predictivo' | 'instalacion' | 'inspeccion' | 'proyecto' | 'garantia' | 'otros'
   description: string
   status: 'pendiente' | 'asignada' | 'en_ruta' | 'en_sitio' | 'completada' | 'cancelada'
   priority: 'baja' | 'normal' | 'alta' | 'urgente'
@@ -35,7 +37,7 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
     const fetchWorkOrders = async () => {
       try {
         console.log('[v0] Fetching work orders from API...')
-        const res = await fetch('/api/work-orders')
+        const res = await authenticatedFetch('/api/work-orders')
         console.log('[v0] API response status:', res.status)
         if (!res.ok) {
           throw new Error(`HTTP error! status: ${res.status}`)
@@ -63,7 +65,7 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
           throw error
         }
         
-        const res = await fetch('/api/work-orders', {
+        const res = await authenticatedFetch('/api/work-orders', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -113,6 +115,7 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
         if (data.customerId !== undefined) payload.customer_id = data.customerId
         if (data.technicianId !== undefined) payload.technician_id = data.technicianId
 
+        // Call API to update in database
         const res = await fetch(`/api/work-orders/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -123,9 +126,12 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
           throw new Error(`Failed to update work order: ${res.status}`)
         }
 
+        // Update local state after successful API call
         setWorkOrders((prev) =>
           prev.map((wo) => (wo.id !== id ? wo : { ...wo, ...data }))
         )
+        
+        console.log('[v0] Updated work order in database:', id, data)
       } catch (error) {
         console.error('[v0] Error updating work order:', error)
         throw error
@@ -137,6 +143,7 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
   const deleteWorkOrder = useCallback(
     async (id: string) => {
       try {
+        // Call API to delete from database
         const res = await fetch(`/api/work-orders/${id}`, {
           method: 'DELETE',
         })
@@ -145,7 +152,9 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
           throw new Error(`Failed to delete work order: ${res.status}`)
         }
 
+        // Update local state after successful API call
         setWorkOrders((prev) => prev.filter((wo) => wo.id !== id))
+        console.log('[v0] Deleted work order from database:', id)
       } catch (error) {
         console.error('[v0] Error deleting work order:', error)
         throw error

@@ -29,7 +29,7 @@ const quickLinks = [
   {
     title: "Técnicos",
     description: "Administra técnicos, disponibilidad, especialidades y rendimiento.",
-    href: "/admin/tecnicos",
+    href: "/tecnicos",
     icon: Users,
   },
   {

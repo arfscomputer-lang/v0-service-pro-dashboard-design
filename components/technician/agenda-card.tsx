@@ -18,6 +18,8 @@ import {
   Play,
   Square,
   X,
+  MessageCircle,
+  Lightbulb,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -37,6 +39,7 @@ export interface AgendaJob {
   estimatedDuration: string
   notes: string
   status: JobStatus
+  hasMessaging?: boolean
 }
 
 interface AgendaCardProps {
@@ -123,6 +126,7 @@ export function AgendaCard({ job, onAction, isActive }: AgendaCardProps) {
   const [photos, setPhotos] = useState<string[]>([])
   const [timerRunning, setTimerRunning] = useState(false)
   const [totalTime, setTotalTime] = useState<string | null>(null)
+  const [suggestions, setSuggestions] = useState("")
   const fileRef = useRef<HTMLInputElement>(null)
   const timer = useElapsedTimer(timerRunning)
 
@@ -325,6 +329,8 @@ export function AgendaCard({ job, onAction, isActive }: AgendaCardProps) {
                 <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                   <Camera className="h-4 w-4 text-primary" />
                   Evidencia Fotografica
+                  {isOnSite && <span className="text-xs text-primary">(Inicio del trabajo)</span>}
+                  {isCompleted && <span className="text-xs text-emerald-600">(Final del trabajo)</span>}
                 </div>
                 <span className="text-xs text-muted-foreground">
                   {photos.length} foto{photos.length !== 1 ? "s" : ""}
@@ -345,7 +351,7 @@ export function AgendaCard({ job, onAction, isActive }: AgendaCardProps) {
                         className="h-full w-full object-cover"
                         crossOrigin="anonymous"
                       />
-                      {isOnSite && (
+                      {(isOnSite || isCompleted) && (
                         <button
                           type="button"
                           onClick={() => handleRemovePhoto(i)}
@@ -361,7 +367,7 @@ export function AgendaCard({ job, onAction, isActive }: AgendaCardProps) {
               )}
 
               {/* Upload button */}
-              {isOnSite && (
+              {(isOnSite || isCompleted) && (
                 <>
                   <input
                     ref={fileRef}
@@ -383,6 +389,36 @@ export function AgendaCard({ job, onAction, isActive }: AgendaCardProps) {
                   </button>
                 </>
               )}
+            </div>
+          )}
+
+          {/* Suggestions field (visible when completed) */}
+          {isCompleted && (
+            <div className="rounded-xl bg-muted/50 border border-border p-3 mb-3">
+              <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-2">
+                <Lightbulb className="h-4 w-4 text-amber-500" />
+                Sugerencias y Mejoras
+              </div>
+              <textarea
+                value={suggestions}
+                onChange={(e) => setSuggestions(e.target.value)}
+                placeholder="Describe cualquier sugerencia o mejora encontrada durante el trabajo..."
+                className="w-full px-3 py-2 text-sm rounded-lg bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                rows={3}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                {suggestions.length} caracteres
+              </p>
+            </div>
+          )}
+
+          {/* Messaging indicator */}
+          {job.hasMessaging && (
+            <div className="flex items-center gap-2 rounded-lg bg-blue-50 border border-blue-200 px-3 py-2 mb-3">
+              <MessageCircle className="h-4 w-4 text-blue-600" />
+              <span className="text-xs font-medium text-blue-700">
+                Mensajería activa con el cliente
+              </span>
             </div>
           )}
 
@@ -449,6 +485,15 @@ export function AgendaCard({ job, onAction, isActive }: AgendaCardProps) {
                 <span className="text-xs text-muted-foreground">
                   {photos.length} foto{photos.length !== 1 ? "s" : ""} de evidencia
                 </span>
+              )}
+              {suggestions && (
+                <div className="mt-2 w-full bg-amber-50 border border-amber-200 rounded-lg p-2">
+                  <p className="text-xs font-semibold text-amber-700 mb-1 flex items-center gap-1">
+                    <Lightbulb className="h-3 w-3" />
+                    Sugerencias:
+                  </p>
+                  <p className="text-xs text-amber-700">{suggestions}</p>
+                </div>
               )}
             </div>
           )}

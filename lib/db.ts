@@ -562,3 +562,277 @@ export async function deleteUserSessions(user_id: string) {
 export async function cleanupExpiredSessions() {
   await query(`DELETE FROM sessions WHERE expires_at <= NOW()`)
 }
+
+// ============================================
+// ASSETS / EQUIPMENT MANAGEMENT
+// ============================================
+
+export async function createAsset(data: {
+  asset_id: string
+  name: string
+  customer_id: string
+  type: string
+  category: string
+  serial_number: string
+  status?: string
+  criticality?: string
+  description?: string
+  brand?: string
+  model?: string
+  year_manufactured?: number
+  site_location?: string
+  capacity?: string
+  has_maintenance_plan?: boolean
+  recurrence_type?: string
+  interval_months?: number
+  interval_hours?: number
+  interval_cycles?: number
+  hours_threshold_alert?: number
+}) {
+  const result = await query(
+    `INSERT INTO assets (
+      asset_id, name, customer_id, type, category, serial_number, status, 
+      criticality, description, brand, model, year_manufactured, 
+      site_location, capacity, has_maintenance_plan, recurrence_type, 
+      interval_months, interval_hours, interval_cycles, hours_threshold_alert,
+      created_at, updated_at
+    ) VALUES (
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 
+      $15, $16, $17, $18, $19, $20, NOW(), NOW()
+    ) RETURNING *`,
+    [
+      data.asset_id,
+      data.name,
+      data.customer_id,
+      data.type,
+      data.category,
+      data.serial_number,
+      data.status || 'activo',
+      data.criticality || 'medio',
+      data.description || null,
+      data.brand || '',
+      data.model || '',
+      data.year_manufactured || null,
+      data.site_location || null,
+      data.capacity || null,
+      data.has_maintenance_plan || false,
+      data.recurrence_type || null,
+      data.interval_months || null,
+      data.interval_hours || null,
+      data.interval_cycles || null,
+      data.hours_threshold_alert || null,
+    ]
+  )
+  return result.rows[0]
+}
+
+export async function getAssets() {
+  return getMany(`SELECT * FROM assets ORDER BY created_at DESC`)
+}
+
+export async function getAssetById(id: string) {
+  return getOne(`SELECT * FROM assets WHERE id = $1`, [id])
+}
+
+export async function getAssetsByCustomer(customer_id: string) {
+  return getMany(
+    `SELECT * FROM assets 
+     WHERE customer_id = $1 AND status != 'retirado' 
+     ORDER BY name ASC`,
+    [customer_id]
+  )
+}
+
+export async function updateAsset(id: string, data: Partial<any>) {
+  const fields: string[] = []
+  const values: any[] = []
+  let paramIndex = 1
+
+  Object.entries(data).forEach(([key, value]) => {
+    if (key !== 'id' && key !== 'created_at') {
+      fields.push(`${key} = $${paramIndex}`)
+      values.push(value)
+      paramIndex++
+    }
+  })
+
+  if (fields.length === 0) return { rows: [] }
+
+  fields.push(`updated_at = $${paramIndex}`)
+  values.push(new Date())
+  paramIndex++
+
+  values.push(id)
+
+  const result = await query(
+    `UPDATE assets SET ${fields.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
+    values
+  )
+  return result.rows[0] ?? null
+}
+
+export async function deleteAsset(id: string) {
+  await query(`DELETE FROM assets WHERE id = $1`, [id])
+}
+
+export async function getAssetsDueForMaintenance(customer_id: string, days_ahead: number = 7) {
+  return getMany(
+    `SELECT * FROM assets
+     WHERE customer_id = $1
+     AND has_maintenance_plan = true
+     AND status != 'retirado'
+     AND next_maintenance_date <= NOW() + INTERVAL '1 day' * $2
+     ORDER BY next_maintenance_date ASC`,
+    [customer_id, days_ahead]
+  )
+}
+
+export async function updateAssetMaintenanceDates(
+  id: string,
+  next_maintenance_date: Date | null
+) {
+  return getOne(
+    `UPDATE assets SET next_maintenance_date = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
+    [next_maintenance_date, id]
+  )
+}
+
+export async function getAssetsWithMaintenancePlan(customer_id: string) {
+  return getMany(
+    `SELECT id, asset_id, name, customer_id, has_maintenance_plan, recurrence_type,
+            interval_months, last_maintenance_date, next_maintenance_date, created_at
+     FROM assets
+     WHERE customer_id = $1
+     AND has_maintenance_plan = true
+     AND status != 'retirado'
+     ORDER BY next_maintenance_date ASC NULLS LAST`,
+    [customer_id]
+  )
+}
+
+// ============================================
+// FASE 3 — PLANES DE MANTENIMIENTO
+// ============================================
+
+export async function getMaintenancePlans(filters: {
+  customer_id?: string
+  search?: string
+}) {
+  const conditions: string[] = ["a.has_maintenance_plan = true", "a.status != 'retirado'"]
+  const params: any[] = []
+  let idx = 1
+
+  if (filters.customer_id) {
+    conditions.push(`a.customer_id = $${idx++}`)
+    params.push(filters.customer_id)
+  }
+
+  if (filters.search) {
+    conditions.push(`(LOWER(a.name) LIKE $${idx} OR LOWER(a.asset_id) LIKE $${idx})`)
+    params.push(`%${filters.search.toLowerCase()}%`)
+    idx++
+  }
+
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
+
+  return getMany(
+    `SELECT
+       a.id, a.asset_id, a.name, a.brand, a.model, a.site_location,
+       a.customer_id, a.recurrence_type, a.interval_months,
+       a.last_maintenance_date, a.next_maintenance_date,
+       a.has_maintenance_plan, a.created_at,
+       c.name AS customer_name
+     FROM assets a
+     LEFT JOIN customers c ON c.id = a.customer_id
+     ${where}
+     ORDER BY a.next_maintenance_date ASC NULLS LAST`,
+    params
+  )
+}
+
+export async function getMaintenanceHistoryByAsset(asset_internal_id: string) {
+  return getMany(
+    `SELECT
+       wo.id, wo.order_id, wo.status, wo.scheduled_date,
+       wo.completed_date, wo.description, wo.notes,
+       wo.created_at,
+       u.name AS technician_name
+     FROM work_orders wo
+     LEFT JOIN users u ON u.id = wo.assigned_to
+     WHERE wo.type = 'preventivo'
+       AND wo.description LIKE $1
+     ORDER BY wo.created_at DESC
+     LIMIT 24`,
+    [`%${asset_internal_id}%`]
+  )
+}
+
+export async function completeMaintenanceExecution(data: {
+  asset_id: string
+  asset_internal_id: string
+  customer_id: string
+  asset_name: string
+  completed_date: Date
+  technician_name: string
+  notes: string
+  was_overdue: boolean
+  next_maintenance_date: Date | null
+}) {
+  // 1. Create the completed work order
+  const orderId = `PREV-${data.asset_id.toUpperCase()}-${Date.now()}`
+  const wo = await getOne(
+    `INSERT INTO work_orders (order_id, customer_id, type, status, category, priority, description, notes, scheduled_date, completed_date, created_at, updated_at)
+     VALUES ($1, $2, 'preventivo', 'completada', 'Preventivo', 'normal', $3, $4, $5, $5, NOW(), NOW())
+     RETURNING *`,
+    [
+      orderId,
+      data.customer_id,
+      `Mantenimiento preventivo: ${data.asset_name} (${data.asset_id})`,
+      data.notes || null,
+      data.completed_date,
+    ]
+  )
+
+  // 2. Update asset last_maintenance_date and recalculate next
+  await query(
+    `UPDATE assets
+     SET last_maintenance_date = $1,
+         next_maintenance_date = $2,
+         updated_at = NOW()
+     WHERE id = $3`,
+    [data.completed_date, data.next_maintenance_date, data.asset_internal_id]
+  )
+
+  return wo
+}
+
+export async function createPreventiveWorkOrder(data: {
+  order_id: string
+  customer_id: string
+  asset_id: string
+  asset_name: string
+  scheduled_date: Date
+}) {
+  // Verify no pending preventive order already exists for this asset
+  const existing = await getOne<{ id: string }>(
+    `SELECT id FROM work_orders
+     WHERE customer_id = $1
+     AND description LIKE $2
+     AND type = 'preventivo'
+     AND status IN ('pendiente', 'en_progreso')`,
+    [data.customer_id, `%${data.asset_id}%`]
+  )
+  if (existing) return null
+
+  return getOne(
+    `INSERT INTO work_orders (order_id, customer_id, type, status, description, scheduled_date, created_at, updated_at)
+     VALUES ($1, $2, 'preventivo', 'pendiente', $3, $4, NOW(), NOW())
+     RETURNING *`,
+    [
+      data.order_id,
+      data.customer_id,
+      `Mantenimiento preventivo: ${data.asset_name} (${data.asset_id})`,
+      data.scheduled_date,
+    ]
+  )
+}
