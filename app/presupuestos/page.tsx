@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { Plus, X, Printer, DollarSign } from 'lucide-react'
+import { SidebarNav } from '@/components/dashboard/sidebar-nav'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -320,21 +321,34 @@ export default function PresupuestosPage() {
   const sub2 = sumSection(materials)
   const sub3 = sumSection(labor)
   const subtotal = sub1 + sub2 + sub3
-  const tax = (subtotal * taxRate) / 100
-  const total = subtotal + tax
+  const isPYG = currency === 'PYG'
+  const tax = isPYG ? subtotal / 11 : (subtotal * taxRate) / 100
+  const total = isPYG ? subtotal : subtotal + tax
 
   const handlePrint = () => {
     const printContent = document.getElementById('print-area')
     if (!printContent) return
     const win = window.open('', '_blank')
     if (!win) return
-    win.document.write(`<!DOCTYPE html><html><head><title>Presupuesto CCTV - ${project.number}</title>
-      <style>body{margin:0;font-family:system-ui,sans-serif}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style>
+
+    const styleLinks = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
+      .map(l => l.outerHTML)
+      .join('\n')
+    const styleBlocks = Array.from(document.querySelectorAll('style'))
+      .map(s => s.outerHTML)
+      .join('\n')
+
+    win.document.write(`<!DOCTYPE html><html><head>
+      <title>Presupuesto CCTV - ${project.number}</title>
+      ${styleLinks}
+      ${styleBlocks}
+      <style>
+        body { margin: 0; font-family: system-ui, sans-serif; background: white; }
+        @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+      </style>
       </head><body>${printContent.innerHTML}</body></html>`)
     win.document.close()
-    setTimeout(() => {
-      win.print()
-    }, 400)
+    setTimeout(() => { win.print() }, 800)
   }
 
   const handleNew = () => {
@@ -389,7 +403,9 @@ export default function PresupuestosPage() {
   }, [equipment, materials, labor])
 
   return (
-    <main className="min-h-screen bg-background">
+    <div className="flex h-screen overflow-hidden bg-background">
+      <SidebarNav />
+      <main className="flex-1 overflow-auto">
       {/* Header */}
       <div className="sticky top-0 z-50 bg-card border-b border-border px-4 md:px-6 py-3 md:py-4 shadow-sm">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 md:gap-4 flex-wrap md:flex-nowrap">
@@ -462,7 +478,7 @@ export default function PresupuestosPage() {
             { label: 'Equipos', value: sub1, color: '#1a1a2e' },
             { label: 'Materiales', value: sub2, color: '#2d4a7a' },
             { label: 'M. de Obra', value: sub3, color: '#3a6b5a' },
-            { label: `IVA (${taxRate}%)`, value: tax, color: '#b45309' },
+            { label: isPYG ? 'IVA incluido (10%)' : `IVA (${taxRate}%)`, value: tax, color: '#b45309' },
             { label: 'TOTAL', value: total, color: '#dc2626', bold: true },
           ].map(({ label, value, color, bold }, i) => (
             <div
@@ -670,16 +686,20 @@ export default function PresupuestosPage() {
             <div className="grid md:grid-cols-2 gap-6">
               <div className="bg-card border border-border rounded-lg p-6">
                 <h2 className="font-bold text-lg text-foreground mb-4">💰 Impuestos</h2>
-                <div>
-                  <label className="text-sm font-medium text-foreground">Tasa IVA (%)</label>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={taxRate}
-                    onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
-                  />
-                </div>
+                {isPYG ? (
+                  <p className="text-sm text-muted-foreground">IVA incluido en precios (10% — se obtiene dividiendo el total entre 11).</p>
+                ) : (
+                  <div>
+                    <label className="text-sm font-medium text-foreground">Tasa IVA (%)</label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={taxRate}
+                      onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="bg-card border border-border rounded-lg p-6">
@@ -733,7 +753,8 @@ export default function PresupuestosPage() {
           </div>
         )}
       </div>
-    </main>
+      </main>
+    </div>
   )
 }
 
@@ -751,8 +772,9 @@ function PrintPreview({
   const sub2 = sumSection(materials)
   const sub3 = sumSection(labor)
   const subtotal = sub1 + sub2 + sub3
-  const tax = (subtotal * taxRate) / 100
-  const total = subtotal + tax
+  const isPYG = currency === 'PYG'
+  const tax = isPYG ? subtotal / 11 : (subtotal * taxRate) / 100
+  const total = isPYG ? subtotal : subtotal + tax
 
   const renderTable = (title: string, items: Item[], color: string) => (
     <div className="mb-6">
@@ -837,7 +859,7 @@ function PrintPreview({
           <span>{fmt(subtotal, currency)}</span>
         </div>
         <div className="flex justify-between px-4 py-2 border-b text-sm">
-          <span>IVA ({taxRate}%)</span>
+          <span>{isPYG ? 'IVA incluido (10%)' : `IVA (${taxRate}%)`}</span>
           <span>{fmt(tax, currency)}</span>
         </div>
         <div className="flex justify-between px-4 py-3 bg-gray-900 text-white font-bold text-lg">
