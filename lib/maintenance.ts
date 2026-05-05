@@ -96,3 +96,25 @@ export function daysUntilMaintenance(dateStr: string | null): number | null {
   next.setHours(0, 0, 0, 0)
   return Math.round((next.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
 }
+
+/**
+ * Genera las próximas N fechas de ocurrencia a partir del next_maintenance_date del activo.
+ */
+export function generateOccurrenceDates(asset: AssetMaintenanceInfo, count = 6): Date[] {
+  if (!asset.has_maintenance_plan) return []
+  const months = asset.interval_months ?? RECURRENCE_MONTHS[asset.recurrence_type ?? '']
+  if (!months || months <= 0) return []
+
+  const baseDate = asset.next_maintenance_date
+    ? new Date(asset.next_maintenance_date)
+    : calculateNextMaintenanceDate(asset)
+  if (!baseDate) return []
+
+  const dates: Date[] = []
+  for (let i = 0; i < count; i++) {
+    const d = new Date(baseDate)
+    d.setMonth(d.getMonth() + months * i)
+    dates.push(d)
+  }
+  return dates
+}

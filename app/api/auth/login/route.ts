@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getOne, createSession } from '@/lib/db'
+import { getOne, createSession, query } from '@/lib/db'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 
@@ -55,7 +55,15 @@ export async function POST(req: NextRequest) {
       expires_at,
     })
 
-    // Return user data with session token
+    let technicianId: string | null = null
+    if (user.role === 'tecnico') {
+      const tech = await getOne<{ id: string }>(
+        'SELECT id FROM technicians WHERE email = $1 LIMIT 1',
+        [user.email]
+      )
+      technicianId = tech?.id ?? null
+    }
+
     return NextResponse.json({
       success: true,
       token,
@@ -65,7 +73,7 @@ export async function POST(req: NextRequest) {
         email: user.email,
         role: user.role,
         customerId: user.customer_id,
-        // Generate initials from name
+        technicianId,
         initials: user.name
           .split(' ')
           .map((n: string) => n[0])

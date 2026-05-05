@@ -26,6 +26,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useWorkOrders, type WorkOrder } from "@/lib/context/work-orders-context"
+import { useCustomers } from "@/lib/context/customers-context"
 import { authenticatedFetch } from "@/lib/authenticated-fetch"
 
 interface Technician {
@@ -38,13 +39,12 @@ interface Technician {
 }
 
 const statusConfig: Record<string, { label: string; className: string }> = {
-  pendiente: { label: "Pendiente", className: "bg-amber-500/10 text-amber-700 border-amber-500/20" },
-  asignada: { label: "Asignada", className: "bg-blue-500/10 text-blue-700 border-blue-500/20" },
-  en_ruta: { label: "En Ruta", className: "bg-violet-500/10 text-violet-700 border-violet-500/20" },
-  en_sitio: { label: "En Sitio", className: "bg-indigo-500/10 text-indigo-700 border-indigo-500/20" },
-  en_proceso: { label: "En Proceso", className: "bg-indigo-500/10 text-indigo-700 border-indigo-500/20" },
-  completada: { label: "Completada", className: "bg-emerald-500/10 text-emerald-700 border-emerald-500/20" },
-  cancelada: { label: "Cancelada", className: "bg-destructive/10 text-destructive border-destructive/20" },
+  pendiente: { label: "Pendiente",  className: "bg-amber-500/10 text-amber-700 border-amber-500/20" },
+  asignada:  { label: "Asignada",   className: "bg-blue-500/10 text-blue-700 border-blue-500/20" },
+  en_ruta:   { label: "En Ruta",    className: "bg-violet-500/10 text-violet-700 border-violet-500/20" },
+  en_sitio:  { label: "En Sitio",   className: "bg-indigo-500/10 text-indigo-700 border-indigo-500/20" },
+  completada:{ label: "Completada", className: "bg-emerald-500/10 text-emerald-700 border-emerald-500/20" },
+  cancelada: { label: "Cancelada",  className: "bg-destructive/10 text-destructive border-destructive/20" },
 }
 
 const priorityConfig: Record<string, { label: string; dot: string; badge: string }> = {
@@ -54,8 +54,22 @@ const priorityConfig: Record<string, { label: string; dot: string; badge: string
   urgente: { label: "Urgente", dot: "bg-destructive",         badge: "bg-destructive/10 text-destructive border-destructive/20" },
 }
 
+function ResponseLight({ createdAt, status }: { createdAt: string; status: string }) {
+  if (status === "completada" || status === "cancelada") return null
+  const hours = (Date.now() - new Date(createdAt).getTime()) / 36e5
+  const color = hours < 8 ? "bg-emerald-500" : hours < 48 ? "bg-amber-400" : "bg-destructive"
+  const label = hours < 8 ? "Reciente" : hours < 48 ? `${Math.round(hours)}h sin atender` : `${Math.round(hours)}h — crítico`
+  return (
+    <div className="flex items-center gap-1.5" title={label}>
+      <span className={cn("h-2.5 w-2.5 rounded-full shrink-0 animate-pulse", color)} />
+      <span className="text-xs text-muted-foreground hidden lg:inline">{label}</span>
+    </div>
+  )
+}
+
 export default function OrdenesPage() {
   const { workOrders, updateWorkOrder, deleteWorkOrder } = useWorkOrders()
+  const { customers } = useCustomers()
   const [searchTerm, setSearchTerm] = useState("")
   const [technicians, setTechnicians] = useState<Technician[]>([])
   const [loadingTechnicians, setLoadingTechnicians] = useState(true)
@@ -86,16 +100,14 @@ export default function OrdenesPage() {
     fetchTechnicians()
   }, [])
 
-  // Load assets with maintenance plans
+  // Load all assets for the asset selector
   useEffect(() => {
     const fetchAssets = async () => {
       try {
         setLoadingAssets(true)
-        const res = await fetch('/api/maintenance/plans')
+        const res = await fetch('/api/assets')
         const data = await res.json()
-        if (data.plans) {
-          setAssets(data.plans)
-        }
+        if (data.assets) setAssets(data.assets)
       } catch (error) {
         console.error('Error loading assets:', error)
         setAssets([])
@@ -207,14 +219,20 @@ export default function OrdenesPage() {
                   >
                     <div className="flex-1 flex items-center gap-4 min-w-0">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-semibold text-sm">{order.orderId}</span>
                           <Badge variant="outline" className={cn("text-xs", st.className)}>
                             {st.label}
                           </Badge>
+                          <ResponseLight createdAt={order.createdAt} status={order.status} />
                         </div>
                         <p className="text-sm text-muted-foreground truncate">{order.type}</p>
-                        <div className="flex gap-3 mt-2 text-xs text-muted-foreground">
+                        <div className="flex gap-3 mt-1.5 text-xs text-muted-foreground flex-wrap">
+                          {order.customerId && (
+                            <div className="flex items-center gap-1 font-medium text-foreground/80">
+                              <span>{customers.find(c => c.id === order.customerId)?.name ?? "—"}</span>
+                            </div>
+                          )}
                           <div className="flex items-center gap-1">
                             <MapPin className="h-3 w-3" />
                             <span className="truncate">{order.address}</span>
@@ -332,32 +350,33 @@ export default function OrdenesPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                  {editForm.assetId && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      Próximo mantenimiento: {assets.find(a => a.id === editForm.assetId)?.next_maintenance_date || 'N/A'}
-                    </p>
-                  )}
+                  {editForm.assetId && (() => {
+                    const a = assets.find(a => a.id === editForm.assetId)
+                    return a?.next_maintenance_date
+                      ? <p className="text-xs text-muted-foreground mt-1">Próximo mantenimiento: {a.next_maintenance_date}</p>
+                      : null
+                  })()}
                 </div>
                 <div className="space-y-1.5" />
               </div>
               <div>
                 <Label htmlFor="edit-category">Categoría de Trabajo</Label>
-                <Select 
-                  value={editForm.category || 'otros'} 
+                <Select
+                  value={editForm.category || 'Otros'}
                   onValueChange={(v) => setEditForm({ ...editForm, category: v as any })}
                 >
                   <SelectTrigger id="edit-category">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="reactivo">Reactivo / Correctivo</SelectItem>
-                    <SelectItem value="preventivo">Preventivo</SelectItem>
-                    <SelectItem value="predictivo">Predictivo</SelectItem>
-                    <SelectItem value="instalacion">Instalación / Puesta en Marcha</SelectItem>
-                    <SelectItem value="inspeccion">Inspección / Auditoría</SelectItem>
-                    <SelectItem value="proyecto">Proyecto / Mejora</SelectItem>
-                    <SelectItem value="garantia">Garantía</SelectItem>
-                    <SelectItem value="otros">Otros</SelectItem>
+                    <SelectItem value="Reactivo">Reactivo / Correctivo</SelectItem>
+                    <SelectItem value="Preventivo">Preventivo</SelectItem>
+                    <SelectItem value="Predictivo">Predictivo</SelectItem>
+                    <SelectItem value="Instalación / Puesta en Marcha">Instalación / Puesta en Marcha</SelectItem>
+                    <SelectItem value="Inspección / Auditoría">Inspección / Auditoría</SelectItem>
+                    <SelectItem value="Proyecto / Mejora">Proyecto / Mejora</SelectItem>
+                    <SelectItem value="Garantía">Garantía</SelectItem>
+                    <SelectItem value="Otros">Otros</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

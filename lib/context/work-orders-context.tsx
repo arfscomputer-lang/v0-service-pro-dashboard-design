@@ -7,7 +7,7 @@ export interface WorkOrder {
   id: string
   orderId: string
   type: string
-  category: 'reactivo' | 'preventivo' | 'predictivo' | 'instalacion' | 'inspeccion' | 'proyecto' | 'garantia' | 'otros'
+  category: string
   description: string
   status: 'pendiente' | 'asignada' | 'en_ruta' | 'en_sitio' | 'completada' | 'cancelada'
   priority: 'baja' | 'normal' | 'alta' | 'urgente'
@@ -17,6 +17,7 @@ export interface WorkOrder {
   scheduledTime: string
   customerId: string | null
   technicianId: string | null
+  assetId: string | null
   createdAt: string
   updatedAt: string
 }
@@ -114,6 +115,8 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
         if (data.scheduledTime !== undefined) payload.scheduled_time = data.scheduledTime
         if (data.customerId !== undefined) payload.customer_id = data.customerId
         if (data.technicianId !== undefined) payload.technician_id = data.technicianId
+        if (data.assetId !== undefined) payload.asset_id = data.assetId
+        if (data.category !== undefined) payload.category = data.category
 
         // Call API to update in database
         const res = await fetch(`/api/work-orders/${id}`, {
@@ -123,7 +126,8 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
         })
 
         if (!res.ok) {
-          throw new Error(`Failed to update work order: ${res.status}`)
+          const errBody = await res.json().catch(() => ({}))
+          throw new Error(`Failed to update work order: ${res.status} — ${errBody.details || errBody.error || ''}`)
         }
 
         // Update local state after successful API call

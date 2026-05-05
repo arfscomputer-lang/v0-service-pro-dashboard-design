@@ -114,7 +114,7 @@ interface SectionTableProps {
   catalogItems?: { nombre: string; precio?: number }[]
 }
 
-function SectionTable({ title, icon, items, setItems, color, currency, catalogItems = [] }: SectionTableProps) {
+function SectionTable({ title, icon: Icon, items, setItems, color, currency, catalogItems = [] }: SectionTableProps) {
   const [openDropdown, setOpenDropdown] = useState<number | null>(null)
   const [searchText, setSearchText] = useState<Record<number, string>>({})
   const [editingPrice, setEditingPrice] = useState<Record<number, string>>({})
@@ -152,7 +152,7 @@ function SectionTable({ title, icon, items, setItems, color, currency, catalogIt
         className="px-6 py-3 flex items-center gap-3 text-white"
         style={{ backgroundColor: color }}
       >
-        <icon className="h-5 w-5 shrink-0 opacity-90" />
+        <Icon className="h-5 w-5 shrink-0 opacity-90" />
         <span className="font-semibold text-base flex-1 tracking-wide">{title}</span>
         <span className="text-xs font-medium opacity-75 bg-white/20 rounded-full px-2 py-0.5">{items.length} ítems</span>
       </div>

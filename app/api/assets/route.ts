@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getAssets, getAssetsByCustomer, createAsset, updateAssetMaintenanceDates } from "@/lib/db"
+import { getAssets, getAssetsByCustomer, createAsset, updateAssetMaintenanceDates, upsertMaintenanceOccurrences } from "@/lib/db"
 import { calculateNextMaintenanceDate, AssetMaintenanceInfo } from "@/lib/maintenance"
 
 // Auto-calculate interval_months from recurrence_type
@@ -55,6 +55,9 @@ export async function POST(req: NextRequest) {
       model: body.model || '',
       year_manufactured: body.year_manufactured,
       site_location: body.site_location,
+      department: body.department || null,
+      lat: body.lat || null,
+      lng: body.lng || null,
       capacity: body.capacity,
       has_maintenance_plan: body.has_maintenance_plan || false,
       recurrence_type: body.recurrence_type,
@@ -76,7 +79,10 @@ export async function POST(req: NextRequest) {
       const nextDate = calculateNextMaintenanceDate(asset as AssetMaintenanceInfo)
       if (nextDate) {
         const updated = await updateAssetMaintenanceDates(asset.id, nextDate)
-        if (updated) return NextResponse.json(updated, { status: 201 })
+        if (updated) {
+          await upsertMaintenanceOccurrences(updated.id, updated as AssetMaintenanceInfo)
+          return NextResponse.json(updated, { status: 201 })
+        }
       }
     }
 

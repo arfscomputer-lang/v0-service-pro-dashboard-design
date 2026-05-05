@@ -9,8 +9,9 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
-import { Plus, AlertCircle, CheckCircle2, User, Pencil, Trash2, Loader2 } from "lucide-react"
+import { Plus, AlertCircle, CheckCircle2, User, Pencil, Trash2, Loader2, Building2 } from "lucide-react"
 import { authenticatedFetch } from "@/lib/authenticated-fetch"
+import { useCustomers } from "@/lib/context/customers-context"
 import { cn } from "@/lib/utils"
 
 interface UserData {
@@ -19,6 +20,7 @@ interface UserData {
   email: string
   role: string
   status: string
+  customer_id: string | null
   created_at: string
 }
 
@@ -43,6 +45,7 @@ const statusColors: Record<string, string> = {
 }
 
 export default function UsuariosConfigPage() {
+  const { customers } = useCustomers()
   const [users, setUsers] = useState<UserData[]>([])
   const [loadingUsers, setLoadingUsers] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
@@ -55,9 +58,9 @@ export default function UsuariosConfigPage() {
 
   const [createForm, setCreateForm] = useState({
     name: "", email: "", password: "", confirmPassword: "",
-    role: "tecnico", status: "activo",
+    role: "tecnico", status: "activo", customer_id: "",
   })
-  const [editForm, setEditForm] = useState({ name: "", status: "activo" })
+  const [editForm, setEditForm] = useState({ name: "", status: "activo", customer_id: "" })
 
   const loadUsers = async () => {
     try {
@@ -91,13 +94,14 @@ export default function UsuariosConfigPage() {
         body: JSON.stringify({
           name: createForm.name, email: createForm.email,
           password: createForm.password, role: createForm.role, status: createForm.status,
+          customer_id: createForm.role === "cliente" && createForm.customer_id ? createForm.customer_id : undefined,
         }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || "Error al crear el usuario"); return }
 
       setSuccess("Usuario creado exitosamente")
-      setCreateForm({ name: "", email: "", password: "", confirmPassword: "", role: "tecnico", status: "activo" })
+      setCreateForm({ name: "", email: "", password: "", confirmPassword: "", role: "tecnico", status: "activo", customer_id: "" })
       await loadUsers()
       setTimeout(() => { setCreateOpen(false); setSuccess("") }, 2000)
     } catch {
@@ -116,7 +120,11 @@ export default function UsuariosConfigPage() {
       const res = await authenticatedFetch(`/api/users/${editTarget.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: editForm.name, status: editForm.status }),
+        body: JSON.stringify({
+          name: editForm.name,
+          status: editForm.status,
+          customer_id: editTarget.role === "cliente" && editForm.customer_id ? editForm.customer_id : undefined,
+        }),
       })
       if (!res.ok) { setError("Error al actualizar usuario"); return }
       setSuccess("Usuario actualizado")
@@ -181,6 +189,7 @@ export default function UsuariosConfigPage() {
                     <tr className="border-b border-border bg-muted/40">
                       <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Usuario</th>
                       <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Rol</th>
+                      <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Cliente vinculado</th>
                       <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Estado</th>
                       <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Alta</th>
                       <th className="py-3 px-4 w-20"></th>
@@ -199,6 +208,18 @@ export default function UsuariosConfigPage() {
                           </Badge>
                         </td>
                         <td className="py-3 px-4">
+                          {user.role === "cliente" && user.customer_id ? (
+                            <div className="flex items-center gap-1.5">
+                              <Building2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                              <span className="text-sm text-foreground truncate max-w-[140px]">
+                                {customers.find(c => c.id === user.customer_id)?.name ?? "—"}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
                           <Badge variant="outline" className={cn("text-[11px]", statusColors[user.status] ?? statusColors.inactivo)}>
                             {user.status === "activo" ? "Activo" : user.status === "inactivo" ? "Inactivo" : "Suspendido"}
                           </Badge>
@@ -210,7 +231,7 @@ export default function UsuariosConfigPage() {
                           <div className="flex items-center gap-1 justify-end">
                             <Button
                               variant="ghost" size="icon" className="h-7 w-7"
-                              onClick={() => { setEditTarget(user); setEditForm({ name: user.name, status: user.status }); setError(""); setSuccess(""); setEditOpen(true) }}
+                              onClick={() => { setEditTarget(user); setEditForm({ name: user.name, status: user.status, customer_id: user.customer_id ?? "" }); setError(""); setSuccess(""); setEditOpen(true) }}
                             >
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
@@ -287,6 +308,30 @@ export default function UsuariosConfigPage() {
                 </Select>
               </div>
             </div>
+            {createForm.role === "cliente" && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4" />
+                  Cliente vinculado *
+                </Label>
+                <Select
+                  value={createForm.customer_id || "none"}
+                  onValueChange={v => setCreateForm(f => ({ ...f, customer_id: v === "none" ? "" : v }))}
+                  disabled={isLoading}
+                >
+                  <SelectTrigger><SelectValue placeholder="Seleccioná un cliente" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sin cliente</SelectItem>
+                    {customers.map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  El usuario cliente verá solo las órdenes de este cliente en el portal.
+                </p>
+              </div>
+            )}
             {error && (
               <div className="flex items-center gap-2 p-3 text-sm text-destructive bg-destructive/10 rounded-lg border border-destructive/20">
                 <AlertCircle className="h-4 w-4 shrink-0" />{error}
@@ -332,6 +377,27 @@ export default function UsuariosConfigPage() {
                 </SelectContent>
               </Select>
             </div>
+            {editTarget?.role === "cliente" && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4" />
+                  Cliente vinculado
+                </Label>
+                <Select
+                  value={editForm.customer_id || "none"}
+                  onValueChange={v => setEditForm(f => ({ ...f, customer_id: v === "none" ? "" : v }))}
+                  disabled={isLoading}
+                >
+                  <SelectTrigger><SelectValue placeholder="Seleccioná un cliente" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sin cliente</SelectItem>
+                    {customers.map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             {error && (
               <div className="flex items-center gap-2 p-3 text-sm text-destructive bg-destructive/10 rounded-lg border border-destructive/20">
                 <AlertCircle className="h-4 w-4 shrink-0" />{error}

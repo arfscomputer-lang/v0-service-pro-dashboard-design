@@ -32,11 +32,16 @@ export async function PUT(
 ) {
   try {
     const { id } = await params
-    const { name, status } = await request.json()
+    const { name, status, customer_id } = await request.json()
 
     const result = await query(
-      `UPDATE users SET name = COALESCE($1, name), status = COALESCE($2, status) WHERE id = $3 RETURNING *`,
-      [name, status, id]
+      `UPDATE users
+       SET name = COALESCE($1, name),
+           status = COALESCE($2, status),
+           customer_id = $3
+       WHERE id = $4
+       RETURNING *`,
+      [name, status, customer_id ?? null, id]
     )
 
     if (result.rows.length === 0) {

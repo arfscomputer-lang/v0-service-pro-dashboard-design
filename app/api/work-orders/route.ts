@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { listWorkOrders, createWorkOrder } from "@/lib/db"
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const workOrders = await listWorkOrders()
-    return NextResponse.json({ data: workOrders }, { status: 200 })
+    const { searchParams } = new URL(req.url)
+    const technicianId = searchParams.get("technician_id") || undefined
+    const workOrders = await listWorkOrders(technicianId)
+    return NextResponse.json({ workOrders, data: workOrders }, { status: 200 })
   } catch (error) {
     console.error("[v0] Error fetching work orders:", error)
     return NextResponse.json({ error: "Failed to fetch work orders" }, { status: 500 })

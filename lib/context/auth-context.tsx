@@ -181,6 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         role: data.user.role,
         initials: data.user.initials,
         customerId: data.user.customerId,
+        technicianId: data.user.technicianId ?? undefined,
       }
 
       // Store token in sessionStorage (token validates session on server)

@@ -11,6 +11,8 @@ import {
   Clock,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   MapPin,
   Wrench,
   User,
@@ -19,6 +21,7 @@ import {
   Filter,
   RefreshCw,
   X,
+  LayoutList,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -55,6 +58,21 @@ import { cn } from "@/lib/utils"
 
 type MaintenanceStatus = "vencido" | "proximo" | "al_dia" | "sin_plan"
 type QuickFilter = "todos" | "vencido" | "proximo_15"
+type ViewMode = "lista" | "calendario"
+
+interface Occurrence {
+  id: string
+  asset_id: string
+  scheduled_date: string
+  status: string
+  work_order_id: string | null
+  completed_at: string | null
+  notes: string | null
+  asset_code: string
+  asset_name: string
+  customer_id: string
+  customer_name: string
+}
 
 interface PlanDeMantenimiento {
   id: string
@@ -276,11 +294,13 @@ function AssetCard({
   const Icon = cfg.icon
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onClick()}
       className={cn(
-        "w-full text-left rounded-lg border p-3 transition-all",
+        "w-full text-left rounded-lg border p-3 transition-all cursor-pointer",
         selected
           ? "border-primary bg-primary/5 shadow-sm"
           : "border-border hover:border-primary/40 hover:bg-muted/40"
@@ -312,7 +332,7 @@ function AssetCard({
           </Button>
         </div>
       )}
-    </button>
+    </div>
   )
 }
 
@@ -564,6 +584,8 @@ const EMPTY_FORM: CompleteFormData = {
   technician_name: "",
   notes: "",
   was_overdue: false,
+  planned_date: "",
+  asset_id_selected: "",
 }
 
 function CompleteModal({
@@ -770,6 +792,192 @@ function EmptyState({ message }: { message: string }) {
 }
 
 // ============================================================
+// CALENDARIO VIEW
+// ============================================================
+
+function getOccColor(occ: Occurrence, today: Date): string {
+  if (occ.status === "completada") return "bg-emerald-500"
+  const d = new Date(occ.scheduled_date)
+  d.setHours(0, 0, 0, 0)
+  if (d < today) return "bg-destructive"
+  const diff = Math.round((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+  if (diff <= 7) return "bg-amber-500"
+  return "bg-blue-400"
+}
+
+function CalendarioView({
+  occurrences,
+  loading,
+  year,
+  month,
+  onMonthChange,
+}: {
+  occurrences: Occurrence[]
+  loading: boolean
+  year: number
+  month: number
+  onMonthChange: (year: number, month: number) => void
+}) {
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
+
+  const today = useMemo(() => {
+    const d = new Date()
+    d.setHours(0, 0, 0, 0)
+    return d
+  }, [])
+
+  const byDate = useMemo(() => {
+    const map: Record<string, Occurrence[]> = {}
+    occurrences.forEach((occ) => {
+      const d = occ.scheduled_date.slice(0, 10)
+      if (!map[d]) map[d] = []
+      map[d].push(occ)
+    })
+    return map
+  }, [occurrences])
+
+  const cells = useMemo(() => {
+    const firstDay = new Date(year, month, 1)
+    const lastDay = new Date(year, month + 1, 0)
+    const startDow = (firstDay.getDay() + 6) % 7 // Mon=0
+    const result: (Date | null)[] = Array(startDow).fill(null)
+    for (let d = 1; d <= lastDay.getDate(); d++) result.push(new Date(year, month, d))
+    return result
+  }, [year, month])
+
+  const selectedOccs = selectedDate ? (byDate[selectedDate] ?? []) : []
+
+  function prevMonth() {
+    if (month === 0) onMonthChange(year - 1, 11)
+    else onMonthChange(year, month - 1)
+  }
+  function nextMonth() {
+    if (month === 11) onMonthChange(year + 1, 0)
+    else onMonthChange(year, month + 1)
+  }
+
+  const monthLabel = new Date(year, month, 1).toLocaleDateString("es-ES", { month: "long", year: "numeric" })
+
+  return (
+    <div className="flex gap-6 h-full">
+      <div className="flex-1 min-w-0">
+        {/* Month nav */}
+        <div className="flex items-center justify-between mb-4">
+          <Button variant="outline" size="icon" onClick={prevMonth}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="text-sm font-semibold capitalize">{monthLabel}</span>
+          <Button variant="outline" size="icon" onClick={nextMonth}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Day headers */}
+        <div className="grid grid-cols-7 mb-1">
+          {["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map((d) => (
+            <div key={d} className="text-center text-xs font-medium text-muted-foreground py-2">{d}</div>
+          ))}
+        </div>
+
+        {/* Grid */}
+        {loading ? (
+          <div className="grid grid-cols-7 gap-1">
+            {Array.from({ length: 35 }).map((_, i) => (
+              <Skeleton key={i} className="h-[60px] rounded-lg" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-7 gap-1">
+            {cells.map((date, i) => {
+              if (!date) return <div key={`e-${i}`} />
+              const dateStr = date.toISOString().slice(0, 10)
+              const occs = byDate[dateStr] ?? []
+              const isToday = date.getTime() === today.getTime()
+              const isSelected = selectedDate === dateStr
+
+              return (
+                <button
+                  key={dateStr}
+                  type="button"
+                  onClick={() => setSelectedDate(isSelected ? null : dateStr)}
+                  className={cn(
+                    "min-h-[60px] rounded-lg border p-1.5 text-left transition-colors hover:bg-muted/50",
+                    isToday && "border-primary/50 bg-primary/5",
+                    isSelected && "border-primary bg-primary/10 shadow-sm",
+                    !isToday && !isSelected && "border-border"
+                  )}
+                >
+                  <span className={cn(
+                    "text-xs font-medium block mb-1",
+                    isToday ? "text-primary font-bold" : "text-muted-foreground"
+                  )}>
+                    {date.getDate()}
+                  </span>
+                  <div className="flex flex-wrap gap-0.5">
+                    {occs.slice(0, 4).map((occ) => (
+                      <span key={occ.id} className={cn("h-2 w-2 rounded-full", getOccColor(occ, today))} />
+                    ))}
+                    {occs.length > 4 && (
+                      <span className="text-[9px] text-muted-foreground leading-none">+{occs.length - 4}</span>
+                    )}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Legend */}
+        <div className="flex items-center gap-4 mt-4 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-destructive" />Vencido</span>
+          <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-amber-500" />Próximo 7 días</span>
+          <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-blue-400" />Programado</span>
+          <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />Completado</span>
+        </div>
+      </div>
+
+      {/* Day detail panel */}
+      <div className="w-72 shrink-0">
+        {selectedDate ? (
+          <div>
+            <h3 className="text-sm font-semibold mb-3 capitalize">
+              {new Date(selectedDate + "T12:00:00").toLocaleDateString("es-ES", {
+                weekday: "long", day: "numeric", month: "long",
+              })}
+            </h3>
+            {selectedOccs.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Sin mantenimientos programados</p>
+            ) : (
+              <div className="space-y-2">
+                {selectedOccs.map((occ) => (
+                  <div key={occ.id} className="rounded-lg border bg-card p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={cn("h-2.5 w-2.5 rounded-full shrink-0", getOccColor(occ, today))} />
+                      <span className="text-sm font-medium leading-tight line-clamp-1">{occ.asset_name}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{occ.asset_code} &bull; {occ.customer_name}</p>
+                    {occ.status === "completada" && (
+                      <Badge className="mt-2 text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-50">
+                        Completada
+                      </Badge>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-52 text-center">
+            <Calendar className="h-10 w-10 text-muted-foreground/20 mb-2" />
+            <p className="text-sm text-muted-foreground">Seleccioná un día para ver los mantenimientos programados</p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ============================================================
 // MAIN PAGE
 // ============================================================
 
@@ -786,6 +994,11 @@ export default function MantenimientoPage() {
   const [historyLoading, setHistoryLoading] = useState(false)
   const [completingPlan, setCompletingPlan] = useState<PlanDeMantenimiento | null>(null)
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false)
+  const [viewMode, setViewMode] = useState<ViewMode>("lista")
+  const [occurrences, setOccurrences] = useState<Occurrence[]>([])
+  const [occLoading, setOccLoading] = useState(false)
+  const [calYear, setCalYear] = useState(() => new Date().getFullYear())
+  const [calMonth, setCalMonth] = useState(() => new Date().getMonth())
 
   // Load customers
   useEffect(() => {
@@ -816,6 +1029,22 @@ export default function MantenimientoPage() {
   useEffect(() => {
     loadPlans()
   }, [loadPlans])
+
+  // Load occurrences when calendar view is active
+  useEffect(() => {
+    if (viewMode !== "calendario") return
+    setOccLoading(true)
+    const from = `${calYear}-${String(calMonth + 1).padStart(2, "0")}-01`
+    const lastDay = new Date(calYear, calMonth + 1, 0).getDate()
+    const to = `${calYear}-${String(calMonth + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`
+    const params = new URLSearchParams({ from, to })
+    if (selectedCustomerId !== "todos") params.set("customer_id", selectedCustomerId)
+    fetch(`/api/maintenance/occurrences?${params}`)
+      .then((r) => r.json())
+      .then((d) => setOccurrences(d.occurrences ?? []))
+      .catch(() => setOccurrences([]))
+      .finally(() => setOccLoading(false))
+  }, [viewMode, calYear, calMonth, selectedCustomerId])
 
   // Load history when plan is selected
   useEffect(() => {
@@ -881,7 +1110,33 @@ export default function MantenimientoPage() {
         <div className="flex flex-col flex-1 overflow-hidden bg-background">
       {/* ── Header ─────────────────────────────────────────── */}
       <div className="border-b bg-card px-6 py-5">
-        <h1 className="text-2xl font-bold tracking-tight mb-4">Planes de Mantenimiento</h1>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-2xl font-bold tracking-tight">Planes de Mantenimiento</h1>
+          <div className="flex items-center gap-1 rounded-lg border bg-muted/40 p-1">
+            <button
+              type="button"
+              onClick={() => setViewMode("lista")}
+              className={cn(
+                "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                viewMode === "lista" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <LayoutList className="h-3.5 w-3.5" />
+              Lista
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("calendario")}
+              className={cn(
+                "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                viewMode === "calendario" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Calendar className="h-3.5 w-3.5" />
+              Calendario
+            </button>
+          </div>
+        </div>
 
         {/* KPI cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
@@ -973,8 +1228,21 @@ export default function MantenimientoPage() {
         </div>
       </div>
 
+      {/* ── Calendario view ────────────────────────────────── */}
+      {viewMode === "calendario" && (
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          <CalendarioView
+            occurrences={occurrences}
+            loading={occLoading}
+            year={calYear}
+            month={calMonth}
+            onMonthChange={(y, m) => { setCalYear(y); setCalMonth(m) }}
+          />
+        </div>
+      )}
+
       {/* ── Main two-column layout ──────────────────────────── */}
-      <div className="flex flex-1 overflow-hidden">
+      {viewMode === "lista" && <div className="flex flex-1 overflow-hidden">
         {/* LEFT — Asset list */}
         <aside className="w-full md:w-[34%] border-r overflow-y-auto px-4 py-4">
           {loading ? (
@@ -1029,7 +1297,7 @@ export default function MantenimientoPage() {
             />
           )}
         </main>
-      </div>
+      </div>}
 
       {/* Mobile bottom sheet (detail) */}
       <Sheet open={mobileDetailOpen} onOpenChange={setMobileDetailOpen}>

@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/context/auth-context"
 import { useCustomers } from "@/lib/context/customers-context"
+import { useWorkOrders } from "@/lib/context/work-orders-context"
 import { SidebarNav } from "@/components/dashboard/sidebar-nav"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -81,10 +82,13 @@ const statusMap: Record<string, { label: string; color: string; icon: typeof Che
 export default function ClientPortalPage() {
   const { user, logout } = useAuth()
   const { customers } = useCustomers()
+  const { workOrders } = useWorkOrders()
   const router = useRouter()
   const [orderOpen, setOrderOpen] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [tab, setTab] = useState<"dashboard" | "ordenes" | "reportes">("dashboard")
+  const [customerAssets, setCustomerAssets] = useState<{ id: string; name: string; asset_id: string; type: string }[]>([])
+  const [selectedAssetId, setSelectedAssetId] = useState("")
 
   const customer = useMemo(() => {
     if (!user?.customerId) return null
@@ -98,17 +102,28 @@ export default function ClientPortalPage() {
     }
   }, [orderOpen])
 
+  useEffect(() => {
+    if (!user?.customerId) return
+    fetch(`/api/assets?customer_id=${user.customerId}`)
+      .then((r) => r.json())
+      .then((d) => setCustomerAssets(d.assets || []))
+      .catch(() => setCustomerAssets([]))
+  }, [user?.customerId])
+
   if (!user || !customer) return null
 
+  const myOrders = workOrders.filter((o) => o.customerId === user.customerId)
+  const completedOrders = myOrders.filter((o) => o.status === "completada")
+  const pendingOrders = myOrders.filter((o) => o.status !== "completada" && o.status !== "cancelada")
+
   const completedServices = customer.services.filter((s) => s.status === "completado")
-  const pendingServices = customer.services.filter((s) => s.status === "pendiente")
   const avgRating = completedServices.length > 0
     ? completedServices.filter((s) => s.rating !== null).reduce((a, s) => a + (s.rating ?? 0), 0) / completedServices.filter((s) => s.rating !== null).length
     : 0
 
   const kpis = [
-    { label: "Servicios Completados", value: completedServices.length, icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-500/10" },
-    { label: "Ordenes Pendientes", value: pendingServices.length, icon: Clock, color: "text-amber-600", bg: "bg-amber-500/10" },
+    { label: "Servicios Completados", value: completedOrders.length, icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-500/10" },
+    { label: "Ordenes Pendientes", value: pendingOrders.length, icon: Clock, color: "text-amber-600", bg: "bg-amber-500/10" },
     { label: "Calificacion Promedio", value: avgRating > 0 ? avgRating.toFixed(1) : "N/A", icon: Star, color: "text-primary", bg: "bg-primary/10" },
     { label: "Total Invertido", value: `$${customer.totalSpent.toLocaleString()}`, icon: DollarSign, color: "text-emerald-600", bg: "bg-emerald-500/10" },
   ]
@@ -295,32 +310,24 @@ export default function ClientPortalPage() {
                   </CardHeader>
                   <CardContent className="p-0">
                     <div className="divide-y divide-border">
-                      {customer.services.slice(0, 5).map((s) => {
-                        const st = statusMap[s.status] ?? statusMap.pendiente
+                      {myOrders.slice(0, 5).map((o) => {
+                        const st = statusMap[o.status === "completada" ? "completado" : o.status === "cancelada" ? "cancelado" : "pendiente"] ?? statusMap.pendiente
                         return (
-                          <div key={s.orderId} className="flex items-center justify-between px-5 py-3">
+                          <div key={o.id} className="flex items-center justify-between px-5 py-3">
                             <div className="flex items-center gap-3 min-w-0">
                               <st.icon className={cn("h-4 w-4 shrink-0", st.color)} />
                               <div className="min-w-0">
-                                <p className="text-sm font-medium text-foreground truncate">{s.orderId} - {s.type}</p>
-                                <p className="text-xs text-muted-foreground">{s.date} | {s.technicianName}</p>
+                                <p className="text-sm font-medium text-foreground truncate">{o.orderId} — {o.type}</p>
+                                <p className="text-xs text-muted-foreground">{o.scheduledDate} · {o.address}</p>
                               </div>
                             </div>
-                            <div className="flex items-center gap-3 shrink-0">
-                              {s.rating !== null && (
-                                <div className="flex items-center gap-1 text-xs text-amber-600">
-                                  <Star className="h-3 w-3 fill-amber-400" />
-                                  {s.rating}
-                                </div>
-                              )}
-                              <Badge variant="outline" className={cn("text-[10px]", st.color)}>
-                                {st.label}
-                              </Badge>
-                            </div>
+                            <Badge variant="outline" className={cn("text-[10px] shrink-0", st.color)}>
+                              {st.label}
+                            </Badge>
                           </div>
                         )
                       })}
-                      {customer.services.length === 0 && (
+                      {myOrders.length === 0 && (
                         <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
                           <ClipboardList className="h-8 w-8 mb-2 opacity-40" />
                           <p className="text-sm">No hay servicios registrados</p>
@@ -366,30 +373,31 @@ export default function ClientPortalPage() {
             /* ─── Reportes tab ─── */
             (() => {
               const servicesByMonth = (() => {
-                const map: Record<string, { mes: string; total: number; completados: number; monto: number }> = {}
-                customer.services.forEach(s => {
-                  const [y, m] = (s.date || "").split("-")
+                const map: Record<string, { mes: string; total: number; completados: number }> = {}
+                myOrders.forEach(o => {
+                  const [y, m] = (o.scheduledDate || "").split("-")
                   if (!y || !m) return
                   const key = `${y}-${m}`
                   const label = new Date(parseInt(y), parseInt(m) - 1, 1).toLocaleDateString("es-ES", { month: "short", year: "2-digit" })
-                  if (!map[key]) map[key] = { mes: label, total: 0, completados: 0, monto: 0 }
+                  if (!map[key]) map[key] = { mes: label, total: 0, completados: 0 }
                   map[key].total++
-                  if (s.status === "completado") map[key].completados++
-                  map[key].monto += s.amount ?? 0
+                  if (o.status === "completada") map[key].completados++
                 })
                 return Object.values(map).slice(-6)
               })()
 
               const byType = (() => {
                 const map: Record<string, number> = {}
-                customer.services.forEach(s => { map[s.type] = (map[s.type] || 0) + 1 })
+                myOrders.forEach(o => { map[o.type] = (map[o.type] || 0) + 1 })
                 return Object.entries(map).map(([name, value]) => ({ name, value }))
               })()
 
+              const canceledOrders = myOrders.filter(o => o.status === "cancelada")
+
               const statusBreakdown = [
-                { name: "Completados", value: completedServices.length, color: "#10b981" },
-                { name: "Pendientes", value: pendingServices.length, color: "#f59e0b" },
-                { name: "Cancelados", value: customer.services.filter(s => s.status === "cancelado").length, color: "#6b7280" },
+                { name: "Completados", value: completedOrders.length, color: "#10b981" },
+                { name: "Pendientes", value: pendingOrders.length, color: "#f59e0b" },
+                { name: "Cancelados", value: canceledOrders.length, color: "#6b7280" },
               ].filter(s => s.value > 0)
 
               const COLORS = ["#2e5cb8", "#10b981", "#f59e0b", "#8b5cf6", "#ef4444", "#06b6d4"]
@@ -399,9 +407,9 @@ export default function ClientPortalPage() {
                   {/* KPI row */}
                   <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                     {[
-                      { label: "Total solicitudes", value: customer.services.length, icon: ClipboardList, color: "text-primary", bg: "bg-primary/10" },
-                      { label: "Completados", value: completedServices.length, icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-500/10" },
-                      { label: "Tasa de éxito", value: customer.services.length ? `${Math.round(completedServices.length / customer.services.length * 100)}%` : "0%", icon: TrendingUp, color: "text-blue-600", bg: "bg-blue-500/10" },
+                      { label: "Total solicitudes", value: myOrders.length, icon: ClipboardList, color: "text-primary", bg: "bg-primary/10" },
+                      { label: "Completados", value: completedOrders.length, icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-500/10" },
+                      { label: "Tasa de éxito", value: myOrders.length ? `${Math.round(completedOrders.length / myOrders.length * 100)}%` : "0%", icon: TrendingUp, color: "text-blue-600", bg: "bg-blue-500/10" },
                       { label: "Rating promedio", value: avgRating > 0 ? `${avgRating.toFixed(1)} ★` : "N/A", icon: Star, color: "text-amber-600", bg: "bg-amber-500/10" },
                     ].map(k => (
                       <Card key={k.label} className="border border-border shadow-sm">
@@ -490,7 +498,7 @@ export default function ClientPortalPage() {
                               <div key={t.name} className="flex items-center gap-3">
                                 <span className="text-xs text-muted-foreground w-24 truncate">{t.name}</span>
                                 <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
-                                  <div className="h-full rounded-full" style={{ width: `${(t.value / customer.services.length) * 100}%`, background: COLORS[i % COLORS.length] }} />
+                                  <div className="h-full rounded-full" style={{ width: `${(t.value / myOrders.length) * 100}%`, background: COLORS[i % COLORS.length] }} />
                                 </div>
                                 <span className="text-xs font-semibold text-foreground w-4 text-right">{t.value}</span>
                               </div>
@@ -534,7 +542,7 @@ export default function ClientPortalPage() {
                     <ClipboardList className="h-5 w-5 text-primary" />
                     <div>
                       <p className="text-xs text-muted-foreground">Total</p>
-                      <p className="text-lg font-bold">{customer.services.length}</p>
+                      <p className="text-lg font-bold">{myOrders.length}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -543,7 +551,7 @@ export default function ClientPortalPage() {
                     <Clock className="h-5 w-5 text-amber-600" />
                     <div>
                       <p className="text-xs text-muted-foreground">Pendientes</p>
-                      <p className="text-lg font-bold">{pendingServices.length}</p>
+                      <p className="text-lg font-bold">{pendingOrders.length}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -552,7 +560,7 @@ export default function ClientPortalPage() {
                     <CheckCircle2 className="h-5 w-5 text-emerald-600" />
                     <div>
                       <p className="text-xs text-muted-foreground">Completados</p>
-                      <p className="text-lg font-bold">{completedServices.length}</p>
+                      <p className="text-lg font-bold">{completedOrders.length}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -566,41 +574,33 @@ export default function ClientPortalPage() {
                         <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Orden</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Tipo</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Fecha</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Tecnico</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Dirección</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Estado</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">Monto</th>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground">Rating</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Prioridad</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                      {customer.services.map((s) => {
-                        const st = statusMap[s.status] ?? statusMap.pendiente
+                      {myOrders.map((o) => {
+                        const st = statusMap[o.status === "completada" ? "completado" : o.status === "cancelada" ? "cancelado" : "pendiente"] ?? statusMap.pendiente
+                        const prioridad = { alta: "text-destructive", urgente: "text-destructive", normal: "text-muted-foreground", baja: "text-muted-foreground" }
                         return (
-                          <tr key={s.orderId} className="hover:bg-muted/20 transition-colors">
-                            <td className="px-4 py-3 font-medium text-foreground">{s.orderId}</td>
-                            <td className="px-4 py-3 text-muted-foreground">{s.type}</td>
-                            <td className="px-4 py-3 text-muted-foreground">{s.date}</td>
-                            <td className="px-4 py-3 text-muted-foreground">{s.technicianName}</td>
+                          <tr key={o.id} className="hover:bg-muted/20 transition-colors">
+                            <td className="px-4 py-3 font-medium text-foreground">{o.orderId}</td>
+                            <td className="px-4 py-3 text-muted-foreground">{o.type}</td>
+                            <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{o.scheduledDate}</td>
+                            <td className="px-4 py-3 text-muted-foreground truncate max-w-[160px]">{o.address}</td>
                             <td className="px-4 py-3">
                               <Badge variant="outline" className={cn("text-[10px]", st.color)}>{st.label}</Badge>
                             </td>
-                            <td className="px-4 py-3 text-right font-medium">${s.amount.toLocaleString()}</td>
-                            <td className="px-4 py-3 text-center">
-                              {s.rating !== null ? (
-                                <div className="flex items-center justify-center gap-1 text-xs text-amber-600">
-                                  <Star className="h-3 w-3 fill-amber-400" />
-                                  {s.rating}
-                                </div>
-                              ) : (
-                                <span className="text-xs text-muted-foreground">--</span>
-                              )}
+                            <td className={cn("px-4 py-3 text-xs capitalize", prioridad[o.priority] ?? "text-muted-foreground")}>
+                              {o.priority}
                             </td>
                           </tr>
                         )
                       })}
                     </tbody>
                   </table>
-                  {customer.services.length === 0 && (
+                  {myOrders.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                       <ClipboardList className="h-10 w-10 mb-3 opacity-30" />
                       <p className="text-sm">No hay ordenes de servicio</p>
@@ -687,7 +687,23 @@ export default function ClientPortalPage() {
 
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold text-muted-foreground">Equipo / Unidad</Label>
-                  <Input className="h-9" placeholder="Ej: HVAC Piso 3, Caldera Principal..." />
+                  {customerAssets.length > 0 ? (
+                    <Select value={selectedAssetId} onValueChange={setSelectedAssetId}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Seleccioná un equipo..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="otro">Otro / No listado</SelectItem>
+                        {customerAssets.map((a) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            {a.name} — {a.asset_id}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input className="h-9" placeholder="Ej: HVAC Piso 3, Caldera Principal..." />
+                  )}
                 </div>
 
                 <div className="space-y-1.5">

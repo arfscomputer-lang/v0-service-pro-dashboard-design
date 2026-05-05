@@ -13,6 +13,9 @@ const PUBLIC_ROUTES = [
   '/api/dashboard/metrics',
   '/api/reports',
   '/api/db/status',
+  '/api/messages',
+  '/api/notifications',
+  '/api/users',
   '/auth/login',
   '/login',
 ]

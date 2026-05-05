@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getAssetById, updateAsset, deleteAsset, updateAssetMaintenanceDates } from "@/lib/db"
+import { getAssetById, updateAsset, deleteAsset, updateAssetMaintenanceDates, upsertMaintenanceOccurrences } from "@/lib/db"
 import { calculateNextMaintenanceDate, AssetMaintenanceInfo } from "@/lib/maintenance"
 
 // Auto-calculate interval_months from recurrence_type
@@ -22,6 +22,7 @@ export async function GET(
     }
     return NextResponse.json(asset)
   } catch (error) {
+    console.error("[v0] Error fetching asset:", error)
     return NextResponse.json({ error: "Failed to fetch asset" }, { status: 500 })
   }
 }
@@ -54,7 +55,10 @@ export async function PUT(
       const nextDate = calculateNextMaintenanceDate(updated as AssetMaintenanceInfo)
       if (nextDate) {
         const withDates = await updateAssetMaintenanceDates(updated.id, nextDate)
-        if (withDates) return NextResponse.json(withDates)
+        if (withDates) {
+          await upsertMaintenanceOccurrences(withDates.id, withDates as AssetMaintenanceInfo)
+          return NextResponse.json(withDates)
+        }
       }
     }
 

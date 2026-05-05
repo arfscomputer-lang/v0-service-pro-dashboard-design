@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getMaintenancePlans } from "@/lib/db"
+import { getMaintenancePlans, autoGenerateWorkOrdersFromOccurrences } from "@/lib/db"
 import { getMaintenanceStatus, daysUntilMaintenance, AssetMaintenanceInfo } from "@/lib/maintenance"
 
 export async function GET(req: NextRequest) {
@@ -7,6 +7,11 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const customer_id = searchParams.get("customer_id") || undefined
     const search = searchParams.get("search") || undefined
+
+    // Auto-generate work orders for occurrences within the next 30 days
+    autoGenerateWorkOrdersFromOccurrences({ customer_id }).catch((e) =>
+      console.error("[v0] autoGenerate error:", e)
+    )
 
     const assets = await getMaintenancePlans({ customer_id, search }) as (AssetMaintenanceInfo & {
       customer_name: string

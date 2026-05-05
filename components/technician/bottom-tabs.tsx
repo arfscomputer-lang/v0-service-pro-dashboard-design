@@ -2,12 +2,13 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { CalendarDays, ClipboardList, User, MessageSquare } from "lucide-react"
+import { CalendarDays, ClipboardList, User, MessageSquare, ScanLine } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const tabs = [
   { icon: CalendarDays, label: "Agenda", href: "/tecnico/agenda" },
   { icon: ClipboardList, label: "Historial", href: "/tecnico/historial" },
+  { icon: ScanLine, label: "Escanear", href: "/tecnico/escanear" },
   { icon: MessageSquare, label: "Mensajes", href: "/tecnico/mensajes" },
   { icon: User, label: "Perfil", href: "/tecnico/perfil" },
 ]

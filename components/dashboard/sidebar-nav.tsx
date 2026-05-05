@@ -22,6 +22,7 @@ import {
   DollarSign,
   Zap,
   CalendarCheck,
+  MessageSquare,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -49,6 +50,7 @@ const navItems: NavItem[] = [
   { icon: DollarSign, label: "Presupuestos", href: "/presupuestos", roles: ["admin", "supervisor"] },
   { icon: BarChart3, label: "Reportes", href: "/reportes", roles: ["admin", "supervisor"] },
   { icon: FileText, label: "Facturas", href: "/facturas", roles: ["admin"] },
+  { icon: MessageSquare, label: "Mensajes", href: "/mensajes", roles: ["admin", "supervisor"] },
   { icon: Smartphone, label: "Vista Tecnico", href: "/tecnico/agenda", roles: ["admin", "tecnico"] },
   { icon: Settings, label: "Configuracion", href: "/configuracion", roles: ["admin"] },
 ]

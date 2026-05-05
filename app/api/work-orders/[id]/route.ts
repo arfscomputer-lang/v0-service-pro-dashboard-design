@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getWorkOrderById, updateWorkOrder, deleteWorkOrder } from "@/lib/db"
+import { getWorkOrderById, updateWorkOrder, deleteWorkOrder, query } from "@/lib/db"
+
+async function ensureColumns() {
+  await query(`ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS technician_started_at TIMESTAMPTZ`).catch(() => {})
+  await query(`ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS technician_completed_at TIMESTAMPTZ`).catch(() => {})
+  await query(`ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS technician_notes TEXT`).catch(() => {})
+  await query(`ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS asset_id UUID`).catch(() => {})
+  await query(`ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS category VARCHAR(50) DEFAULT 'Otros'`).catch(() => {})
+}
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -17,6 +25,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    await ensureColumns()
     const { id } = await params
     const body = await req.json()
     const workOrder = await updateWorkOrder(id, body)
@@ -27,7 +36,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({ data: workOrder }, { status: 200 })
   } catch (error) {
     console.error("[v0] Error updating work order:", error)
-    return NextResponse.json({ error: "Failed to update work order" }, { status: 500 })
+    const msg = error instanceof Error ? error.message : String(error)
+    return NextResponse.json({ error: "Failed to update work order", details: msg }, { status: 500 })
   }
 }
 

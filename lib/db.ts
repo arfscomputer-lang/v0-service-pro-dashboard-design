@@ -1,4 +1,5 @@
 import { neon } from "@neondatabase/serverless"
+import { generateOccurrenceDates, AssetMaintenanceInfo } from "@/lib/maintenance"
 
 function getSql() {
   if (!process.env.DATABASE_URL) {
@@ -375,12 +376,24 @@ function normalizeWorkOrder(row: any) {
     scheduledTime: row.scheduled_time || '',
     customerId: row.customer_id || null,
     technicianId: row.technician_id || null,
+    assetId: row.asset_id || null,
+    category: row.category || 'Otros',
     createdAt: row.created_at || '',
     updatedAt: row.updated_at || '',
+    technicianStartedAt: row.technician_started_at || null,
+    technicianCompletedAt: row.technician_completed_at || null,
+    technicianNotes: row.technician_notes || null,
   }
 }
 
-export async function listWorkOrders() {
+export async function listWorkOrders(technician_id?: string) {
+  if (technician_id) {
+    const rows = await getMany<any>(
+      `SELECT * FROM work_orders WHERE technician_id = $1 ORDER BY scheduled_date DESC, scheduled_time DESC`,
+      [technician_id]
+    )
+    return rows.map(normalizeWorkOrder)
+  }
   const rows = await getMany<any>(`SELECT * FROM work_orders ORDER BY scheduled_date DESC, scheduled_time DESC`)
   return rows.map(normalizeWorkOrder)
 }
@@ -415,22 +428,34 @@ export async function updateWorkOrder(id: string, data: Record<string, any>) {
   const values: any[] = []
   let idx = 1
 
+  // Lazy: ensure optional columns exist
+  await query(`ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS asset_id UUID`).catch(() => {})
+  await query(`ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS category TEXT`).catch(() => {})
+
   const allowedFields: Record<string, string> = {
     order_id: "order_id", type: "type", description: "description",
     status: "status", priority: "priority", address: "address",
     city: "city", scheduled_date: "scheduled_date", scheduled_time: "scheduled_time",
     customer_id: "customer_id", technician_id: "technician_id",
+    asset_id: "asset_id", category: "category",
+    technician_started_at: "technician_started_at",
+    technician_completed_at: "technician_completed_at",
+    technician_notes: "technician_notes",
   }
+
+  // Columns that are nullable (empty string → null)
+  const nullableColumns = new Set(["customer_id", "technician_id", "asset_id", "technician_started_at", "technician_completed_at", "technician_notes"])
 
   for (const [key, col] of Object.entries(allowedFields)) {
     if (data[key] !== undefined) {
-      // Skip technician_id if it's not a valid UUID (e.g., "tech-3" from frontend data)
       if (col === "technician_id" && data[key] && !isValidUUID(data[key])) {
         console.log(`[v0] Skipping invalid technician_id: ${data[key]}`)
         continue
       }
+      // Only convert empty string to null for nullable columns
+      const value = nullableColumns.has(col) ? (data[key] || null) : data[key]
       sets.push(`${col} = $${idx}`)
-      values.push(data[key] || null)
+      values.push(value)
       idx++
     }
   }
@@ -581,7 +606,10 @@ export async function createAsset(data: {
   model?: string
   year_manufactured?: number
   site_location?: string
+  department?: string
   capacity?: string
+  lat?: number
+  lng?: number
   has_maintenance_plan?: boolean
   recurrence_type?: string
   interval_months?: number
@@ -589,16 +617,22 @@ export async function createAsset(data: {
   interval_cycles?: number
   hours_threshold_alert?: number
 }) {
+  await Promise.all([
+    query(`ALTER TABLE assets ADD COLUMN IF NOT EXISTS department TEXT`).catch(() => {}),
+    query(`ALTER TABLE assets ADD COLUMN IF NOT EXISTS lat NUMERIC(10,7)`).catch(() => {}),
+    query(`ALTER TABLE assets ADD COLUMN IF NOT EXISTS lng NUMERIC(10,7)`).catch(() => {}),
+  ])
   const result = await query(
     `INSERT INTO assets (
-      asset_id, name, customer_id, type, category, serial_number, status, 
-      criticality, description, brand, model, year_manufactured, 
-      site_location, capacity, has_maintenance_plan, recurrence_type, 
+      asset_id, name, customer_id, type, category, serial_number, status,
+      criticality, description, brand, model, year_manufactured,
+      site_location, department, capacity, lat, lng,
+      has_maintenance_plan, recurrence_type,
       interval_months, interval_hours, interval_cycles, hours_threshold_alert,
       created_at, updated_at
     ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 
-      $15, $16, $17, $18, $19, $20, NOW(), NOW()
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+      $16, $17, $18, $19, $20, $21, $22, $23, NOW(), NOW()
     ) RETURNING *`,
     [
       data.asset_id,
@@ -614,7 +648,10 @@ export async function createAsset(data: {
       data.model || '',
       data.year_manufactured || null,
       data.site_location || null,
+      data.department || null,
       data.capacity || null,
+      data.lat || null,
+      data.lng || null,
       data.has_maintenance_plan || false,
       data.recurrence_type || null,
       data.interval_months || null,
@@ -631,7 +668,43 @@ export async function getAssets() {
 }
 
 export async function getAssetById(id: string) {
-  return getOne(`SELECT * FROM assets WHERE id = $1`, [id])
+  await query(`ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS asset_id UUID`).catch(() => {})
+  await query(`ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS category VARCHAR(50) DEFAULT 'Otros'`).catch(() => {})
+
+  // Search by UUID first; fall back to short-code for old QR codes that only have asset_id
+  let asset = await getOne<any>(`SELECT * FROM assets WHERE id = $1`, [id]).catch(() => null)
+  if (!asset) {
+    asset = await getOne<any>(`SELECT * FROM assets WHERE asset_id = $1`, [id]).catch(() => null)
+  }
+  if (!asset) return null
+
+  const assetUuid: string = asset.id
+
+  const lastService = await getOne<any>(
+    `SELECT
+       COALESCE(u.name, 'Sin asignar')  AS last_technician_name,
+       wo.type                          AS last_service_type,
+       wo.description                   AS last_service_description,
+       wo.technician_notes              AS last_technician_notes,
+       COALESCE(wo.technician_completed_at, wo.updated_at) AS last_service_date
+     FROM work_orders wo
+     LEFT JOIN users u ON u.id = wo.technician_id
+     WHERE wo.status = 'completada'
+       AND (
+         wo.asset_id = $1::uuid
+         OR wo.order_id IN (
+           SELECT work_order_id FROM maintenance_occurrences
+           WHERE asset_id = $1::uuid AND work_order_id IS NOT NULL
+         )
+         OR wo.description ILIKE $2
+       )
+     ORDER BY COALESCE(wo.technician_completed_at, wo.updated_at) DESC NULLS LAST
+     LIMIT 1`,
+    [assetUuid, `%${asset.asset_id}%`]
+  ).catch((e) => { console.error('[db] lastService query error:', e); return null })
+
+  console.log(`[db] getAssetById ${assetUuid} (${asset.asset_id}): lastService =`, lastService ? `found — ${lastService.last_technician_name}` : 'null')
+  return { ...asset, lastService: lastService ?? null }
 }
 
 export async function getAssetsByCustomer(customer_id: string) {
@@ -754,11 +827,16 @@ export async function getMaintenanceHistoryByAsset(asset_internal_id: string) {
   return getMany(
     `SELECT
        wo.id, wo.order_id, wo.status, wo.scheduled_date,
-       wo.completed_date, wo.description, wo.notes,
+       wo.technician_completed_at AS completed_date,
+       wo.description,
+       wo.technician_notes AS notes,
        wo.created_at,
-       u.name AS technician_name
+       CASE
+         WHEN wo.technician_notes LIKE 'Técnico:%'
+         THEN split_part(wo.technician_notes, chr(10), 1)
+         ELSE NULL
+       END AS technician_name
      FROM work_orders wo
-     LEFT JOIN users u ON u.id = wo.assigned_to
      WHERE wo.type = 'preventivo'
        AND wo.description LIKE $1
      ORDER BY wo.created_at DESC
@@ -779,16 +857,20 @@ export async function completeMaintenanceExecution(data: {
   next_maintenance_date: Date | null
 }) {
   // 1. Create the completed work order
-  const orderId = `PREV-${data.asset_id.toUpperCase()}-${Date.now()}`
+  const orderId = `PV-${Date.now().toString(36).toUpperCase().slice(-8)}`
+  const techNotes = [
+    data.technician_name ? `Técnico: ${data.technician_name}` : null,
+    data.notes || null,
+  ].filter(Boolean).join('\n') || null
   const wo = await getOne(
-    `INSERT INTO work_orders (order_id, customer_id, type, status, category, priority, description, notes, scheduled_date, completed_date, created_at, updated_at)
-     VALUES ($1, $2, 'preventivo', 'completada', 'Preventivo', 'normal', $3, $4, $5, $5, NOW(), NOW())
+    `INSERT INTO work_orders (order_id, customer_id, type, status, priority, description, technician_notes, address, city, scheduled_date, scheduled_time, technician_completed_at, created_at, updated_at)
+     VALUES ($1, $2, 'preventivo', 'completada', 'normal', $3, $4, '', '', $5::date, '00:00', $5::timestamptz, NOW(), NOW())
      RETURNING *`,
     [
       orderId,
       data.customer_id,
       `Mantenimiento preventivo: ${data.asset_name} (${data.asset_id})`,
-      data.notes || null,
+      techNotes,
       data.completed_date,
     ]
   )
@@ -802,6 +884,25 @@ export async function completeMaintenanceExecution(data: {
      WHERE id = $3`,
     [data.completed_date, data.next_maintenance_date, data.asset_internal_id]
   )
+
+  // 3. Mark the oldest pending occurrence as completed and link to the new work order
+  const woRow = wo as any
+  if (woRow?.order_id) {
+    await linkOccurrenceToWorkOrder(
+      data.asset_internal_id,
+      woRow.order_id,
+      data.completed_date,
+      data.notes || undefined
+    )
+  }
+
+  // 4. Regenerate pending occurrences from the new next_maintenance_date
+  if (data.next_maintenance_date) {
+    const updatedAsset = await getOne<any>(`SELECT * FROM assets WHERE id = $1`, [data.asset_internal_id])
+    if (updatedAsset) {
+      await upsertMaintenanceOccurrences(data.asset_internal_id, updatedAsset as AssetMaintenanceInfo)
+    }
+  }
 
   return wo
 }
@@ -835,4 +936,198 @@ export async function createPreventiveWorkOrder(data: {
       data.scheduled_date,
     ]
   )
+}
+
+// ============================================
+// MAINTENANCE OCCURRENCES
+// ============================================
+
+async function ensureMaintenanceOccurrencesTable() {
+  await query(`
+    CREATE TABLE IF NOT EXISTS maintenance_occurrences (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      asset_id UUID NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
+      scheduled_date DATE NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pendiente',
+      work_order_id TEXT REFERENCES work_orders(order_id),
+      generated_at TIMESTAMPTZ DEFAULT NOW(),
+      completed_at TIMESTAMPTZ,
+      notes TEXT
+    )
+  `).catch(() => {})
+  await query(`CREATE INDEX IF NOT EXISTS idx_mo_asset_id ON maintenance_occurrences(asset_id)`).catch(() => {})
+  await query(`CREATE INDEX IF NOT EXISTS idx_mo_scheduled_date ON maintenance_occurrences(scheduled_date)`).catch(() => {})
+}
+
+export async function upsertMaintenanceOccurrences(
+  asset_internal_id: string,
+  asset: AssetMaintenanceInfo
+) {
+  await ensureMaintenanceOccurrencesTable()
+  const dates = generateOccurrenceDates(asset)
+  if (dates.length === 0) return []
+
+  // Replace all pending occurrences; keep completed ones untouched
+  await query(
+    `DELETE FROM maintenance_occurrences WHERE asset_id = $1 AND status = 'pendiente'`,
+    [asset_internal_id]
+  )
+
+  const results: any[] = []
+  for (const date of dates) {
+    const row = await getOne(
+      `INSERT INTO maintenance_occurrences (asset_id, scheduled_date) VALUES ($1, $2) RETURNING *`,
+      [asset_internal_id, date]
+    )
+    if (row) results.push(row)
+  }
+
+  // Auto-generate work orders for occurrences within the next 30 days
+  await autoGenerateWorkOrdersFromOccurrences({ asset_id: asset_internal_id })
+
+  return results
+}
+
+export async function getMaintenanceOccurrences(filters: {
+  asset_id?: string
+  customer_id?: string
+  status?: string
+  from?: string
+  to?: string
+}) {
+  await ensureMaintenanceOccurrencesTable()
+
+  const conditions: string[] = []
+  const params: any[] = []
+  let idx = 1
+
+  if (filters.asset_id) { conditions.push(`mo.asset_id = $${idx++}`); params.push(filters.asset_id) }
+  if (filters.customer_id) { conditions.push(`a.customer_id = $${idx++}`); params.push(filters.customer_id) }
+  if (filters.status) { conditions.push(`mo.status = $${idx++}`); params.push(filters.status) }
+  if (filters.from) { conditions.push(`mo.scheduled_date >= $${idx++}`); params.push(filters.from) }
+  if (filters.to) { conditions.push(`mo.scheduled_date <= $${idx++}`); params.push(filters.to) }
+
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
+
+  return getMany(
+    `SELECT
+       mo.id, mo.asset_id, mo.scheduled_date, mo.status,
+       mo.work_order_id, mo.generated_at, mo.completed_at, mo.notes,
+       a.asset_id AS asset_code, a.name AS asset_name,
+       a.customer_id, c.name AS customer_name
+     FROM maintenance_occurrences mo
+     JOIN assets a ON a.id = mo.asset_id
+     LEFT JOIN customers c ON c.id = a.customer_id
+     ${where}
+     ORDER BY mo.scheduled_date ASC`,
+    params
+  )
+}
+
+export async function linkOccurrenceToWorkOrder(
+  asset_internal_id: string,
+  work_order_id: string,
+  completed_at: Date,
+  notes?: string
+) {
+  await ensureMaintenanceOccurrencesTable()
+
+  const occurrence = await getOne<{ id: string }>(
+    `SELECT id FROM maintenance_occurrences
+     WHERE asset_id = $1 AND status = 'pendiente'
+     ORDER BY scheduled_date ASC LIMIT 1`,
+    [asset_internal_id]
+  )
+  if (!occurrence) return null
+
+  await query(
+    `UPDATE maintenance_occurrences
+     SET status = 'completada', work_order_id = $1, completed_at = $2, notes = $3
+     WHERE id = $4`,
+    [work_order_id, completed_at, notes || null, occurrence.id]
+  )
+  return occurrence
+}
+
+export async function autoGenerateWorkOrdersFromOccurrences(filters: {
+  asset_id?: string
+  customer_id?: string
+  days_ahead?: number
+}) {
+  await ensureMaintenanceOccurrencesTable()
+
+  const daysAhead = filters.days_ahead ?? 30
+  const conditions = [
+    `mo.status = 'pendiente'`,
+    `mo.work_order_id IS NULL`,
+    `mo.scheduled_date <= CURRENT_DATE + INTERVAL '1 day' * $1`,
+  ]
+  const params: any[] = [daysAhead]
+  let idx = 2
+
+  if (filters.asset_id) {
+    conditions.push(`mo.asset_id = $${idx++}`)
+    params.push(filters.asset_id)
+  }
+  if (filters.customer_id) {
+    conditions.push(`a.customer_id = $${idx++}`)
+    params.push(filters.customer_id)
+  }
+
+  const due = await getMany<any>(
+    `SELECT mo.id AS occurrence_id, mo.scheduled_date,
+            a.id AS asset_internal_id, a.asset_id AS asset_code,
+            a.name AS asset_name, a.customer_id
+     FROM maintenance_occurrences mo
+     JOIN assets a ON a.id = mo.asset_id
+     WHERE ${conditions.join(' AND ')}
+     ORDER BY mo.scheduled_date ASC`,
+    params
+  )
+
+  const created: string[] = []
+
+  for (const occ of due) {
+    const datePart = String(occ.scheduled_date).slice(0, 7).replace('-', '')
+    const codePart = String(occ.asset_code).replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 8)
+    const orderId = `PV-${codePart}-${datePart}`
+
+    const existing = await getOne<{ id: string }>(
+      `SELECT id FROM work_orders WHERE order_id = $1`,
+      [orderId]
+    )
+    if (existing) {
+      // Link occurrence to the already-existing work order
+      await query(
+        `UPDATE maintenance_occurrences SET work_order_id = $1 WHERE id = $2 AND work_order_id IS NULL`,
+        [orderId, occ.occurrence_id]
+      )
+      continue
+    }
+
+    const wo = await getOne<any>(
+      `INSERT INTO work_orders
+         (order_id, customer_id, type, status, priority, description,
+          scheduled_date, scheduled_time, address, city, asset_id, category, created_at, updated_at)
+       VALUES ($1, $2, 'preventivo', 'pendiente', 'normal', $3, $4, '08:00', '', '', $5, 'Preventivo', NOW(), NOW())
+       RETURNING id, order_id`,
+      [
+        orderId,
+        occ.customer_id,
+        `Mantenimiento preventivo: ${occ.asset_name} (${occ.asset_code})`,
+        occ.scheduled_date,
+        occ.asset_internal_id,
+      ]
+    )
+
+    if (wo?.id) {
+      await query(
+        `UPDATE maintenance_occurrences SET work_order_id = $1 WHERE id = $2`,
+        [wo.id, occ.occurrence_id]
+      )
+      created.push(wo.order_id)
+    }
+  }
+
+  return created
 }
