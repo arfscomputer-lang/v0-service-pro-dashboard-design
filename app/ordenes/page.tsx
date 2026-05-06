@@ -249,7 +249,7 @@ export default function OrdenesPage() {
                       <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 h-5 hidden sm:flex", pr.badge)}>
                         {pr.label}
                       </Badge>
-                      <Link href={`/orden/${order.id}`}>
+                      <Link href={`/ordenes/${order.id}`}>
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                           <ChevronRight className="h-4 w-4" />
                         </Button>
