@@ -130,9 +130,10 @@ export default function OrderDetailPage() {
 
   // ── Load order ──────────────────────────────────────────────
   useEffect(() => {
-    // Seed from context for instant render, then refresh from API for full data
+    // Seed from context for instant render
     const found = workOrders.find(wo => wo.id === orderId)
     if (found) { setOrder(found); setEditForm(found) }
+    // Always fetch directly from API — response includes technicianName via JOIN
     fetch(`/api/work-orders/${orderId}`)
       .then(r => r.ok ? r.json() : null)
       .then(j => {
@@ -141,7 +142,8 @@ export default function OrderDetailPage() {
       })
       .catch(() => {})
       .finally(() => setIsLoading(false))
-  }, [orderId, workOrders])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderId])
 
   // ── Load technicians ────────────────────────────────────────
   useEffect(() => {
@@ -156,7 +158,7 @@ export default function OrderDetailPage() {
     if (!order?.customerId) return
     fetch(`/api/customers/${order.customerId}`)
       .then(r => r.ok ? r.json() : null)
-      .then(j => { if (j) setCustomer(j.data ?? j) })
+      .then(j => { if (j) setCustomer(j.data ?? j.customer ?? j) })
       .catch(() => {})
   }, [order?.customerId])
 
