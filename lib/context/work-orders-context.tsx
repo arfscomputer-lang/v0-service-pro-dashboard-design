@@ -17,6 +17,9 @@ export interface WorkOrder {
   scheduledTime: string
   customerId: string | null
   technicianId: string | null
+  technicianName?: string | null
+  technicianRole?: string | null
+  technicianPhone?: string | null
   assetId: string | null
   createdAt: string
   updatedAt: string

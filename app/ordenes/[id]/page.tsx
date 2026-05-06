@@ -130,9 +130,17 @@ export default function OrderDetailPage() {
 
   // ── Load order ──────────────────────────────────────────────
   useEffect(() => {
+    // Seed from context for instant render, then refresh from API for full data
     const found = workOrders.find(wo => wo.id === orderId)
     if (found) { setOrder(found); setEditForm(found) }
-    setIsLoading(false)
+    fetch(`/api/work-orders/${orderId}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(j => {
+        const wo = j?.data ?? j
+        if (wo?.id) { setOrder(wo); setEditForm(wo) }
+      })
+      .catch(() => {})
+      .finally(() => setIsLoading(false))
   }, [orderId, workOrders])
 
   // ── Load technicians ────────────────────────────────────────
@@ -308,7 +316,9 @@ export default function OrderDetailPage() {
     </div>
   )
 
-  const assignedTech = technicians.find(t => t.id === order.technicianId)
+  const assignedTechName = order.technicianName || technicians.find(t => t.id === order.technicianId)?.name || null
+  const assignedTechRole = order.technicianRole || technicians.find(t => t.id === order.technicianId)?.role || null
+  const assignedTechPhone = order.technicianPhone || technicians.find(t => t.id === order.technicianId)?.phone || null
   const refacciones = expenses.filter(e => ['repuestos', 'terceros'].includes(e.category))
   const manoDeObra  = expenses.filter(e => e.category === 'mano_de_obra')
   const otrosGastos = expenses.filter(e => !['repuestos', 'terceros', 'mano_de_obra'].includes(e.category))
@@ -379,23 +389,23 @@ export default function OrderDetailPage() {
                 {technicians.map(t => <SelectItem key={t.id} value={t.id}>{t.name}{t.role ? ` — ${t.role}` : ''}</SelectItem>)}
               </SelectContent>
             </Select>
-          ) : assignedTech ? (
+          ) : assignedTechName ? (
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-700">
-                {assignedTech.name[0]}
+                {assignedTechName[0]}
               </div>
               <div>
-                <p className="text-sm font-medium">{assignedTech.name}</p>
-                {assignedTech.role && <p className="text-xs text-muted-foreground">{assignedTech.role}</p>}
-                {assignedTech.phone && (
+                <p className="text-sm font-medium">{assignedTechName}</p>
+                {assignedTechRole && <p className="text-xs text-muted-foreground">{assignedTechRole}</p>}
+                {assignedTechPhone && (
                   <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-                    <Phone className="h-3 w-3" />{assignedTech.phone}
+                    <Phone className="h-3 w-3" />{assignedTechPhone}
                   </div>
                 )}
               </div>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">Sin asignar</p>
+            <p className="text-sm text-muted-foreground">{order.technicianId ? 'Cargando...' : 'Sin asignar'}</p>
           )}
         </CardContent>
       </Card>

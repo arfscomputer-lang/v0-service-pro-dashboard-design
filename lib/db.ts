@@ -376,6 +376,9 @@ function normalizeWorkOrder(row: any) {
     scheduledTime: row.scheduled_time || '',
     customerId: row.customer_id || null,
     technicianId: row.technician_id || null,
+    technicianName: row.technician_name || null,
+    technicianRole: row.technician_role || null,
+    technicianPhone: row.technician_phone || null,
     assetId: row.asset_id || null,
     category: row.category || 'Otros',
     createdAt: row.created_at || '',
@@ -399,7 +402,16 @@ export async function listWorkOrders(technician_id?: string) {
 }
 
 export async function getWorkOrderById(id: string) {
-  const row = await getOne<any>(`SELECT * FROM work_orders WHERE id = $1`, [id])
+  const row = await getOne<any>(
+    `SELECT wo.*,
+            t.name  AS technician_name,
+            t.role  AS technician_role,
+            t.phone AS technician_phone
+     FROM work_orders wo
+     LEFT JOIN technicians t ON t.id = wo.technician_id
+     WHERE wo.id = $1`,
+    [id]
+  )
   return row ? normalizeWorkOrder(row) : null
 }
 
