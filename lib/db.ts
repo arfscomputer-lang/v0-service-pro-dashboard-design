@@ -682,12 +682,13 @@ export async function getAssetById(id: string) {
 
   const lastService = await getOne<any>(
     `SELECT
-       COALESCE(u.name, 'Sin asignar')  AS last_technician_name,
+       COALESCE(t.name, u.name, 'Sin asignar') AS last_technician_name,
        wo.type                          AS last_service_type,
        wo.description                   AS last_service_description,
        wo.technician_notes              AS last_technician_notes,
        COALESCE(wo.technician_completed_at, wo.updated_at) AS last_service_date
      FROM work_orders wo
+     LEFT JOIN technicians t ON t.id = wo.technician_id
      LEFT JOIN users u ON u.id = wo.technician_id
      WHERE wo.status = 'completada'
        AND (
