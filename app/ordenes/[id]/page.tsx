@@ -259,7 +259,15 @@ export default function OrderDetailPage() {
       if (data.scheduledDate) data.scheduledDate = new Date(data.scheduledDate).toISOString().split('T')[0]
       await updateWorkOrder(order.id, data)
       setIsEditing(false)
-      setOrder({ ...order, ...data })
+      // Re-fetch so technicianName (from JOIN) updates immediately
+      const res = await fetch(`/api/work-orders/${orderId}`)
+      if (res.ok) {
+        const j = await res.json()
+        const wo = j?.data ?? j
+        if (wo?.id) { setOrder(wo); setEditForm(wo) }
+      } else {
+        setOrder({ ...order, ...data })
+      }
     } catch { alert('Error al guardar la orden') }
     finally { setIsSaving(false) }
   }
