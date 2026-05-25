@@ -1,16 +1,12 @@
 'use client'
 
-import { useState, useCallback } from 'react'
-import {
-  Plus, X, Printer, DollarSign, Building2, FileText,
-  Cog, HardHat, Receipt, ClipboardList, Trash2, Zap,
-  Camera, FilePlus, Eye, Edit3
-} from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { SidebarNav } from '@/components/dashboard/sidebar-nav'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
+import { Badge } from '@/components/ui/badge'
 import {
   Select,
   SelectContent,
@@ -18,910 +14,268 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { CATALOGO_PRODUCTOS } from '@/lib/catalogo-cctv'
-import { KitSelector } from '@/components/budget/kit-selector'
-import { MaterialCalculator } from '@/components/budget/material-calculator'
-import { SaveKitDialog } from '@/components/budget/save-kit-dialog'
-import { savePriceHistory, getHistoricalPrice } from '@/lib/price-history'
-import { PriceHistoryHint } from '@/components/budget/price-history-hint'
+import {
+  FileText,
+  Plus,
+  Search,
+  Eye,
+  Trash2,
+  Send,
+  ChevronRight,
+  Filter,
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { RUBROS } from '@/lib/rubro-kits'
 
-// Currency exchange rates (example rates - in production, fetch from API)
-const EXCHANGE_RATES: Record<string, number> = {
-  USD: 1,
-  VES: 36.5, // Venezuelan Bolívares
-  PYG: 6800, // Paraguayan Guaraní
+interface Budget {
+  id: string
+  numero: string
+  rubro: string
+  status: string
+  customer_name: string | null
+  total: number
+  currency: string
+  fecha: string
+  created_at: string
 }
 
-const INITIAL_COMPANY = {
-  name: '',
-  rif: '',
-  address: '',
-  phone: '',
-  email: '',
+const STATUS_CONFIG: Record<string, { label: string; className: string; rowClass?: string; pulse?: boolean }> = {
+  borrador:    { label: 'Borrador',    className: 'bg-gray-100 text-gray-600 border-gray-200' },
+  enviado:     { label: 'Enviado',     className: 'bg-blue-100 text-blue-700 border-blue-200' },
+  en_revision: { label: 'En Revisión', className: 'bg-amber-100 text-amber-700 border-amber-300', rowClass: 'bg-amber-50/40 border-l-2 border-l-amber-400', pulse: true },
+  devuelto:    { label: 'Devuelto',    className: 'bg-orange-100 text-orange-700 border-orange-300', rowClass: 'bg-orange-50/30' },
+  aceptado:    { label: 'Aceptado',    className: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+  rechazado:   { label: 'Rechazado',   className: 'bg-red-100 text-red-700 border-red-200' },
 }
 
-const INITIAL_PROJECT = {
-  number: `CCTV-${String(Math.floor(Math.random() * 900) + 100)}`,
-  date: new Date().toISOString().split('T')[0],
-  validity: '15 días',
-  client: '',
-  location: '',
-}
-
-const DEFAULT_EQUIPMENT = CATALOGO_PRODUCTOS.equiposPrincipales
-  .slice(0, 5)
-  .map((producto, idx) => ({
-    id: idx + 1,
-    desc: `${producto.nombre} (${producto.marca} ${producto.modelo})`,
-    unit: 'Und',
-    qty: 0,
-    price: 0,
-  }))
-
-const DEFAULT_MATERIALS = CATALOGO_PRODUCTOS.materialesInstalacion
-  .slice(0, 5)
-  .map((producto, idx) => ({
-    id: idx + 1,
-    desc: `${producto.nombre} (${producto.marca})`,
-    unit: 'Und',
-    qty: 0,
-    price: 0,
-  }))
-
-const DEFAULT_LABOR = [
-  { id: 1, desc: 'Instalación cableado estructurado', unit: 'Gbl', qty: 1, price: 200 },
-  { id: 2, desc: 'Montaje y fijación de cámaras', unit: 'Gbl', qty: 1, price: 160 },
-]
-
-const DEFAULT_CONDITIONS = [
-  'Forma de pago: 50% anticipo, 50% contra entrega e instalación.',
-  'Tiempo de entrega de materiales: 5-10 días hábiles.',
-  'Garantía de equipos: 1 año por defectos de fábrica.',
-]
-
-function fmt(n: number, currency: string = 'USD') {
-  const rate = EXCHANGE_RATES[currency] || 1
-  const converted = n * rate
-  const symbols: Record<string, string> = { USD: '$', VES: 'Bs.', PYG: '₲' }
-  const symbol = symbols[currency] || '$'
-  return `${symbol} ${converted.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-}
-
-function sumSection(items: any[]) {
-  return items.reduce((s, i) => s + i.qty * i.price, 0)
-}
-
-let _id = 100
-function nid() {
-  return ++_id
-}
-
-interface Item {
-  id: number
-  desc: string
-  unit: string
-  qty: number
-  price: number
-}
-
-interface SectionTableProps {
-  title: string
-  icon: LucideIcon
-  items: Item[]
-  setItems: (items: Item[]) => void
-  color: string
-  currency: 'USD' | 'VES' | 'PYG'
-  catalogItems?: { nombre: string; precio?: number }[]
-}
-
-function SectionTable({ title, icon: Icon, items, setItems, color, currency, catalogItems = [] }: SectionTableProps) {
-  const [openDropdown, setOpenDropdown] = useState<number | null>(null)
-  const [searchText, setSearchText] = useState<Record<number, string>>({})
-  const [editingPrice, setEditingPrice] = useState<Record<number, string>>({})
-
-  const add = () =>
-    setItems([...items, { id: nid(), desc: '', unit: 'Und', qty: 1, price: 0 }])
-  const remove = (id: number) => setItems(items.filter((i) => i.id !== id))
-  const update = (id: number, field: string, val: any) =>
-    setItems(
-      items.map((i) =>
-        i.id === id
-          ? {
-              ...i,
-              [field]: field === 'qty' || field === 'price' ? parseFloat(val) || 0 : val,
-            }
-          : i
-      )
-    )
-
-  const handleSelectFromCatalog = (id: number, item: { nombre: string; precio?: number }) => {
-    update(id, 'desc', item.nombre)
-    if (item.precio) update(id, 'price', item.precio)
-    setOpenDropdown(null)
-    setSearchText({ ...searchText, [id]: '' })
-  }
-
-  const getFilteredCatalog = (id: number) => {
-    const search = searchText[id]?.toLowerCase() || ''
-    return catalogItems.filter((item) => item.nombre.toLowerCase().includes(search))
-  }
-
-  return (
-    <div className="bg-card border border-border rounded-lg overflow-hidden">
-      <div
-        className="px-6 py-3 flex items-center gap-3 text-white"
-        style={{ backgroundColor: color }}
-      >
-        <Icon className="h-5 w-5 shrink-0 opacity-90" />
-        <span className="font-semibold text-base flex-1 tracking-wide">{title}</span>
-        <span className="text-xs font-medium opacity-75 bg-white/20 rounded-full px-2 py-0.5">{items.length} ítems</span>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-border bg-secondary/30">
-              {['#', 'Descripción', 'Und', 'Cant.', `P.Unit (${currency})`, `Total (${currency})`, ''].map(
-                (h, i) => (
-                  <th
-                    key={i}
-                    className="px-4 py-3 text-sm font-semibold text-left text-foreground"
-                  >
-                    {h}
-                  </th>
-                )
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item, idx) => (
-              <tr
-                key={item.id}
-                className={idx % 2 === 0 ? 'bg-background' : 'bg-secondary/10'}
-              >
-                <td className="px-4 py-3 text-sm text-foreground">{idx + 1}</td>
-                <td className="px-4 py-3 relative">
-                  <div className="relative">
-                    <Input
-                      value={item.desc}
-                      onChange={(e) => {
-                        update(item.id, 'desc', e.target.value)
-                        setSearchText({ ...searchText, [item.id]: e.target.value })
-                      }}
-                      onFocus={() => setOpenDropdown(item.id)}
-                      placeholder="Buscar o escribir..."
-                      className="text-sm"
-                    />
-                    {openDropdown === item.id && catalogItems.length > 0 && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-background border border-border rounded-md shadow-lg z-50 max-h-48 overflow-y-auto">
-                        {getFilteredCatalog(item.id).length > 0 ? (
-                          getFilteredCatalog(item.id).map((cat, idx) => (
-                            <button
-                              key={idx}
-                              onClick={() => handleSelectFromCatalog(item.id, cat)}
-                              className="w-full text-left px-3 py-2 hover:bg-secondary text-sm border-b border-border last:border-b-0"
-                            >
-                              <div className="font-medium text-foreground">{cat.nombre}</div>
-                              {cat.precio && <div className="text-xs text-muted-foreground">${cat.precio.toFixed(2)}</div>}
-                            </button>
-                          ))
-                        ) : (
-                          <div className="px-3 py-2 text-sm text-muted-foreground">Sin coincidencias</div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <Select value={item.unit} onValueChange={(v) => update(item.id, 'unit', v)}>
-                    <SelectTrigger className="text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {['Und', 'Gbl', 'Mt', 'Ml', 'Kg'].map((u) => (
-                        <SelectItem key={u} value={u}>
-                          {u}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </td>
-                <td className="px-4 py-3">
-                  <Input
-                    type="number"
-                    min="0"
-                    value={item.qty}
-                    onChange={(e) => update(item.id, 'qty', e.target.value)}
-                    className="text-sm text-right"
-                  />
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {currency === 'USD' ? '$' : currency === 'VES' ? 'Bs.' : '₲'}
-                    </span>
-                    <Input
-                      type="text"
-                      inputMode="decimal"
-                      value={editingPrice[item.id] !== undefined ? editingPrice[item.id] : (item.price * EXCHANGE_RATES[currency]).toFixed(2)}
-                      onChange={(e) => {
-                        setEditingPrice({ ...editingPrice, [item.id]: e.target.value })
-                      }}
-                      onBlur={(e) => {
-                        const inputValue = e.target.value.trim()
-                        if (inputValue === '') {
-                          update(item.id, 'price', '0')
-                        } else {
-                          const numValue = parseFloat(inputValue)
-                          if (!isNaN(numValue) && numValue >= 0) {
-                            const convertedValue = numValue / EXCHANGE_RATES[currency]
-                            update(item.id, 'price', convertedValue.toString())
-                            // Guardar en historial de precios
-                            savePriceHistory(item.desc, convertedValue, 'USD')
-                          }
-                        }
-                        setEditingPrice({ ...editingPrice, [item.id]: "" })
-                      }}
-                      className="text-sm text-right"
-                      placeholder="0.00"
-                    />
-                  </div>
-                  {currency !== 'USD' && item.price > 0 && (
-                    <div className="text-xs text-muted-foreground mt-1">
-                      USD: ${item.price.toFixed(2)}
-                    </div>
-                  )}
-                  <PriceHistoryHint 
-                    productName={item.desc}
-                    currency={currency}
-                    onUsePrice={(price) => {
-                      const convertedPrice = price * EXCHANGE_RATES[currency]
-                      setEditingPrice({ ...editingPrice, [item.id]: convertedPrice.toFixed(2) })
-                      update(item.id, 'price', price.toString())
-                    }}
-                  />
-                </td>
-                <td className="px-4 py-3 text-sm font-semibold text-right text-foreground">
-                  {fmt(item.qty * item.price, currency)}
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <button
-                    onClick={() => remove(item.id)}
-                    className="text-destructive hover:bg-destructive/10 rounded p-1"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className="px-6 py-3 border-t border-border">
-        <Button
-          onClick={add}
-          variant="outline"
-          className="text-sm"
-          style={{ borderColor: color, color }}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Agregar ítem
-        </Button>
-      </div>
-    </div>
-  )
+function fmt(n: number, currency = 'USD') {
+  const rate = currency === 'VES' ? 36.5 : currency === 'PYG' ? 6800 : 1
+  const sym = currency === 'VES' ? 'Bs.' : currency === 'PYG' ? '₲' : '$'
+  return `${sym} ${(n * rate).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 export default function PresupuestosPage() {
-  const [tab, setTab] = useState<'edit' | 'preview'>('edit')
-  const [currency, setCurrency] = useState<'USD' | 'VES' | 'PYG'>('USD')
-  const [company, setCompany] = useState(INITIAL_COMPANY)
-  const [project, setProject] = useState(INITIAL_PROJECT)
-  const [equipment, setEquipment] = useState(DEFAULT_EQUIPMENT)
-  const [materials, setMaterials] = useState(DEFAULT_MATERIALS)
-  const [labor, setLabor] = useState(DEFAULT_LABOR)
-  const [taxRate, setTaxRate] = useState(16)
-  const [conditions, setConditions] = useState(DEFAULT_CONDITIONS)
+  const router = useRouter()
+  const [budgets, setBudgets] = useState<Budget[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [filterRubro, setFilterRubro] = useState('todos')
+  const [filterStatus, setFilterStatus] = useState('todos')
+  const [deleting, setDeleting] = useState<string | null>(null)
 
-  const sub1 = sumSection(equipment)
-  const sub2 = sumSection(materials)
-  const sub3 = sumSection(labor)
-  const subtotal = sub1 + sub2 + sub3
-  const isPYG = currency === 'PYG'
-  const tax = isPYG ? subtotal / 11 : (subtotal * taxRate) / 100
-  const total = isPYG ? subtotal : subtotal + tax
+  const load = useCallback(async () => {
+    setLoading(true)
+    const params = new URLSearchParams()
+    if (filterRubro !== 'todos') params.set('rubro', filterRubro)
+    if (filterStatus !== 'todos') params.set('status', filterStatus)
+    try {
+      const res = await fetch(`/api/budgets?${params}`)
+      const { budgets: data } = await res.json()
+      setBudgets(data || [])
+    } catch {
+      setBudgets([])
+    } finally {
+      setLoading(false)
+    }
+  }, [filterRubro, filterStatus])
 
-  const handlePrint = () => {
-    const printContent = document.getElementById('print-area')
-    if (!printContent) return
-    const win = window.open('', '_blank')
-    if (!win) return
+  useEffect(() => { load() }, [load])
 
-    const styleLinks = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
-      .map(l => l.outerHTML)
-      .join('\n')
-    const styleBlocks = Array.from(document.querySelectorAll('style'))
-      .map(s => s.outerHTML)
-      .join('\n')
-
-    win.document.write(`<!DOCTYPE html><html><head>
-      <title>Presupuesto CCTV - ${project.number}</title>
-      ${styleLinks}
-      ${styleBlocks}
-      <style>
-        body { margin: 0; font-family: system-ui, sans-serif; background: white; }
-        @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
-      </style>
-      </head><body>${printContent.innerHTML}</body></html>`)
-    win.document.close()
-    setTimeout(() => { win.print() }, 800)
+  const handleDelete = async (id: string, numero: string) => {
+    if (!confirm(`¿Eliminar el presupuesto ${numero}? Esta acción no se puede deshacer.`)) return
+    setDeleting(id)
+    await fetch(`/api/budgets/${id}`, { method: 'DELETE' })
+    setBudgets((prev) => prev.filter((b) => b.id !== id))
+    setDeleting(null)
   }
 
-  const handleNew = () => {
-    if (!confirm('¿Crear nuevo presupuesto? Se perderán los datos actuales.')) return
-    setCompany(INITIAL_COMPANY)
-    setProject({
-      ...INITIAL_PROJECT,
-      number: `CCTV-${String(Math.floor(Math.random() * 900) + 100)}`,
-    })
-    setEquipment([])
-    setMaterials([])
-    setLabor([])
-    setTaxRate(16)
-    setConditions(DEFAULT_CONDITIONS)
-    setTab('edit')
+  const handleSend = async (id: string) => {
+    if (!confirm('¿Enviar este presupuesto al cliente? El estado cambiará a "Enviado".')) return
+    await fetch(`/api/budgets/${id}/send`, { method: 'POST' })
+    setBudgets((prev) => prev.map((b) => b.id === id ? { ...b, status: 'enviado' } : b))
   }
 
-  const handleLoadKit = useCallback((kitItems: Array<{
-    section: 'equipos' | 'materiales' | 'mano_de_obra'
-    description: string
-    unit: string
-    quantity: number
-    price: number
-  }>) => {
-    const equipmentItems = kitItems.filter(i => i.section === 'equipos').map((i, idx) => ({
-      id: Math.max(...equipment.map(e => e.id), 0) + idx + 1,
-      desc: i.description,
-      unit: i.unit,
-      qty: i.quantity,
-      price: i.price
-    }))
-    
-    const materialItems = kitItems.filter(i => i.section === 'materiales').map((i, idx) => ({
-      id: Math.max(...materials.map(m => m.id), 0) + idx + 1,
-      desc: i.description,
-      unit: i.unit,
-      qty: i.quantity,
-      price: i.price
-    }))
-    
-    const laborItems = kitItems.filter(i => i.section === 'mano_de_obra').map((i, idx) => ({
-      id: Math.max(...labor.map(l => l.id), 0) + idx + 1,
-      desc: i.description,
-      unit: i.unit,
-      qty: i.quantity,
-      price: i.price
-    }))
+  const filtered = budgets.filter((b) =>
+    b.numero.toLowerCase().includes(search.toLowerCase()) ||
+    (b.customer_name || '').toLowerCase().includes(search.toLowerCase())
+  )
 
-    setEquipment([...equipment, ...equipmentItems])
-    setMaterials([...materials, ...materialItems])
-    setLabor([...labor, ...laborItems])
-  }, [equipment, materials, labor])
+  const stats = {
+    total: budgets.length,
+    enviado: budgets.filter((b) => b.status === 'enviado').length,
+    en_revision: budgets.filter((b) => b.status === 'en_revision').length,
+    aceptado: budgets.filter((b) => b.status === 'aceptado').length,
+    rechazado: budgets.filter((b) => b.status === 'rechazado').length,
+    monthlyTotal: budgets
+      .filter((b) => {
+        const d = new Date(b.created_at)
+        const now = new Date()
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+      })
+      .reduce((s, b) => s + Number(b.total), 0),
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <SidebarNav />
       <main className="flex-1 overflow-auto">
-      {/* Header */}
-      <div className="sticky top-0 z-50 bg-card border-b border-border px-4 md:px-6 py-3 md:py-4 shadow-sm">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 md:gap-4 flex-wrap md:flex-nowrap">
-          <div className="flex items-center gap-2 md:gap-3 min-w-0">
-            <div className="bg-primary text-primary-foreground p-2 rounded-lg shrink-0">
-              <FileText className="h-5 w-5" />
+        {/* Header */}
+        <div className="sticky top-0 z-40 bg-card border-b border-border px-6 py-4 shadow-sm">
+          <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="bg-primary text-primary-foreground p-2 rounded-lg">
+                <FileText className="h-5 w-5" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-foreground">Presupuestos</h1>
+                <p className="text-xs text-muted-foreground">Gestión de cotizaciones por rubro</p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <h1 className="text-lg md:text-xl font-bold text-foreground truncate">Presupuestos CCTV</h1>
-              <p className="text-xs text-muted-foreground hidden md:block">Generador de presupuestos profesionales</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1 md:gap-2 flex-wrap justify-end">
-            <div className="flex items-center gap-2 px-2 md:px-3 py-1.5 rounded-lg bg-secondary border border-border">
-              <DollarSign className="h-4 w-4 text-muted-foreground shrink-0" />
-              <Select value={currency} onValueChange={(val) => setCurrency(val as 'USD' | 'VES' | 'PYG')}>
-                <SelectTrigger className="border-0 bg-transparent p-0 h-auto focus:ring-0 text-xs md:text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="USD">USD</SelectItem>
-                  <SelectItem value="VES">VES</SelectItem>
-                  <SelectItem value="PYG">PYG</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Button onClick={handleNew} variant="outline" size="sm" className="gap-1.5 text-xs md:text-sm">
-              <FilePlus className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Nuevo</span>
-            </Button>
-            <div className="flex items-center rounded-lg border border-border bg-secondary/50 p-0.5 gap-0.5">
-              <Button
-                onClick={() => setTab('edit')}
-                variant={tab === 'edit' ? 'default' : 'ghost'}
-                size="sm"
-                className="gap-1.5 text-xs md:text-sm h-7 px-2 md:px-3"
-              >
-                <Edit3 className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Editar</span>
+            <Link href="/presupuestos/nuevo">
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" />
+                Nuevo Presupuesto
               </Button>
-              <Button
-                onClick={() => setTab('preview')}
-                variant={tab === 'preview' ? 'default' : 'ghost'}
-                size="sm"
-                className="gap-1.5 text-xs md:text-sm h-7 px-2 md:px-3"
-              >
-                <Eye className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Vista previa</span>
-              </Button>
-            </div>
-            {tab === 'preview' && (
-              <Button onClick={handlePrint} size="sm" className="gap-2 text-xs md:text-sm">
-                <Printer className="h-4 w-4" />
-                <span className="hidden md:inline">Imprimir</span>
-              </Button>
-            )}
+            </Link>
           </div>
         </div>
-      </div>
 
-      {/* Summary Bar */}
-      {tab === 'edit' && (
-        <div className="bg-card border-b border-border px-4 md:px-6 py-3 grid grid-cols-2 md:grid-cols-5 gap-2 md:gap-3">
-          {[
-            { label: 'Equipos', value: sub1, color: '#1a1a2e' },
-            { label: 'Materiales', value: sub2, color: '#2d4a7a' },
-            { label: 'M. de Obra', value: sub3, color: '#3a6b5a' },
-            { label: isPYG ? 'IVA incluido (10%)' : `IVA (${taxRate}%)`, value: tax, color: '#b45309' },
-            { label: 'TOTAL', value: total, color: '#dc2626', bold: true },
-          ].map(({ label, value, color, bold }, i) => (
-            <div
-              key={i}
-              className="p-2 md:p-3 rounded-lg border-l-4 bg-secondary/30"
-              style={{ borderColor: color }}
-            >
-              <div className="text-xs font-semibold text-muted-foreground uppercase">{label}</div>
-              <div
-                className={bold ? 'text-lg md:text-xl font-bold' : 'text-base md:text-lg font-semibold'}
-                style={{ color }}
-              >
-                {fmt(value, currency)}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Content */}
-      <div className="px-4 md:px-6 py-6 md:py-8 max-w-7xl mx-auto">
-        {tab === 'edit' ? (
-          <div className="space-y-6">
-            {/* Company & Project Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-              <div className="bg-card border border-border rounded-lg p-4 md:p-6 space-y-4">
-                <h2 className="font-semibold text-base text-foreground flex items-center gap-2"><Building2 className="h-4 w-4 text-primary" /> Datos de la Empresa</h2>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-xs md:text-sm font-medium text-foreground">Nombre</label>
-                    <Input
-                      value={company.name}
-                      onChange={(e) => setCompany({ ...company, name: e.target.value })}
-                      placeholder="Nombre de su empresa"
-                      className="text-xs md:text-sm"
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs md:text-sm font-medium text-foreground">RIF / NIT</label>
-                      <Input
-                        value={company.rif}
-                        onChange={(e) => setCompany({ ...company, rif: e.target.value })}
-                        placeholder="J-XXXXXXXX-X"
-                        className="text-xs md:text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs md:text-sm font-medium text-foreground">Teléfono</label>
-                      <Input
-                        value={company.phone}
-                        onChange={(e) => setCompany({ ...company, phone: e.target.value })}
-                        placeholder="+58 XXX-XXXXXXX"
-                        className="text-xs md:text-sm"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-foreground">Dirección</label>
-                    <Input
-                      value={company.address}
-                      onChange={(e) => setCompany({ ...company, address: e.target.value })}
-                      placeholder="Dirección completa"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-foreground">Email</label>
-                    <Input
-                      value={company.email}
-                      onChange={(e) => setCompany({ ...company, email: e.target.value })}
-                      placeholder="correo@empresa.com"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-card border border-border rounded-lg p-6 space-y-4">
-                <h2 className="font-semibold text-base text-foreground flex items-center gap-2"><ClipboardList className="h-4 w-4 text-primary" /> Datos del Proyecto</h2>
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-sm font-medium text-foreground">Nº Presupuesto</label>
-                      <Input
-                        value={project.number}
-                        onChange={(e) => setProject({ ...project, number: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-foreground">Fecha</label>
-                      <Input
-                        type="date"
-                        value={project.date}
-                        onChange={(e) => setProject({ ...project, date: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-foreground">Cliente</label>
-                    <Input
-                      value={project.client}
-                      onChange={(e) => setProject({ ...project, client: e.target.value })}
-                      placeholder="Nombre del cliente"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-foreground">Ubicación</label>
-                    <Input
-                      value={project.location}
-                      onChange={(e) => setProject({ ...project, location: e.target.value })}
-                      placeholder="Ubicación del proyecto"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-foreground">Vigencia</label>
-                    <Input
-                      value={project.validity}
-                      onChange={(e) => setProject({ ...project, validity: e.target.value })}
-                      placeholder="Ej: 15 días"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Kit Selector and Material Calculator */}
-            <div className="bg-card border border-border rounded-lg p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="font-bold text-lg text-foreground">Herramientas Rápidas</h2>
-                <div className="flex items-center gap-2">
-                  <SaveKitDialog
-                    equipment={equipment}
-                    materials={materials}
-                    labor={labor}
-                    onSave={() => {
-                      // Refresh kit selector by reloading customKits
-                      window.dispatchEvent(new Event('customKitsUpdated'))
-                    }}
-                  />
-                  <Button
-                    onClick={() => {
-                      if (confirm('¿Limpiar todos los items (equipos, materiales y mano de obra)?')) {
-                        setEquipment([])
-                        setMaterials([])
-                        setLabor([])
-                      }
-                    }}
-                    variant="outline"
-                    size="sm"
-                    className="text-destructive hover:text-destructive"
-                  >
-                    Limpiar Todo
-                  </Button>
-                </div>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <p className="text-sm font-medium text-foreground mb-2">Cargar Kit Predefinido</p>
-                  <KitSelector onLoadKit={handleLoadKit} />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-foreground mb-2">Calcular Materiales Automáticos</p>
-                  <MaterialCalculator 
-                    equipment={equipment}
-                    materials={materials}
-                    onAddMaterials={setMaterials}
-                  />
-                </div>
-              </div>
-            </div>
-            <SectionTable
-              title="Equipos Principales"
-              icon={Cog}
-              items={equipment}
-              setItems={setEquipment}
-              color="#1a1a2e"
-              currency={currency}
-              catalogItems={CATALOGO_PRODUCTOS.equiposPrincipales.map(p => ({ 
-                nombre: `${p.nombre} (${p.marca} ${p.modelo})`, 
-                precio: p.precio 
-              }))}
-            />
-            <SectionTable
-              title="Materiales de Instalación"
-              icon={Zap}
-              items={materials}
-              setItems={setMaterials}
-              color="#2d4a7a"
-              currency={currency}
-              catalogItems={CATALOGO_PRODUCTOS.materialesInstalacion.map(p => ({ 
-                nombre: `${p.nombre} (${p.marca})`, 
-                precio: p.precio 
-              }))}
-            />
-            <SectionTable
-              title="Mano de Obra e Instalación"
-              icon={HardHat}
-              items={labor}
-              setItems={setLabor}
-              color="#3a6b5a"
-              currency={currency}
-              catalogItems={[]}
-            />
-
-            {/* Tax & Conditions */}
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="bg-card border border-border rounded-lg p-6">
-                <h2 className="font-semibold text-base text-foreground mb-4 flex items-center gap-2"><Receipt className="h-4 w-4 text-primary" /> Impuestos</h2>
-                {isPYG ? (
-                  <p className="text-sm text-muted-foreground">IVA incluido en precios (10% — se obtiene dividiendo el total entre 11).</p>
-                ) : (
-                  <div>
-                    <label className="text-sm font-medium text-foreground">Tasa IVA (%)</label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={taxRate}
-                      onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
-                    />
-                  </div>
+        <div className="px-6 py-6 max-w-7xl mx-auto space-y-6">
+          {/* KPI cards */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            {[
+              { label: 'Total',        value: stats.total,       color: 'text-foreground',    border: '' },
+              { label: 'Enviados',     value: stats.enviado,     color: 'text-blue-600',      border: 'border-t-2 border-t-blue-400' },
+              { label: 'En Revisión',  value: stats.en_revision, color: 'text-amber-600',     border: 'border-t-2 border-t-amber-400', pulse: stats.en_revision > 0 },
+              { label: 'Aceptados',    value: stats.aceptado,    color: 'text-emerald-600',   border: 'border-t-2 border-t-emerald-400' },
+              { label: 'Rechazados',   value: stats.rechazado,   color: 'text-red-600',       border: 'border-t-2 border-t-red-400' },
+              { label: 'Cotizado mes', value: `$${stats.monthlyTotal.toLocaleString('es-ES', { minimumFractionDigits: 0 })}`, color: 'text-primary', border: 'border-t-2 border-t-primary' },
+            ].map((k) => (
+              <div key={k.label} className={cn('bg-card border border-border rounded-lg p-4 relative overflow-hidden', k.border)}>
+                {k.pulse && (
+                  <span className="absolute top-2 right-2 flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+                  </span>
                 )}
+                <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide">{k.label}</p>
+                <p className={cn('text-2xl font-bold mt-1', k.color)}>{k.value}</p>
               </div>
-
-              <div className="bg-card border border-border rounded-lg p-6">
-                <h2 className="font-semibold text-base text-foreground mb-4 flex items-center gap-2"><FileText className="h-4 w-4 text-primary" /> Condiciones Comerciales</h2>
-                <div className="space-y-2">
-                  {conditions.map((c, i) => (
-                    <div key={i} className="flex gap-2">
-                      <Input
-                        value={c}
-                        onChange={(e) =>
-                          setConditions(
-                            conditions.map((_, idx) => (idx === i ? e.target.value : _))
-                          )
-                        }
-                        className="text-sm"
-                      />
-                      <Button
-                        onClick={() => setConditions(conditions.filter((_, idx) => idx !== i))}
-                        variant="ghost"
-                        size="sm"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                  <Button
-                    onClick={() => setConditions([...conditions, ''])}
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Agregar condición
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div id="print-area" className="bg-white text-gray-900 max-w-4xl mx-auto rounded-lg">
-            <PrintPreview
-              company={company}
-              project={project}
-              equipment={equipment}
-              materials={materials}
-              labor={labor}
-              taxRate={taxRate}
-              conditions={conditions}
-              currency={currency}
-            />
-          </div>
-        )}
-      </div>
-      </main>
-    </div>
-  )
-}
-
-function PrintPreview({
-  company,
-  project,
-  equipment,
-  materials,
-  labor,
-  taxRate,
-  conditions,
-  currency,
-}: any) {
-  const sub1 = sumSection(equipment)
-  const sub2 = sumSection(materials)
-  const sub3 = sumSection(labor)
-  const subtotal = sub1 + sub2 + sub3
-  const isPYG = currency === 'PYG'
-  const tax = isPYG ? subtotal / 11 : (subtotal * taxRate) / 100
-  const total = isPYG ? subtotal : subtotal + tax
-
-  console.log('[v0] PrintPreview rendering - professional format enabled')
-
-  const renderTable = (title: string, items: Item[], color: string) => (
-    <div>
-      <div
-        className="text-white px-6 py-2.5 font-bold text-sm"
-        style={{ backgroundColor: color }}
-      >
-        {title}
-      </div>
-      <table className="w-full text-xs">
-        <thead>
-          <tr className="bg-gray-50 border-b border-gray-300">
-            {['#', 'Descripción', 'Und', 'Cant.', 'P.Unit', 'Total'].map((h) => (
-              <th key={h} className="px-4 py-2.5 text-left font-semibold text-gray-900">
-                {h}
-              </th>
             ))}
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((item, idx) => (
-            <tr key={item.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-              <td className="px-4 py-2 border-b border-gray-200 text-gray-700">{idx + 1}</td>
-              <td className="px-4 py-2 border-b border-gray-200 text-gray-900">{item.desc}</td>
-              <td className="px-4 py-2 border-b border-gray-200 text-gray-700 text-center">{item.unit}</td>
-              <td className="px-4 py-2 border-b border-gray-200 text-gray-700 text-right">{item.qty}</td>
-              <td className="px-4 py-2 border-b border-gray-200 text-gray-900 text-right font-semibold">{fmt(item.price, currency)}</td>
-              <td className="px-4 py-2 border-b border-gray-200 text-gray-900 text-right font-bold">
-                {fmt(item.qty * item.price, currency)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-
-  // PrintPreview - Professional Budget Format v2
-  return (
-    <div className="p-8 bg-white print:bg-white" id="print-area">
-      <div className="mb-8">
-        <div className="mb-4">
-          <h1 className="text-3xl font-bold text-gray-900">PRESUPUESTO DE PROYECTO</h1>
-          <p className="text-sm text-gray-600 mt-1">Provisión de Materiales e Instalación — Sistema CCTV</p>
-        </div>
-        
-        <div className="grid grid-cols-2 gap-8 border-b-2 border-gray-300 pb-6">
-          {/* Left: Company Info */}
-          <div>
-            <div className="mb-4">
-              <h2 className="font-bold text-sm text-gray-900 mb-2">Empresa</h2>
-              {company.name && <p className="text-sm font-semibold text-gray-900">{company.name}</p>}
-              {company.rif && <p className="text-xs text-gray-700">RIF: {company.rif}</p>}
-              {company.address && <p className="text-xs text-gray-700">{company.address}</p>}
-              {company.phone && <p className="text-xs text-gray-700">Tel: {company.phone}</p>}
-              {company.email && <p className="text-xs text-gray-700">{company.email}</p>}
-            </div>
           </div>
-          
-          {/* Right: Project Info - Aligned Right */}
-          <div className="text-right">
-            <table className="ml-auto text-sm">
-              <tbody>
-                <tr>
-                  <td className="font-bold pr-3 text-gray-900">Nº:</td>
-                  <td className="text-gray-900">{project.number}</td>
+
+          {/* Filters */}
+          <div className="flex flex-wrap gap-3 items-center">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input value={search} onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar por número o cliente…" className="pl-9" />
+            </div>
+            <Select value={filterRubro} onValueChange={setFilterRubro}>
+              <SelectTrigger className="w-44">
+                <Filter className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos los rubros</SelectItem>
+                {RUBROS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos los estados</SelectItem>
+                {Object.entries(STATUS_CONFIG).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Table */}
+          <div className="bg-card border border-border rounded-lg overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/30">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Nº</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Rubro</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Cliente</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Total</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Estado</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Fecha</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">Acciones</th>
                 </tr>
-                <tr>
-                  <td className="font-bold pr-3 text-gray-900">Fecha:</td>
-                  <td className="text-gray-900">{project.date}</td>
-                </tr>
-                <tr>
-                  <td className="font-bold pr-3 text-gray-900">Vigencia:</td>
-                  <td className="text-gray-900">{project.validity}</td>
-                </tr>
-                <tr>
-                  <td className="font-bold pr-3 text-gray-900">Cliente:</td>
-                  <td className="text-gray-700">{project.client || '—'}</td>
-                </tr>
-                <tr>
-                  <td className="font-bold pr-3 text-gray-900">Ubicación:</td>
-                  <td className="text-gray-700">{project.location || '—'}</td>
-                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {loading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <tr key={i}>
+                      {Array.from({ length: 7 }).map((_, j) => (
+                        <td key={j} className="px-4 py-3"><div className="h-4 bg-muted animate-pulse rounded" /></td>
+                      ))}
+                    </tr>
+                  ))
+                ) : filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
+                      <FileText className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                      <p className="text-sm">No hay presupuestos{search ? ' que coincidan con la búsqueda' : ''}</p>
+                    </td>
+                  </tr>
+                ) : (
+                  filtered.map((b) => {
+                    const st = STATUS_CONFIG[b.status] || STATUS_CONFIG.borrador
+                    return (
+                      <tr key={b.id} className={cn('hover:bg-muted/20 transition-colors', st.rowClass)}>
+                        <td className="px-4 py-3 font-mono font-medium text-foreground">{b.numero}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{b.rubro}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{b.customer_name || <span className="text-muted-foreground/50 italic">Sin cliente</span>}</td>
+                        <td className="px-4 py-3 font-semibold text-foreground">{fmt(Number(b.total), b.currency)}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1.5">
+                            {st.pulse && (
+                              <span className="flex h-1.5 w-1.5 shrink-0">
+                                <span className="animate-ping absolute inline-flex h-1.5 w-1.5 rounded-full bg-amber-400 opacity-75" />
+                                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-500" />
+                              </span>
+                            )}
+                            <Badge variant="outline" className={cn('text-[10px]', st.className)}>{st.label}</Badge>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+                          {new Date(b.fecha).toLocaleDateString('es-ES')}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1 justify-end">
+                            <Link href={`/presupuestos/${b.id}`}>
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                                <Eye className="h-3.5 w-3.5" />
+                              </Button>
+                            </Link>
+                            {b.status === 'borrador' && (
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                onClick={() => handleSend(b.id)}>
+                                <Send className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              disabled={deleting === b.id}
+                              onClick={() => handleDelete(b.id, b.numero)}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
               </tbody>
             </table>
           </div>
         </div>
-      </div>
-
-      {/* Tables Section */}
-      <div className="space-y-6">
-        {renderTable('1. EQUIPOS PRINCIPALES', equipment, '#1a1a2e')}
-        {renderTable('2. MATERIALES DE INSTALACIÓN', materials, '#2d4a7a')}
-        {renderTable('3. MANO DE OBRA E INSTALACIÓN', labor, '#3a6b5a')}
-      </div>
-
-      {/* Summary Section */}
-      <div className="mt-8 border-2 border-gray-900">
-        <div className="bg-gray-900 text-white px-6 py-3 font-bold">RESUMEN</div>
-        <div className="divide-y divide-gray-200">
-          {[
-            ['Equipos Principales', sub1],
-            ['Materiales de Instalación', sub2],
-            ['Mano de Obra', sub3],
-          ].map(([label, value]) => (
-            <div key={label} className="flex justify-between px-6 py-2 text-sm">
-              <span className="text-gray-900">{label}</span>
-              <span className="text-gray-900 font-semibold">{fmt(value as number, currency)}</span>
-            </div>
-          ))}
-          <div className="flex justify-between px-6 py-2 bg-gray-100 text-sm font-bold text-gray-900">
-            <span>Subtotal</span>
-            <span>{fmt(subtotal, currency)}</span>
-          </div>
-          <div className="flex justify-between px-6 py-2 text-sm text-gray-900">
-            <span>{isPYG ? 'IVA incluido (10%)' : `IVA (${taxRate}%)`}</span>
-            <span className="font-semibold">{fmt(tax, currency)}</span>
-          </div>
-          <div className="flex justify-between px-6 py-3 bg-gray-900 text-white font-bold text-lg">
-            <span>TOTAL ({currency})</span>
-            <span>{fmt(total, currency)}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Conditions Section */}
-      {conditions.length > 0 && (
-        <div className="mt-8">
-          <h3 className="font-bold text-sm text-gray-900 mb-3">CONDICIONES COMERCIALES</h3>
-          <ul className="text-xs text-gray-700 space-y-1 list-disc list-inside">
-            {conditions.map((c, i) => (
-              <li key={i}>{c}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      <div className="flex justify-around mt-16 text-xs text-center">
-        <div>
-          <div className="border-t border-gray-900 pt-2 w-48">Firma y Sello de la Empresa</div>
-        </div>
-        <div>
-          <div className="border-t border-gray-900 pt-2 w-48">Aceptado por el Cliente</div>
-        </div>
-      </div>
+      </main>
     </div>
   )
 }

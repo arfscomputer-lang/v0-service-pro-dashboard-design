@@ -16,6 +16,8 @@ const PUBLIC_ROUTES = [
   '/api/messages',
   '/api/notifications',
   '/api/users',
+  '/api/budgets',
+  '/api/budget-kits',
   '/auth/login',
   '/login',
 ]

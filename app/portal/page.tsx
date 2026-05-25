@@ -51,6 +51,9 @@ import {
   TrendingUp,
   Award,
   PieChart as PieChartIcon,
+  FileText,
+  Send,
+  MessageSquare,
 } from "lucide-react"
 import {
   BarChart,
@@ -86,9 +89,16 @@ export default function ClientPortalPage() {
   const router = useRouter()
   const [orderOpen, setOrderOpen] = useState(false)
   const [submitted, setSubmitted] = useState(false)
-  const [tab, setTab] = useState<"dashboard" | "ordenes" | "reportes">("dashboard")
+  const [tab, setTab] = useState<"dashboard" | "ordenes" | "reportes" | "presupuestos">("dashboard")
   const [customerAssets, setCustomerAssets] = useState<{ id: string; name: string; asset_id: string; type: string }[]>([])
   const [selectedAssetId, setSelectedAssetId] = useState("")
+
+  // presupuestos
+  const [budgets, setBudgets] = useState<any[]>([])
+  const [budgetComments, setBudgetComments] = useState<Record<string, string>>({})
+  const [budgetCommentSending, setBudgetCommentSending] = useState<Record<string, boolean>>({})
+  const [viewingBudget, setViewingBudget] = useState<any | null>(null)
+  const [viewingBudgetLoading, setViewingBudgetLoading] = useState(false)
 
   const customer = useMemo(() => {
     if (!user?.customerId) return null
@@ -109,6 +119,52 @@ export default function ClientPortalPage() {
       .then((d) => setCustomerAssets(d.assets || []))
       .catch(() => setCustomerAssets([]))
   }, [user?.customerId])
+
+  useEffect(() => {
+    if (!user?.customerId) return
+    fetch(`/api/budgets?customer_id=${user.customerId}`)
+      .then((r) => r.json())
+      .then((d) => setBudgets((d.budgets || []).filter((b: any) => b.status !== 'borrador')))
+      .catch(() => setBudgets([]))
+  }, [user?.customerId])
+
+  const handleViewBudget = async (budgetId: string) => {
+    setViewingBudgetLoading(true)
+    setViewingBudget(null)
+    try {
+      const res = await fetch(`/api/budgets/${budgetId}`)
+      const { budget } = await res.json()
+      setViewingBudget(budget)
+    } catch { /* ignore */ }
+    finally { setViewingBudgetLoading(false) }
+  }
+
+  const handleAcceptBudget = async (budgetId: string) => {
+    await fetch(`/api/budgets/${budgetId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'aceptado' }),
+    })
+    setBudgets((prev) => prev.map((b) => b.id === budgetId ? { ...b, status: 'aceptado' } : b))
+  }
+
+  const handleSendComment = async (budgetId: string) => {
+    const text = budgetComments[budgetId]?.trim()
+    if (!text) return
+    setBudgetCommentSending((prev) => ({ ...prev, [budgetId]: true }))
+    const res = await fetch(`/api/budgets/${budgetId}/comments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ author: customer?.name || 'Cliente', text }),
+    })
+    const data = await res.json().catch(() => ({}))
+    setBudgetComments((prev) => ({ ...prev, [budgetId]: '' }))
+    setBudgetCommentSending((prev) => ({ ...prev, [budgetId]: false }))
+    // Reflect new status (en_revision) immediately
+    if (data.newStatus) {
+      setBudgets((prev) => prev.map((b) => b.id === budgetId ? { ...b, status: data.newStatus } : b))
+    }
+  }
 
   if (!user || !customer) return null
 
@@ -186,6 +242,19 @@ export default function ClientPortalPage() {
             <PieChartIcon className="h-5 w-5 shrink-0" />
             <span>Mis Reportes</span>
           </button>
+          <button
+            type="button"
+            onClick={() => setTab("presupuestos")}
+            className={cn(
+              "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+              tab === "presupuestos"
+                ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+            )}
+          >
+            <FileText className="h-5 w-5 shrink-0" />
+            <span>Presupuestos</span>
+          </button>
         </nav>
 
         {/* User section */}
@@ -218,7 +287,7 @@ export default function ClientPortalPage() {
         <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6">
           <div>
             <h1 className="text-lg font-bold text-foreground">
-              {tab === "dashboard" ? "Mi Dashboard" : tab === "ordenes" ? "Mis Órdenes de Servicio" : "Mis Reportes"}
+              {tab === "dashboard" ? "Mi Dashboard" : tab === "ordenes" ? "Mis Órdenes de Servicio" : tab === "presupuestos" ? "Mis Presupuestos" : "Mis Reportes"}
             </h1>
             <p className="text-xs text-muted-foreground">Bienvenido, {customer.name}</p>
           </div>
@@ -368,6 +437,52 @@ export default function ClientPortalPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Budget summary */}
+              {budgets.length > 0 && (() => {
+                const bStats = {
+                  porAprobar:  budgets.filter((b) => b.status === 'enviado').length,
+                  enAnalisis:  budgets.filter((b) => b.status === 'en_revision').length,
+                  aprobados:   budgets.filter((b) => b.status === 'aceptado').length,
+                  rechazados:  budgets.filter((b) => b.status === 'rechazado').length,
+                }
+                return (
+                  <Card className="border border-border shadow-sm">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-primary" />
+                          Mis Presupuestos
+                        </CardTitle>
+                        <Button variant="ghost" size="sm" className="text-xs text-primary" onClick={() => setTab("presupuestos")}>
+                          Ver todos
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                        {[
+                          { label: 'Por Aprobar',  value: bStats.porAprobar, color: 'text-blue-600',    border: 'border-t-2 border-t-blue-400', pulse: bStats.porAprobar > 0 },
+                          { label: 'En Análisis',  value: bStats.enAnalisis, color: 'text-amber-600',   border: 'border-t-2 border-t-amber-400', pulse: bStats.enAnalisis > 0 },
+                          { label: 'Aprobados',    value: bStats.aprobados,  color: 'text-emerald-600', border: 'border-t-2 border-t-emerald-400' },
+                          { label: 'Rechazados',   value: bStats.rechazados, color: 'text-red-600',     border: 'border-t-2 border-t-red-400' },
+                        ].map((s) => (
+                          <div key={s.label} className={cn('rounded-lg border border-border bg-muted/30 p-3 relative', s.border)}>
+                            {s.pulse && s.value > 0 && (
+                              <span className="absolute top-2 right-2 flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-current opacity-60" style={{ color: 'inherit' }} />
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-current" style={{ color: 'inherit' }} />
+                              </span>
+                            )}
+                            <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide">{s.label}</p>
+                            <p className={cn('text-2xl font-bold mt-0.5', s.color)}>{s.value}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })()}
             </div>
           ) : tab === "reportes" ? (
             /* ─── Reportes tab ─── */
@@ -533,6 +648,99 @@ export default function ClientPortalPage() {
                 </div>
               )
             })()
+          ) : tab === "presupuestos" ? (
+            /* ─── Presupuestos tab ─── */
+            <div className="space-y-4">
+              {budgets.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                  <FileText className="h-10 w-10 mb-3 opacity-30" />
+                  <p className="text-sm">No hay presupuestos enviados</p>
+                </div>
+              ) : (
+                budgets.map((b) => {
+                  const statusColors: Record<string, string> = {
+                    enviado:     'bg-blue-100 text-blue-700 border-blue-300',
+                    en_revision: 'bg-amber-100 text-amber-700 border-amber-300',
+                    aceptado:    'bg-emerald-100 text-emerald-700 border-emerald-300',
+                    devuelto:    'bg-orange-100 text-orange-700 border-orange-300',
+                    rechazado:   'bg-red-100 text-red-700 border-red-300',
+                  }
+                  const statusLabels: Record<string, string> = {
+                    enviado: 'Enviado', en_revision: 'En Revisión',
+                    aceptado: 'Aceptado', devuelto: 'Devuelto', rechazado: 'Rechazado',
+                  }
+                  return (
+                    <Card key={b.id} className="border border-border shadow-sm">
+                      <CardContent className="p-5 space-y-4">
+                        <div className="flex items-start justify-between gap-4 flex-wrap">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-mono font-semibold text-foreground text-sm">{b.numero}</span>
+                              <span className={cn("text-[10px] border rounded-full px-2 py-0.5 font-medium", statusColors[b.status] || 'bg-gray-100 text-gray-700 border-gray-300')}>
+                                {statusLabels[b.status] || b.status}
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              Rubro: {b.rubro} · Fecha: {new Date(b.fecha).toLocaleDateString('es-ES')} · Vigencia: {b.vigencia}
+                            </p>
+                          </div>
+                          <div className="flex items-start gap-4">
+                            <div className="text-right">
+                              <p className="text-xs text-muted-foreground uppercase font-medium">Total</p>
+                              <p className="text-xl font-bold text-foreground">
+                                {b.currency === 'USD' ? '$' : b.currency === 'VES' ? 'Bs.' : '₲'} {Number(b.total).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </p>
+                            </div>
+                            <Button size="sm" variant="outline" className="gap-1.5 text-xs shrink-0" onClick={() => handleViewBudget(b.id)}>
+                              <FileText className="h-3.5 w-3.5" />
+                              Ver detalle
+                            </Button>
+                          </div>
+                        </div>
+
+                        {b.status === 'enviado' && (
+                          <div className="space-y-3 pt-2 border-t border-border">
+                            <Textarea
+                              placeholder="Escribir comentario o ajuste solicitado…"
+                              value={budgetComments[b.id] || ''}
+                              onChange={(e) => setBudgetComments((prev) => ({ ...prev, [b.id]: e.target.value }))}
+                              rows={2}
+                              className="text-sm resize-none"
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-1.5 text-xs border-blue-400 text-blue-600 hover:bg-blue-50"
+                                disabled={!budgetComments[b.id]?.trim() || budgetCommentSending[b.id]}
+                                onClick={() => handleSendComment(b.id)}
+                              >
+                                <MessageSquare className="h-3.5 w-3.5" />
+                                {budgetCommentSending[b.id] ? 'Enviando…' : 'Enviar comentario'}
+                              </Button>
+                              <Button
+                                size="sm"
+                                className="gap-1.5 text-xs"
+                                onClick={() => handleAcceptBudget(b.id)}
+                              >
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                                Aceptar presupuesto
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                        {b.status === 'aceptado' && (
+                          <div className="flex items-center gap-2 text-emerald-600 text-sm pt-2 border-t border-border">
+                            <CheckCircle2 className="h-4 w-4" />
+                            Presupuesto aceptado. Nos pondremos en contacto para coordinar el trabajo.
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )
+                })
+              )}
+            </div>
           ) : (
             /* ─── Ordenes tab ─── */
             <div className="space-y-4">
@@ -616,6 +824,138 @@ export default function ClientPortalPage() {
           )}
         </main>
       </div>
+
+      {/* ── Budget detail dialog ── */}
+      <Dialog open={!!viewingBudget || viewingBudgetLoading} onOpenChange={(open) => { if (!open) setViewingBudget(null) }}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0">
+          <DialogTitle className="sr-only">Detalle del presupuesto</DialogTitle>
+          {viewingBudgetLoading && (
+            <div className="flex items-center justify-center py-20 text-muted-foreground text-sm">Cargando…</div>
+          )}
+          {viewingBudget && (() => {
+            const b = viewingBudget
+            const sym = b.currency === 'VES' ? 'Bs.' : b.currency === 'PYG' ? '₲' : '$'
+            const sections: Array<{ key: string; label: string }> = [
+              { key: 'equipos', label: 'Equipos' },
+              { key: 'materiales', label: 'Materiales' },
+              { key: 'mano_de_obra', label: 'Mano de Obra' },
+            ]
+            const allSections = b.sections || {}
+            const taxRate = Number(b.tax_rate ?? 0)
+            const subtotal = Number(b.total) / (1 + taxRate / 100)
+            const taxAmt = Number(b.total) - subtotal
+
+            return (
+              <div className="p-6 space-y-5">
+                {/* Header */}
+                <div className="flex items-start justify-between gap-4 border-b border-border pb-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wide mb-1">Presupuesto</p>
+                    <h2 className="text-xl font-bold font-mono text-foreground">{b.numero}</h2>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Rubro: {b.rubro} · Fecha: {new Date(b.fecha).toLocaleDateString('es-ES')} · Vigencia: {b.vigencia}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground uppercase font-semibold">Total</p>
+                    <p className="text-2xl font-bold text-foreground">{sym} {Number(b.total).toLocaleString('es-ES', { minimumFractionDigits: 2 })}</p>
+                  </div>
+                </div>
+
+                {/* Company / client info */}
+                {b.company_data && (b.company_data.name || b.company_data.address) && (
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Cliente</p>
+                      <p className="font-medium text-foreground">{b.company_data.name}</p>
+                      {b.company_data.rif && <p className="text-muted-foreground">RIF: {b.company_data.rif}</p>}
+                      {b.company_data.address && <p className="text-muted-foreground">{b.company_data.address}</p>}
+                      {b.company_data.phone && <p className="text-muted-foreground">{b.company_data.phone}</p>}
+                    </div>
+                    {b.conditions && (b.conditions.payment || b.conditions.warranty || b.conditions.notes) && (
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Condiciones</p>
+                        {b.conditions.payment && <p className="text-muted-foreground">Pago: {b.conditions.payment}</p>}
+                        {b.conditions.warranty && <p className="text-muted-foreground">Garantía: {b.conditions.warranty}</p>}
+                        {b.conditions.notes && <p className="text-muted-foreground">{b.conditions.notes}</p>}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Sections */}
+                {sections.map(({ key, label }) => {
+                  const items: any[] = allSections[key] || []
+                  if (items.length === 0) return null
+                  const sectionTotal = items.reduce((s: number, i: any) => s + ((Number(i.qty ?? i.quantity) || 0) * (Number(i.price) || 0)), 0)
+                  return (
+                    <div key={key}>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{label}</p>
+                      <div className="rounded-lg border border-border overflow-hidden">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="bg-muted/40 border-b border-border">
+                              <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground">Descripción</th>
+                              <th className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground">Unid.</th>
+                              <th className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground">Cant.</th>
+                              <th className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground">P. Unit.</th>
+                              <th className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground">Total</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border">
+                            {items.map((item: any, idx: number) => {
+                              const desc = item.desc || item.description || ''
+                              const qty = Number(item.qty ?? item.quantity) || 0
+                              const price = Number(item.price) || 0
+                              return (
+                              <tr key={idx} className="hover:bg-muted/20">
+                                <td className="px-3 py-2 text-foreground">{desc || <span className="text-muted-foreground/40 italic">—</span>}</td>
+                                <td className="px-3 py-2 text-center text-muted-foreground">{item.unit || '—'}</td>
+                                <td className="px-3 py-2 text-right text-muted-foreground">{qty}</td>
+                                <td className="px-3 py-2 text-right text-muted-foreground">{sym} {price.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</td>
+                                <td className="px-3 py-2 text-right font-medium text-foreground">{sym} {(qty * price).toLocaleString('es-ES', { minimumFractionDigits: 2 })}</td>
+                              </tr>
+                              )
+                            })}
+                          </tbody>
+                          <tfoot>
+                            <tr className="bg-muted/30 border-t border-border">
+                              <td colSpan={4} className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground">Subtotal {label}</td>
+                              <td className="px-3 py-2 text-right font-semibold text-foreground">{sym} {sectionTotal.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+                    </div>
+                  )
+                })}
+
+                {/* Totals */}
+                <div className="flex justify-end pt-2 border-t border-border">
+                  <div className="space-y-1 text-sm min-w-[220px]">
+                    {taxRate > 0 && (
+                      <>
+                        <div className="flex justify-between text-muted-foreground">
+                          <span>Subtotal</span>
+                          <span>{sym} {subtotal.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                        <div className="flex justify-between text-muted-foreground">
+                          <span>IVA ({taxRate}%)</span>
+                          <span>{sym} {taxAmt.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                      </>
+                    )}
+                    <div className="flex justify-between font-bold text-base text-foreground pt-1 border-t border-border">
+                      <span>TOTAL</span>
+                      <span>{sym} {Number(b.total).toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
+        </DialogContent>
+      </Dialog>
 
       {/* ── New order sheet ── */}
       <Sheet open={orderOpen} onOpenChange={setOrderOpen}>

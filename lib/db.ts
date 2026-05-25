@@ -335,22 +335,65 @@ function normalizeTechnician(row: any) {
 }
 
 // ============================================
-// NOTIFICATIONS
+// NOTIFICATIONS  (budget-level, for admin/supervisor)
 // ============================================
 
 export async function createNotification(data: {
-  user_id: string; type: string; title: string; body?: string; reference_id?: string
+  type: string
+  message: string
+  budget_id?: string
 }) {
-  const result = await query(
-    `INSERT INTO notifications (user_id, type, title, body, reference_id)
-     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-    [data.user_id, data.type, data.title, data.body || null, data.reference_id || null]
-  )
-  return result.rows[0]
+  try {
+    const result = await query(
+      `INSERT INTO notifications (type, message, budget_id) VALUES ($1,$2,$3) RETURNING *`,
+      [data.type, data.message, data.budget_id || null]
+    )
+    return result.rows[0]
+  } catch {
+    // Table may not exist yet — silent fail
+  }
 }
 
-export async function listNotifications(user_id: string) {
-  return getMany(`SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC`, [user_id])
+export async function listNotifications(unreadOnly = false) {
+  try {
+    return getMany<{
+      id: string; type: string; message: string; budget_id: string | null
+      budget_numero: string | null; read: boolean; created_at: string
+    }>(
+      `SELECT n.*, b.numero as budget_numero
+       FROM notifications n
+       LEFT JOIN budgets b ON b.id = n.budget_id
+       ${unreadOnly ? 'WHERE n.read = false' : ''}
+       ORDER BY n.created_at DESC LIMIT 50`,
+      []
+    )
+  } catch {
+    return []
+  }
+}
+
+export async function countUnreadNotifications(): Promise<number> {
+  try {
+    const result = await query(
+      `SELECT COUNT(*)::int as count FROM notifications WHERE read = false`,
+      []
+    )
+    return (result.rows[0] as any)?.count ?? 0
+  } catch {
+    return 0
+  }
+}
+
+export async function markNotificationRead(id: string) {
+  try {
+    await query(`UPDATE notifications SET read = true WHERE id = $1`, [id])
+  } catch { /* silent */ }
+}
+
+export async function markAllNotificationsRead() {
+  try {
+    await query(`UPDATE notifications SET read = true WHERE read = false`, [])
+  } catch { /* silent */ }
 }
 
 // ============================================
@@ -1144,3 +1187,201 @@ export async function autoGenerateWorkOrdersFromOccurrences(filters: {
 
   return created
 }
+
+// ============================================
+// BUDGETS
+// ============================================
+
+export async function listBudgets(filters?: { rubro?: string; status?: string; customer_id?: string }) {
+  const conditions: string[] = []
+  const params: any[] = []
+
+  if (filters?.rubro) {
+    params.push(filters.rubro)
+    conditions.push(`b.rubro = $${params.length}`)
+  }
+  if (filters?.status) {
+    params.push(filters.status)
+    conditions.push(`b.status = $${params.length}`)
+  }
+  if (filters?.customer_id) {
+    params.push(filters.customer_id)
+    conditions.push(`b.customer_id = $${params.length}`)
+  }
+
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+  return getMany(
+    `SELECT b.*, c.name AS customer_name
+     FROM budgets b
+     LEFT JOIN customers c ON b.customer_id = c.id
+     ${where}
+     ORDER BY b.created_at DESC`,
+    params
+  )
+}
+
+export async function getBudgetById(id: string) {
+  return getOne(
+    `SELECT b.*, c.name AS customer_name, c.email AS customer_email, c.phone AS customer_phone
+     FROM budgets b
+     LEFT JOIN customers c ON b.customer_id = c.id
+     WHERE b.id = $1`,
+    [id]
+  )
+}
+
+export async function createBudget(data: {
+  customer_id?: string | null
+  rubro: string
+  status?: string
+  numero: string
+  fecha: string
+  vigencia: string
+  company_data: object
+  sections: object
+  currency: string
+  tax_rate: number
+  total: number
+  conditions: string[]
+}) {
+  const result = await query(
+    `INSERT INTO budgets
+       (customer_id, rubro, status, numero, fecha, vigencia, company_data, sections, currency, tax_rate, total, conditions)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+     RETURNING *`,
+    [
+      data.customer_id || null,
+      data.rubro,
+      data.status || 'borrador',
+      data.numero,
+      data.fecha,
+      data.vigencia,
+      JSON.stringify(data.company_data),
+      JSON.stringify(data.sections),
+      data.currency,
+      data.tax_rate,
+      data.total,
+      JSON.stringify(data.conditions),
+    ]
+  )
+  return result.rows[0]
+}
+
+export async function updateBudget(
+  id: string,
+  data: Partial<{
+    customer_id: string | null
+    rubro: string
+    status: string
+    numero: string
+    fecha: string
+    vigencia: string
+    company_data: object
+    sections: object
+    currency: string
+    tax_rate: number
+    total: number
+    conditions: string[]
+  }>
+) {
+  const fields: string[] = []
+  const params: any[] = []
+
+  for (const [key, val] of Object.entries(data)) {
+    if (val === undefined) continue
+    const serialized =
+      typeof val === 'object' && val !== null ? JSON.stringify(val) : val
+    params.push(serialized)
+    fields.push(`${key} = $${params.length}`)
+  }
+
+  if (fields.length === 0) return getBudgetById(id)
+
+  params.push(id)
+  const result = await query(
+    `UPDATE budgets SET ${fields.join(', ')}, updated_at = NOW()
+     WHERE id = $${params.length}
+     RETURNING *`,
+    params
+  )
+  return result.rows[0]
+}
+
+export async function deleteBudget(id: string) {
+  return query(`DELETE FROM budgets WHERE id = $1`, [id])
+}
+
+export async function getBudgetMetrics() {
+  return getOne(`
+    SELECT
+      COUNT(*) FILTER (WHERE status = 'enviado') AS pending_approval,
+      COUNT(*) FILTER (WHERE status = 'aceptado') AS accepted,
+      COUNT(*) FILTER (WHERE status = 'rechazado') AS rejected,
+      COALESCE(SUM(total) FILTER (
+        WHERE DATE_TRUNC('month', created_at) = DATE_TRUNC('month', NOW())
+      ), 0) AS monthly_total,
+      COUNT(*) FILTER (
+        WHERE DATE_TRUNC('month', created_at) = DATE_TRUNC('month', NOW())
+      ) AS monthly_count,
+      COUNT(*) FILTER (
+        WHERE status = 'aceptado'
+        AND DATE_TRUNC('month', created_at) = DATE_TRUNC('month', NOW())
+      ) AS monthly_accepted
+    FROM budgets
+  `)
+}
+
+// ============================================
+// BUDGET KITS
+// ============================================
+
+export async function listBudgetKits(rubro?: string) {
+  if (rubro) {
+    return getMany(
+      `SELECT * FROM budget_kits WHERE rubro = $1 ORDER BY is_default DESC, created_at ASC`,
+      [rubro]
+    )
+  }
+  return getMany(`SELECT * FROM budget_kits ORDER BY is_default DESC, created_at ASC`)
+}
+
+export async function createBudgetKit(data: {
+  rubro: string
+  name: string
+  sections: object
+  is_default?: boolean
+}) {
+  const result = await query(
+    `INSERT INTO budget_kits (rubro, name, sections, is_default) VALUES ($1,$2,$3,$4) RETURNING *`,
+    [data.rubro, data.name, JSON.stringify(data.sections), data.is_default ?? false]
+  )
+  return result.rows[0]
+}
+
+export async function deleteBudgetKit(id: string) {
+  return query(`DELETE FROM budget_kits WHERE id = $1 AND is_default = FALSE`, [id])
+}
+
+// ============================================
+// BUDGET COMMENTS
+// ============================================
+
+export async function getBudgetComments(budget_id: string) {
+  return getMany(
+    `SELECT * FROM budget_comments WHERE budget_id = $1 ORDER BY created_at ASC`,
+    [budget_id]
+  )
+}
+
+export async function createBudgetComment(data: {
+  budget_id: string
+  author: string
+  text: string
+}) {
+  const result = await query(
+    `INSERT INTO budget_comments (budget_id, author, text) VALUES ($1,$2,$3) RETURNING *`,
+    [data.budget_id, data.author, data.text]
+  )
+  return result.rows[0]
+}
+

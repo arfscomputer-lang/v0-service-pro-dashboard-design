@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import {
@@ -64,9 +64,26 @@ const roleLabels: Record<UserRole, string> = {
 
 export function SidebarNav() {
   const [collapsed, setCollapsed] = useState(false)
+  const [unreadNotifs, setUnreadNotifs] = useState(0)
   const pathname = usePathname()
   const router = useRouter()
   const { user, logout } = useAuth()
+
+  useEffect(() => {
+    if (!user || (user.role !== 'admin' && user.role !== 'supervisor')) return
+    const fetchCount = async () => {
+      try {
+        const res = await fetch('/api/notifications?count=true')
+        if (res.ok) {
+          const { count } = await res.json()
+          setUnreadNotifs(count ?? 0)
+        }
+      } catch { /* ignore */ }
+    }
+    fetchCount()
+    const interval = setInterval(fetchCount, 30_000)
+    return () => clearInterval(interval)
+  }, [user])
 
   function isActive(href: string) {
     if (href === "/") {
@@ -112,6 +129,7 @@ export function SidebarNav() {
         <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
           {visibleItems.map((item) => {
             const active = isActive(item.href)
+            const showBadge = item.href === '/presupuestos' && unreadNotifs > 0
             if (!collapsed) {
               return (
                 <Link
@@ -125,7 +143,12 @@ export function SidebarNav() {
                   )}
                 >
                   <item.icon className="h-5 w-5 shrink-0" />
-                  <span>{item.label}</span>
+                  <span className="flex-1">{item.label}</span>
+                  {showBadge && (
+                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white leading-none">
+                      {unreadNotifs > 9 ? '9+' : unreadNotifs}
+                    </span>
+                  )}
                 </Link>
               )
             }
@@ -135,18 +158,24 @@ export function SidebarNav() {
                   <Link
                     href={item.href}
                     className={cn(
-                      "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                      "relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                       active
                         ? "bg-sidebar-accent text-sidebar-accent-foreground"
                         : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
                     )}
                   >
                     <item.icon className="h-5 w-5 shrink-0" />
+                    {showBadge && (
+                      <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] font-bold text-white">
+                        {unreadNotifs > 9 ? '9+' : unreadNotifs}
+                      </span>
+                    )}
                   </Link>
                 </TooltipTrigger>
                 {collapsed && (
                   <TooltipContent side="right" className="bg-foreground text-background">
                     {item.label}
+                    {showBadge && ` (${unreadNotifs} sin leer)`}
                   </TooltipContent>
                 )}
               </Tooltip>
