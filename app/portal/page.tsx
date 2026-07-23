@@ -998,6 +998,7 @@ export default function ClientPortalPage() {
                       <tr className="border-b border-border bg-muted/30">
                         <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Orden</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Tipo</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Descripción</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Fecha</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Dirección</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Estado</th>
@@ -1013,6 +1014,9 @@ export default function ClientPortalPage() {
                           <tr key={o.id} className="hover:bg-muted/20 transition-colors">
                             <td className="px-4 py-3 font-medium text-foreground">{o.orderId}</td>
                             <td className="px-4 py-3 text-muted-foreground">{o.type}</td>
+                            <td className="px-4 py-3 text-muted-foreground truncate max-w-[220px]" title={o.description || undefined}>
+                              {o.description || <span className="text-muted-foreground/40 italic">—</span>}
+                            </td>
                             <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
                               {isEditingDate ? (
                                 <div className="flex items-center gap-1.5">
