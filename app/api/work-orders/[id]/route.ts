@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getWorkOrderById, updateWorkOrder, deleteWorkOrder, query } from "@/lib/db"
+import { getWorkOrderById, updateWorkOrder, deleteWorkOrder, query, createNotification } from "@/lib/db"
 
 async function ensureColumns() {
   await query(`ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS technician_started_at TIMESTAMPTZ`).catch(() => {})
@@ -27,11 +27,33 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     await ensureColumns()
     const { id } = await params
-    const body = await req.json()
+    const { client_reschedule, ...body } = await req.json()
+
+    if (client_reschedule) {
+      const existing = await getWorkOrderById(id)
+      if (!existing) {
+        return NextResponse.json({ error: "Work order not found" }, { status: 404 })
+      }
+      if (existing.status !== "pendiente") {
+        return NextResponse.json(
+          { error: "Solo se puede reprogramar una orden mientras está pendiente" },
+          { status: 409 }
+        )
+      }
+    }
+
     const workOrder = await updateWorkOrder(id, body)
     if (!workOrder) {
       return NextResponse.json({ error: "Work order not found" }, { status: 404 })
     }
+
+    if (client_reschedule && body.scheduled_date) {
+      await createNotification({
+        type: "order_rescheduled",
+        message: `El cliente reprogramó la orden ${workOrder.orderId} para el ${body.scheduled_date}`,
+      })
+    }
+
     console.log("[v0] Updated work order:", id)
     return NextResponse.json({ data: workOrder }, { status: 200 })
   } catch (error) {

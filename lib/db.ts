@@ -335,75 +335,129 @@ function normalizeTechnician(row: any) {
 }
 
 // ============================================
-// NOTIFICATIONS  (budget-level, for admin/supervisor)
+// NOTIFICATIONS
+//
+// Real schema (scripts/init-db.sql, the one actually deployed):
+//   id, user_id (nullable — relaxed below), type, title, body, reference_id,
+//   read, read_at, created_at.
+// Two independent consumers share this table:
+//   - Per-user (technician) notifications: rows with user_id set — see
+//     listUserNotifications/markUserNotificationsRead, used by
+//     components/technician/mobile-header.tsx via GET/PATCH ?user_id=.
+//   - Broadcast notifications (admin/supervisor, or a specific client via
+//     customer_id): rows with user_id IS NULL — see createNotification /
+//     listNotifications / countUnreadNotifications / markAllNotificationsRead.
+// A prior version of this file assumed message/budget_id columns that were
+// never actually present, so every insert silently failed — keep write
+// paths logging errors instead of swallowing them.
 // ============================================
+
+async function ensureNotificationColumns() {
+  await query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS customer_id UUID`).catch(() => {})
+  await query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS read_at TIMESTAMPTZ`).catch(() => {})
+  await query(`ALTER TABLE notifications ALTER COLUMN user_id DROP NOT NULL`).catch(() => {})
+}
 
 export async function createNotification(data: {
   type: string
   message: string
   budget_id?: string
   customer_id?: string
+  user_id?: string
 }) {
   try {
-    await query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS customer_id UUID`).catch(() => {})
+    await ensureNotificationColumns()
     const result = await query(
-      `INSERT INTO notifications (type, message, budget_id, customer_id) VALUES ($1,$2,$3,$4) RETURNING *`,
-      [data.type, data.message, data.budget_id || null, data.customer_id || null]
+      `INSERT INTO notifications (type, title, body, reference_id, user_id, customer_id)
+       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+      [data.type, data.message.slice(0, 255), data.message, data.budget_id || null, data.user_id || null, data.customer_id || null]
     )
     return result.rows[0]
-  } catch {
-    // Table may not exist yet — silent fail
+  } catch (error) {
+    console.error('[v0] createNotification error:', error)
   }
 }
 
 // customer_id omitted => admin/supervisor notifications; provided => that client's notifications
 export async function listNotifications(unreadOnly = false, customer_id?: string) {
   try {
-    await query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS customer_id UUID`).catch(() => {})
-    const conditions: string[] = [customer_id ? 'n.customer_id = $1' : 'n.customer_id IS NULL']
+    await ensureNotificationColumns()
+    const conditions: string[] = ['n.user_id IS NULL', customer_id ? 'n.customer_id = $1' : 'n.customer_id IS NULL']
     if (unreadOnly) conditions.push('n.read = false')
     return getMany<{
-      id: string; type: string; message: string; budget_id: string | null
-      budget_numero: string | null; read: boolean; created_at: string
+      id: string; type: string; title: string; body: string; reference_id: string | null
+      customer_id: string | null; read: boolean; created_at: string
     }>(
-      `SELECT n.*, b.numero as budget_numero
-       FROM notifications n
-       LEFT JOIN budgets b ON b.id = n.budget_id
+      `SELECT n.* FROM notifications n
        WHERE ${conditions.join(' AND ')}
        ORDER BY n.created_at DESC LIMIT 50`,
       customer_id ? [customer_id] : []
     )
-  } catch {
+  } catch (error) {
+    console.error('[v0] listNotifications error:', error)
     return []
   }
 }
 
 export async function countUnreadNotifications(customer_id?: string): Promise<number> {
   try {
-    await query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS customer_id UUID`).catch(() => {})
+    await ensureNotificationColumns()
     const scope = customer_id ? 'customer_id = $1' : 'customer_id IS NULL'
     const result = await query(
-      `SELECT COUNT(*)::int as count FROM notifications WHERE read = false AND ${scope}`,
+      `SELECT COUNT(*)::int as count FROM notifications WHERE read = false AND user_id IS NULL AND ${scope}`,
       customer_id ? [customer_id] : []
     )
     return (result.rows[0] as any)?.count ?? 0
-  } catch {
+  } catch (error) {
+    console.error('[v0] countUnreadNotifications error:', error)
     return 0
   }
 }
 
 export async function markNotificationRead(id: string) {
   try {
-    await query(`UPDATE notifications SET read = true WHERE id = $1`, [id])
-  } catch { /* silent */ }
+    await query(`UPDATE notifications SET read = true, read_at = NOW() WHERE id = $1`, [id])
+  } catch (error) {
+    console.error('[v0] markNotificationRead error:', error)
+  }
 }
 
 export async function markAllNotificationsRead(customer_id?: string) {
   try {
-    await query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS customer_id UUID`).catch(() => {})
+    await ensureNotificationColumns()
     const scope = customer_id ? 'customer_id = $1' : 'customer_id IS NULL'
-    await query(`UPDATE notifications SET read = true WHERE read = false AND ${scope}`, customer_id ? [customer_id] : [])
-  } catch { /* silent */ }
+    await query(
+      `UPDATE notifications SET read = true, read_at = NOW() WHERE read = false AND user_id IS NULL AND ${scope}`,
+      customer_id ? [customer_id] : []
+    )
+  } catch (error) {
+    console.error('[v0] markAllNotificationsRead error:', error)
+  }
+}
+
+// Per-user (technician) notifications — components/technician/mobile-header.tsx
+export async function listUserNotifications(user_id: string) {
+  try {
+    await ensureNotificationColumns()
+    return getMany<any>(
+      `SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50`,
+      [user_id]
+    )
+  } catch (error) {
+    console.error('[v0] listUserNotifications error:', error)
+    return []
+  }
+}
+
+export async function markUserNotificationsRead(user_id: string) {
+  try {
+    await query(
+      `UPDATE notifications SET read = true, read_at = NOW() WHERE user_id = $1 AND read_at IS NULL`,
+      [user_id]
+    )
+  } catch (error) {
+    console.error('[v0] markUserNotificationsRead error:', error)
+  }
 }
 
 // ============================================

@@ -28,7 +28,7 @@ export interface WorkOrder {
 interface WorkOrdersContextType {
   workOrders: WorkOrder[]
   addWorkOrder: (data: Omit<WorkOrder, 'id' | 'createdAt' | 'updatedAt'>) => Promise<WorkOrder>
-  updateWorkOrder: (id: string, data: Partial<WorkOrder>) => Promise<void>
+  updateWorkOrder: (id: string, data: Partial<WorkOrder>, opts?: { clientReschedule?: boolean }) => Promise<void>
   deleteWorkOrder: (id: string) => Promise<void>
 }
 
@@ -104,7 +104,7 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
   )
 
   const updateWorkOrder = useCallback(
-    async (id: string, data: Partial<WorkOrder>) => {
+    async (id: string, data: Partial<WorkOrder>, opts?: { clientReschedule?: boolean }) => {
       try {
         const payload: Record<string, any> = {}
         if (data.orderId !== undefined) payload.order_id = data.orderId
@@ -120,6 +120,7 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
         if (data.technicianId !== undefined) payload.technician_id = data.technicianId
         if (data.assetId !== undefined) payload.asset_id = data.assetId
         if (data.category !== undefined) payload.category = data.category
+        if (opts?.clientReschedule) payload.client_reschedule = true
 
         // Call API to update in database
         const res = await fetch(`/api/work-orders/${id}`, {

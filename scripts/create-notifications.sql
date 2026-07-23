@@ -1,16 +1,12 @@
--- Tabla de notificaciones internas.
--- customer_id NULL => notificación para admin/supervisor; customer_id seteado => para ese cliente (portal)
-CREATE TABLE IF NOT EXISTS notifications (
-  id          uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  type        text NOT NULL,
-  message     text NOT NULL,
-  budget_id   uuid REFERENCES budgets(id) ON DELETE CASCADE,
-  customer_id uuid REFERENCES customers(id) ON DELETE CASCADE,
-  read        boolean DEFAULT false,
-  created_at  timestamptz DEFAULT now()
-);
+-- The `notifications` table already exists (created by scripts/init-db.sql):
+--   id, user_id (FK users, nullable), type, title, body, reference_id, read, created_at
+-- This script only adds the columns needed for broadcast-style notifications
+-- (admin/supervisor, or a specific client via the portal) on top of the
+-- original per-user (technician) notification rows. Same effect as the lazy
+-- migrations in lib/db.ts — safe to run repeatedly.
 
-CREATE INDEX IF NOT EXISTS notifications_read_idx     ON notifications(read);
-CREATE INDEX IF NOT EXISTS notifications_budget_idx   ON notifications(budget_id);
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS customer_id UUID REFERENCES customers(id) ON DELETE CASCADE;
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS read_at TIMESTAMPTZ;
+ALTER TABLE notifications ALTER COLUMN user_id DROP NOT NULL;
+
 CREATE INDEX IF NOT EXISTS notifications_customer_idx ON notifications(customer_id);
-CREATE INDEX IF NOT EXISTS notifications_created_idx  ON notifications(created_at DESC);

@@ -54,6 +54,9 @@ import {
   FileText,
   Send,
   MessageSquare,
+  Pencil,
+  Check,
+  X,
 } from "lucide-react"
 import {
   BarChart,
@@ -85,7 +88,7 @@ const statusMap: Record<string, { label: string; color: string; icon: typeof Che
 export default function ClientPortalPage() {
   const { user, logout } = useAuth()
   const { customers } = useCustomers()
-  const { workOrders, addWorkOrder } = useWorkOrders()
+  const { workOrders, addWorkOrder, updateWorkOrder } = useWorkOrders()
   const router = useRouter()
   const [orderOpen, setOrderOpen] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -102,6 +105,26 @@ export default function ClientPortalPage() {
   })
   const [orderSubmitting, setOrderSubmitting] = useState(false)
   const [orderError, setOrderError] = useState("")
+
+  // reprogramar fecha (solo órdenes pendientes)
+  const [editingDateOrderId, setEditingDateOrderId] = useState<string | null>(null)
+  const [editingDateValue, setEditingDateValue] = useState("")
+  const [dateSaving, setDateSaving] = useState(false)
+  const [dateError, setDateError] = useState<string | null>(null)
+
+  const handleSaveOrderDate = async (orderId: string) => {
+    if (!editingDateValue) return
+    setDateSaving(true)
+    setDateError(null)
+    try {
+      await updateWorkOrder(orderId, { scheduledDate: editingDateValue }, { clientReschedule: true })
+      setEditingDateOrderId(null)
+    } catch {
+      setDateError("No se pudo reprogramar. La orden puede ya tener un técnico asignado.")
+    } finally {
+      setDateSaving(false)
+    }
+  }
 
   // presupuestos
   const [budgets, setBudgets] = useState<any[]>([])
@@ -848,11 +871,66 @@ export default function ClientPortalPage() {
                       {myOrders.map((o) => {
                         const st = statusMap[o.status === "completada" ? "completado" : o.status === "cancelada" ? "cancelado" : "pendiente"] ?? statusMap.pendiente
                         const prioridad = { alta: "text-destructive", urgente: "text-destructive", normal: "text-muted-foreground", baja: "text-muted-foreground" }
+                        const isEditingDate = editingDateOrderId === o.id
                         return (
                           <tr key={o.id} className="hover:bg-muted/20 transition-colors">
                             <td className="px-4 py-3 font-medium text-foreground">{o.orderId}</td>
                             <td className="px-4 py-3 text-muted-foreground">{o.type}</td>
-                            <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{o.scheduledDate}</td>
+                            <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+                              {isEditingDate ? (
+                                <div className="flex items-center gap-1.5">
+                                  <Input
+                                    type="date"
+                                    className="h-8 w-[150px] text-xs"
+                                    value={editingDateValue}
+                                    onChange={(e) => setEditingDateValue(e.target.value)}
+                                    autoFocus
+                                  />
+                                  <Button
+                                    type="button"
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-7 w-7 text-emerald-600"
+                                    disabled={dateSaving}
+                                    onClick={() => handleSaveOrderDate(o.id)}
+                                  >
+                                    <Check className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-7 w-7 text-muted-foreground"
+                                    disabled={dateSaving}
+                                    onClick={() => { setEditingDateOrderId(null); setDateError(null) }}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1.5">
+                                  <span>{o.scheduledDate}</span>
+                                  {o.status === "pendiente" && (
+                                    <Button
+                                      type="button"
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-6 w-6 text-muted-foreground hover:text-primary"
+                                      onClick={() => {
+                                        setEditingDateOrderId(o.id)
+                                        setEditingDateValue(o.scheduledDate)
+                                        setDateError(null)
+                                      }}
+                                    >
+                                      <Pencil className="h-3.5 w-3.5" />
+                                    </Button>
+                                  )}
+                                </div>
+                              )}
+                              {isEditingDate && dateError && (
+                                <p className="text-[10px] text-destructive mt-1">{dateError}</p>
+                              )}
+                            </td>
                             <td className="px-4 py-3 text-muted-foreground truncate max-w-[160px]">{o.address}</td>
                             <td className="px-4 py-3">
                               <Badge variant="outline" className={cn("text-[10px]", st.color)}>{st.label}</Badge>
