@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSessionByToken, deleteSession } from '@/lib/db'
+import { getSessionByToken, deleteSession, getOne } from '@/lib/db'
 
 interface SessionRow {
   id: string
@@ -7,6 +7,7 @@ interface SessionRow {
   name: string
   role: string
   status: string
+  customer_id: string | null
   [key: string]: unknown
 }
 
@@ -31,6 +32,15 @@ export async function GET(req: NextRequest) {
       })
     }
 
+    let technicianId: string | null = null
+    if (sessionData.role === 'tecnico') {
+      const tech = await getOne<{ id: string }>(
+        'SELECT id FROM technicians WHERE email = $1 LIMIT 1',
+        [sessionData.email]
+      )
+      technicianId = tech?.id ?? null
+    }
+
     return NextResponse.json({
       success: true,
       user: {
@@ -39,6 +49,8 @@ export async function GET(req: NextRequest) {
         name: sessionData.name,
         role: sessionData.role,
         status: sessionData.status,
+        customerId: sessionData.customer_id ?? null,
+        technicianId,
       },
     })
   } catch (error) {

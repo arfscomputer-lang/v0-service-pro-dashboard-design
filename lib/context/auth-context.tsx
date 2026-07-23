@@ -140,6 +140,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   .join("")
                   .toUpperCase()
                   .slice(0, 2),
+                customerId: data.user.customerId ?? undefined,
+                technicianId: data.user.technicianId ?? undefined,
               }
               setUser(authUser)
             } else {
