@@ -57,6 +57,7 @@ import {
   Pencil,
   Check,
   X,
+  ShieldCheck,
 } from "lucide-react"
 import {
   BarChart,
@@ -92,7 +93,7 @@ export default function ClientPortalPage() {
   const router = useRouter()
   const [orderOpen, setOrderOpen] = useState(false)
   const [submitted, setSubmitted] = useState(false)
-  const [tab, setTab] = useState<"dashboard" | "ordenes" | "reportes" | "presupuestos">("dashboard")
+  const [tab, setTab] = useState<"dashboard" | "ordenes" | "reportes" | "presupuestos" | "autorizaciones">("dashboard")
   const [customerAssets, setCustomerAssets] = useState<{ id: string; name: string; asset_id: string; type: string }[]>([])
   const [selectedAssetId, setSelectedAssetId] = useState("")
   const [orderForm, setOrderForm] = useState({
@@ -111,6 +112,11 @@ export default function ClientPortalPage() {
   const [editingDateValue, setEditingDateValue] = useState("")
   const [dateSaving, setDateSaving] = useState(false)
   const [dateError, setDateError] = useState<string | null>(null)
+
+  // autorizaciones de gasto
+  const [authorizations, setAuthorizations] = useState<any[]>([])
+  const [authComments, setAuthComments] = useState<Record<string, string>>({})
+  const [authResponding, setAuthResponding] = useState<Record<string, boolean>>({})
 
   const handleSaveOrderDate = async (orderId: string) => {
     if (!editingDateValue) return
@@ -203,6 +209,34 @@ export default function ClientPortalPage() {
     }
   }, [tab, user?.customerId])
 
+  const loadAuthorizations = () => {
+    if (!user?.customerId) return
+    fetch(`/api/expense-authorizations?customer_id=${user.customerId}`)
+      .then((r) => r.json())
+      .then((d) => setAuthorizations(d.authorizations || []))
+      .catch(() => setAuthorizations([]))
+  }
+
+  useEffect(() => { loadAuthorizations() }, [user?.customerId])
+  useEffect(() => { if (tab === "autorizaciones") loadAuthorizations() }, [tab])
+
+  const handleRespondAuthorization = async (authId: string, status: "aprobado" | "rechazado") => {
+    setAuthResponding((prev) => ({ ...prev, [authId]: true }))
+    try {
+      const res = await fetch(`/api/expense-authorizations/${authId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status, client_comment: authComments[authId]?.trim() || undefined }),
+      })
+      if (res.ok) {
+        const { authorization } = await res.json()
+        setAuthorizations((prev) => prev.map((a) => (a.id === authId ? authorization : a)))
+      }
+    } catch {} finally {
+      setAuthResponding((prev) => ({ ...prev, [authId]: false }))
+    }
+  }
+
   const handleViewBudget = async (budgetId: string) => {
     setViewingBudgetLoading(true)
     setViewingBudget(null)
@@ -246,6 +280,7 @@ export default function ClientPortalPage() {
   const myOrders = workOrders.filter((o) => o.customerId === user.customerId)
   const completedOrders = myOrders.filter((o) => o.status === "completada")
   const pendingOrders = myOrders.filter((o) => o.status !== "completada" && o.status !== "cancelada")
+  const pendingAuthorizations = authorizations.filter((a) => a.status === "pendiente")
 
   const completedServices = customer.services.filter((s) => s.status === "completado")
   const avgRating = completedServices.length > 0
@@ -335,6 +370,24 @@ export default function ClientPortalPage() {
               </span>
             )}
           </button>
+          <button
+            type="button"
+            onClick={() => setTab("autorizaciones")}
+            className={cn(
+              "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+              tab === "autorizaciones"
+                ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+            )}
+          >
+            <ShieldCheck className="h-5 w-5 shrink-0" />
+            <span className="flex-1 text-left">Autorizaciones</span>
+            {pendingAuthorizations.length > 0 && (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white leading-none">
+                {pendingAuthorizations.length > 9 ? '9+' : pendingAuthorizations.length}
+              </span>
+            )}
+          </button>
         </nav>
 
         {/* User section */}
@@ -367,7 +420,7 @@ export default function ClientPortalPage() {
         <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6">
           <div>
             <h1 className="text-lg font-bold text-foreground">
-              {tab === "dashboard" ? "Mi Dashboard" : tab === "ordenes" ? "Mis Órdenes de Servicio" : tab === "presupuestos" ? "Mis Presupuestos" : "Mis Reportes"}
+              {tab === "dashboard" ? "Mi Dashboard" : tab === "ordenes" ? "Mis Órdenes de Servicio" : tab === "presupuestos" ? "Mis Presupuestos" : tab === "autorizaciones" ? "Autorizaciones de Gasto" : "Mis Reportes"}
             </h1>
             <p className="text-xs text-muted-foreground">Bienvenido, {customer.name}</p>
           </div>
@@ -814,6 +867,90 @@ export default function ClientPortalPage() {
                             <CheckCircle2 className="h-4 w-4" />
                             Presupuesto aceptado. Nos pondremos en contacto para coordinar el trabajo.
                           </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )
+                })
+              )}
+            </div>
+          ) : tab === "autorizaciones" ? (
+            /* ─── Autorizaciones de Gasto tab ─── */
+            <div className="space-y-4">
+              {authorizations.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                  <ShieldCheck className="h-10 w-10 mb-3 opacity-30" />
+                  <p className="text-sm">No hay autorizaciones de gasto</p>
+                </div>
+              ) : (
+                authorizations.map((a) => {
+                  const statusColors: Record<string, string> = {
+                    pendiente: 'bg-amber-100 text-amber-700 border-amber-300',
+                    aprobado:  'bg-emerald-100 text-emerald-700 border-emerald-300',
+                    rechazado: 'bg-red-100 text-red-700 border-red-300',
+                  }
+                  const statusLabels: Record<string, string> = {
+                    pendiente: 'Esperando tu respuesta', aprobado: 'Aprobado', rechazado: 'Rechazado',
+                  }
+                  return (
+                    <Card key={a.id} className="border border-border shadow-sm">
+                      <CardContent className="p-5 space-y-3">
+                        <div className="flex items-start justify-between gap-4 flex-wrap">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-mono font-semibold text-foreground text-sm">{a.work_order_number || 'Orden'}</span>
+                              <span className={cn("text-[10px] border rounded-full px-2 py-0.5 font-medium", statusColors[a.status] || 'bg-gray-100 text-gray-700 border-gray-300')}>
+                                {statusLabels[a.status] || a.status}
+                              </span>
+                            </div>
+                            <p className="text-sm text-foreground">{a.description}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {new Date(a.created_at).toLocaleDateString('es-ES')}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-muted-foreground uppercase font-medium">Monto</p>
+                            <p className="text-xl font-bold text-foreground">
+                              {a.currency === 'USD' ? '$' : a.currency === 'VES' ? 'Bs.' : a.currency} {Number(a.amount).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                            </p>
+                          </div>
+                        </div>
+
+                        {a.status === 'pendiente' ? (
+                          <div className="space-y-3 pt-2 border-t border-border">
+                            <Textarea
+                              placeholder="Comentario (opcional)…"
+                              value={authComments[a.id] || ''}
+                              onChange={(e) => setAuthComments((prev) => ({ ...prev, [a.id]: e.target.value }))}
+                              rows={2}
+                              className="text-sm resize-none"
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-1.5 text-xs border-red-400 text-red-600 hover:bg-red-50"
+                                disabled={authResponding[a.id]}
+                                onClick={() => handleRespondAuthorization(a.id, 'rechazado')}
+                              >
+                                <X className="h-3.5 w-3.5" />
+                                Rechazar
+                              </Button>
+                              <Button
+                                size="sm"
+                                className="gap-1.5 text-xs"
+                                disabled={authResponding[a.id]}
+                                onClick={() => handleRespondAuthorization(a.id, 'aprobado')}
+                              >
+                                <Check className="h-3.5 w-3.5" />
+                                {authResponding[a.id] ? 'Enviando…' : 'Autorizar gasto'}
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          a.client_comment && (
+                            <p className="text-sm text-muted-foreground italic pt-2 border-t border-border">"{a.client_comment}"</p>
+                          )
                         )}
                       </CardContent>
                     </Card>

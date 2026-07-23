@@ -18,6 +18,7 @@ const PUBLIC_ROUTES = [
   '/api/users',
   '/api/budgets',
   '/api/budget-kits',
+  '/api/expense-authorizations',
   '/auth/login',
   '/login',
 ]

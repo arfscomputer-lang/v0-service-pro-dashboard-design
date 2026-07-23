@@ -16,7 +16,7 @@ import {
   ArrowLeft, Save, Trash2, Loader2, Plus, DollarSign,
   Paperclip, FileText, Eye, Camera, History, Wrench,
   Package, Upload, User, Phone, Mail, MapPin, Calendar,
-  Clock, ChevronRight,
+  Clock, ChevronRight, ShieldCheck, CheckCircle2, XCircle,
 } from 'lucide-react'
 import { useWorkOrders, type WorkOrder } from '@/lib/context/work-orders-context'
 import { useAuth } from '@/lib/context/auth-context'
@@ -51,6 +51,18 @@ interface Customer {
   created_at?: string
 }
 
+interface ExpenseAuthorization {
+  id: string
+  description: string
+  amount: number | string
+  currency: string
+  status: 'pendiente' | 'aprobado' | 'rechazado'
+  client_comment: string | null
+  created_by: string
+  created_at: string
+  responded_at: string | null
+}
+
 type Tab = 'detalles' | 'refacciones' | 'historial' | 'fotos'
 type PhotoFilter = 'todas' | 'antes' | 'despues'
 
@@ -72,6 +84,16 @@ const STATUS_LABEL: Record<string, string> = {
   pendiente: 'Pendiente', asignada: 'Asignada', en_ruta: 'En Ruta',
   en_sitio: 'En Sitio', completada: 'Completada', cancelada: 'Cancelada',
 }
+
+const AUTH_STATUS_LABEL: Record<string, string> = {
+  pendiente: 'Esperando al cliente', aprobado: 'Aprobado', rechazado: 'Rechazado',
+}
+
+const AUTH_STATUS_COLOR: Record<string, string> = {
+  pendiente: 'bg-amber-100 text-amber-800', aprobado: 'bg-green-100 text-green-800', rechazado: 'bg-red-100 text-red-800',
+}
+
+const EMPTY_AUTH = { description: '', amount: '' }
 
 const STATUS_COLOR: Record<string, string> = {
   pendiente:  'bg-yellow-100 text-yellow-800',
@@ -117,6 +139,12 @@ export default function OrderDetailPage() {
   const [showExpenseForm, setShowExpenseForm] = useState(false)
   const [expenseForm, setExpenseForm] = useState(EMPTY_EXPENSE)
   const [savingExpense, setSavingExpense] = useState(false)
+
+  // Expense authorizations state
+  const [authorizations, setAuthorizations] = useState<ExpenseAuthorization[]>([])
+  const [showAuthForm, setShowAuthForm] = useState(false)
+  const [authForm, setAuthForm] = useState(EMPTY_AUTH)
+  const [savingAuth, setSavingAuth] = useState(false)
 
   // Photos state
   const [photos, setPhotos] = useState<{ before: string[]; after: string[] }>({ before: [], after: [] })
@@ -176,6 +204,41 @@ export default function OrderDetailPage() {
   }, [orderId, canManageExpenses])
 
   useEffect(() => { loadExpenses() }, [loadExpenses])
+
+  // ── Load expense authorizations ──────────────────────────────
+  const loadAuthorizations = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/expense-authorizations?work_order_id=${orderId}`)
+      if (res.ok) {
+        const j = await res.json()
+        setAuthorizations(j.authorizations ?? [])
+      }
+    } catch {}
+  }, [orderId])
+
+  useEffect(() => { loadAuthorizations() }, [loadAuthorizations])
+
+  const handleAddAuthorization = async () => {
+    if (!authForm.description.trim() || !authForm.amount) return
+    setSavingAuth(true)
+    try {
+      const res = await fetch('/api/expense-authorizations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          work_order_id: orderId,
+          description: authForm.description.trim(),
+          amount: parseFloat(authForm.amount),
+          created_by: user?.name || '',
+        }),
+      })
+      if (res.ok) {
+        setAuthForm(EMPTY_AUTH)
+        setShowAuthForm(false)
+        await loadAuthorizations()
+      }
+    } catch {} finally { setSavingAuth(false) }
+  }
 
   // ── Load photos ─────────────────────────────────────────────
   const loadPhotos = useCallback(async () => {
@@ -740,6 +803,73 @@ export default function OrderDetailPage() {
                         </CardContent>
                       </Card>
                     )}
+
+                    {/* Autorizaciones de Gasto */}
+                    <Card className="border border-border">
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-base flex items-center gap-2"><ShieldCheck className="h-4 w-4" />Autorizaciones de Gasto</CardTitle>
+                          {canManageExpenses && !showAuthForm && (
+                            <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => setShowAuthForm(true)}>
+                              <Plus className="h-3 w-3" />Solicitar autorización
+                            </Button>
+                          )}
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {authorizations.length === 0 && !showAuthForm ? (
+                          <p className="text-xs text-muted-foreground text-center py-6">Sin autorizaciones de gasto solicitadas</p>
+                        ) : (
+                          authorizations.map(a => (
+                            <div key={a.id} className="flex items-start justify-between gap-3 py-2.5 border-b border-border last:border-0">
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-foreground">{a.description}</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  {new Date(a.created_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                  {a.created_by ? ` · ${a.created_by}` : ''}
+                                </p>
+                                {a.status !== 'pendiente' && a.client_comment && (
+                                  <p className="text-xs text-muted-foreground mt-1 italic">"{a.client_comment}"</p>
+                                )}
+                              </div>
+                              <div className="flex flex-col items-end gap-1 shrink-0">
+                                <span className="font-semibold text-sm">{a.currency} {parseFloat(String(a.amount)).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                                <Badge className={cn('text-[10px] gap-1', AUTH_STATUS_COLOR[a.status])}>
+                                  {a.status === 'aprobado' && <CheckCircle2 className="h-3 w-3" />}
+                                  {a.status === 'rechazado' && <XCircle className="h-3 w-3" />}
+                                  {AUTH_STATUS_LABEL[a.status] ?? a.status}
+                                </Badge>
+                              </div>
+                            </div>
+                          ))
+                        )}
+
+                        {canManageExpenses && showAuthForm && (
+                          <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-3">
+                            <div>
+                              <Label className="text-xs">Descripción del trabajo/gasto extra</Label>
+                              <Textarea
+                                placeholder="Ej: se detectó una pieza adicional a reemplazar..."
+                                className="mt-1 text-xs"
+                                rows={2}
+                                value={authForm.description}
+                                onChange={e => setAuthForm({ ...authForm, description: e.target.value })}
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-xs">Monto (USD)</Label>
+                              <Input type="number" min="0" step="0.01" placeholder="0.00" className="mt-1 text-xs h-8" value={authForm.amount} onChange={e => setAuthForm({ ...authForm, amount: e.target.value })} />
+                            </div>
+                            <div className="flex gap-2 justify-end">
+                              <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setShowAuthForm(false); setAuthForm(EMPTY_AUTH) }} disabled={savingAuth}>Cancelar</Button>
+                              <Button size="sm" className="h-7 text-xs gap-1" onClick={handleAddAuthorization} disabled={savingAuth || !authForm.description.trim() || !authForm.amount}>
+                                {savingAuth ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}Enviar al cliente
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
 
                     {/* Add expense form */}
                     {canManageExpenses && showExpenseForm && (
