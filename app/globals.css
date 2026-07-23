@@ -8,6 +8,29 @@
   }
 }
 
+@media print {
+  html, body {
+    height: auto !important;
+  }
+  body * {
+    visibility: hidden;
+  }
+  #print-area,
+  #print-area * {
+    visibility: visible;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+  #print-area {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    background: white;
+  }
+}
+
 @layer base {
   :root {
     --background: 220 20% 97%;
@@ -48,6 +71,65 @@
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
     --content: 220 16% 93%;
+
+    /* Estados de OT — sistema de diseño "Servicios de Campo" */
+    --status-pending: 37 64% 53%;
+    --status-pending-bg: 35 100% 92%;
+    --status-pending-fg: 37 77% 15%;
+    --status-progress: 213 58% 51%;
+    --status-progress-bg: 210 100% 94%;
+    --status-progress-fg: 213 56% 21%;
+    --status-done: 136 40% 40%;
+    --status-done-bg: 129 48% 92%;
+    --status-done-fg: 136 46% 15%;
+    --status-cancelled: 8 45% 49%;
+    --status-cancelled-bg: 10 100% 94%;
+    --status-cancelled-fg: 8 45% 19%;
+  }
+
+  .dark {
+    --background: 203 25% 8%;
+    --foreground: 34 16% 92%;
+    --card: 203 19% 11%;
+    --card-foreground: 34 16% 92%;
+    --popover: 203 19% 11%;
+    --popover-foreground: 34 16% 92%;
+    --primary: 183 47% 51%;
+    --primary-foreground: 183 66% 4%;
+    --secondary: 183 21% 14%;
+    --secondary-foreground: 183 26% 85%;
+    --muted: 203 15% 14%;
+    --muted-foreground: 203 8% 60%;
+    --accent: 33 44% 16%;
+    --accent-foreground: 31 51% 83%;
+    --destructive: 3 57% 58%;
+    --destructive-foreground: 5 40% 6%;
+    --border: 203 14% 20%;
+    --input: 203 14% 20%;
+    --ring: 183 47% 51%;
+    --content: 203 15% 14%;
+
+    --sidebar-background: 204 47% 4%;
+    --sidebar-foreground: 220 20% 90%;
+    --sidebar-primary: 183 47% 51%;
+    --sidebar-primary-foreground: 183 66% 4%;
+    --sidebar-accent: 203 19% 11%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 203 14% 20%;
+    --sidebar-ring: 183 47% 51%;
+
+    --status-pending: 36 72% 62%;
+    --status-pending-bg: 36 53% 15%;
+    --status-pending-fg: 34 68% 81%;
+    --status-progress: 214 79% 69%;
+    --status-progress-bg: 214 48% 17%;
+    --status-progress-fg: 214 77% 83%;
+    --status-done: 133 32% 55%;
+    --status-done-bg: 134 36% 13%;
+    --status-done-fg: 130 34% 78%;
+    --status-cancelled: 8 63% 66%;
+    --status-cancelled-bg: 8 41% 17%;
+    --status-cancelled-fg: 9 84% 86%;
   }
 }
 

@@ -95,6 +95,7 @@ export default function ClientPortalPage() {
 
   // presupuestos
   const [budgets, setBudgets] = useState<any[]>([])
+  const [unreadBudgetNotifs, setUnreadBudgetNotifs] = useState(0)
   const [budgetComments, setBudgetComments] = useState<Record<string, string>>({})
   const [budgetCommentSending, setBudgetCommentSending] = useState<Record<string, boolean>>({})
   const [viewingBudget, setViewingBudget] = useState<any | null>(null)
@@ -127,6 +128,37 @@ export default function ClientPortalPage() {
       .then((d) => setBudgets((d.budgets || []).filter((b: any) => b.status !== 'borrador')))
       .catch(() => setBudgets([]))
   }, [user?.customerId])
+
+  // Poll for new budgets sent by admin while the client is on the portal
+  useEffect(() => {
+    if (!user?.customerId) return
+    const fetchCount = async () => {
+      try {
+        const res = await fetch(`/api/notifications?count=true&customer_id=${user.customerId}`)
+        if (res.ok) {
+          const { count } = await res.json()
+          setUnreadBudgetNotifs(count ?? 0)
+        }
+      } catch { /* ignore */ }
+    }
+    fetchCount()
+    const interval = setInterval(fetchCount, 30_000)
+    return () => clearInterval(interval)
+  }, [user?.customerId])
+
+  // Entering the tab means the client has seen the newly sent budgets: refresh list and clear the badge
+  useEffect(() => {
+    if (tab !== "presupuestos" || !user?.customerId) return
+    fetch(`/api/budgets?customer_id=${user.customerId}`)
+      .then((r) => r.json())
+      .then((d) => setBudgets((d.budgets || []).filter((b: any) => b.status !== 'borrador')))
+      .catch(() => {})
+    if (unreadBudgetNotifs > 0) {
+      fetch(`/api/notifications?customer_id=${user.customerId}`, { method: 'PATCH' })
+        .then(() => setUnreadBudgetNotifs(0))
+        .catch(() => {})
+    }
+  }, [tab, user?.customerId])
 
   const handleViewBudget = async (budgetId: string) => {
     setViewingBudgetLoading(true)
@@ -253,7 +285,12 @@ export default function ClientPortalPage() {
             )}
           >
             <FileText className="h-5 w-5 shrink-0" />
-            <span>Presupuestos</span>
+            <span className="flex-1 text-left">Presupuestos</span>
+            {unreadBudgetNotifs > 0 && (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white leading-none">
+                {unreadBudgetNotifs > 9 ? '9+' : unreadBudgetNotifs}
+              </span>
+            )}
           </button>
         </nav>
 

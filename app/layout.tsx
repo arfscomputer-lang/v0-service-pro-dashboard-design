@@ -1,6 +1,7 @@
 import React from "react"
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
+import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/lib/context/auth-context"
 import { RouteGuard } from "@/components/auth/route-guard"
 import { TechniciansProvider } from "@/lib/context/technicians-context"
@@ -39,13 +40,15 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning>
       <body className="font-sans antialiased">
-        <AuthProvider>
-          <RouteGuard>
-            <DataProviders>{children}</DataProviders>
-          </RouteGuard>
-        </AuthProvider>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+          <AuthProvider>
+            <RouteGuard>
+              <DataProviders>{children}</DataProviders>
+            </RouteGuard>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

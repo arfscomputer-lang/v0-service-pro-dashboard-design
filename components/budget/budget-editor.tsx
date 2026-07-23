@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import {
   Plus, X, Printer, DollarSign, Building2, FileText,
   Cog, HardHat, Receipt, ClipboardList, Trash2, Zap,
   Camera, FilePlus, Eye, Edit3, Save, Send, CheckCircle2,
-  ChevronDown, Search, Lock, LockOpen, AlertTriangle,
+  ChevronDown, Search, Lock, LockOpen, AlertTriangle, Upload, Loader2,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -296,7 +297,7 @@ function PrintPreview({ company, project, rubro, equipment, materials, labor, ta
   )
 
   return (
-    <div className="p-8 bg-white print:bg-white" id="print-area">
+    <div className="p-8 bg-white print:bg-white">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">PRESUPUESTO DE PROYECTO</h1>
         <p className="text-sm text-gray-600 mt-1">Rubro: {rubro} — Provisión de Materiales e Instalación</p>
@@ -380,6 +381,8 @@ export function BudgetEditor({ budgetId }: BudgetEditorProps) {
   const [sending, setSending] = useState(false)
   const [saved, setSaved] = useState(false)
   const [reopening, setReopening] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
 
   const readOnly = status === 'aceptado'
 
@@ -406,6 +409,10 @@ export function BudgetEditor({ budgetId }: BudgetEditorProps) {
   const [labor, setLabor] = useState<Item[]>([])
   const [taxRate, setTaxRate] = useState(16)
   const [conditions, setConditions] = useState(DEFAULT_CONDITIONS)
+
+  // — PDF import —
+  const [importingPdf, setImportingPdf] = useState(false)
+  const pdfInputRef = useRef<HTMLInputElement>(null)
 
   // — totals —
   const sub1 = sumSection(equipment)
@@ -518,6 +525,77 @@ export function BudgetEditor({ budgetId }: BudgetEditorProps) {
     }))])
   }, [equipment, materials, labor])
 
+  // ── PDF import ──────────────────────────────────────────────────────────────
+  const handleImportPdfClick = () => {
+    if (readOnly) return
+    pdfInputRef.current?.click()
+  }
+
+  const handleImportPdfFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+
+    if (
+      (equipment.length + materials.length + labor.length > 0) &&
+      !confirm('Se agregarán los ítems detectados en el PDF a las listas actuales. ¿Continuar?')
+    ) {
+      return
+    }
+
+    setImportingPdf(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch('/api/budgets/extract-pdf', { method: 'POST', body: formData })
+      const json = await res.json()
+      if (!res.ok) {
+        alert(json.error || 'No se pudo extraer el presupuesto del PDF.')
+        return
+      }
+
+      const data = json.data || {}
+      const toItems = (arr: any[] | undefined, baseId: number) =>
+        (arr || []).map((i, idx) => ({
+          id: baseId + idx + 1,
+          desc: i.desc || '',
+          unit: i.unit || 'Und',
+          qty: Number(i.qty) || 1,
+          price: Number(i.price) || 0,
+        }))
+
+      const maxId = (arr: Item[]) => Math.max(...arr.map((e) => e.id), 0)
+      setEquipment([...equipment, ...toItems(data.equipos, maxId(equipment))])
+      setMaterials([...materials, ...toItems(data.materiales, maxId(materials))])
+      setLabor([...labor, ...toItems(data.mano_de_obra, maxId(labor))])
+
+      if (data.company) {
+        setCompany((c) => ({
+          name: data.company.name ?? c.name,
+          rif: data.company.rif ?? c.rif,
+          address: data.company.address ?? c.address,
+          phone: data.company.phone ?? c.phone,
+          email: data.company.email ?? c.email,
+        }))
+      }
+      if (data.project) {
+        setProject((p) => ({
+          ...p,
+          number: data.project.number ?? p.number,
+          date: data.project.date ?? p.date,
+          validity: data.project.validity ?? p.validity,
+          location: data.project.location ?? p.location,
+        }))
+      }
+      if (data.currency) setCurrency(data.currency)
+      if (data.tax_rate !== undefined) setTaxRate(Number(data.tax_rate))
+    } catch {
+      alert('Error al importar el PDF.')
+    } finally {
+      setImportingPdf(false)
+    }
+  }
+
   // ── Save ────────────────────────────────────────────────────────────────────
   const handleSave = async () => {
     setSaving(true)
@@ -595,15 +673,7 @@ export function BudgetEditor({ budgetId }: BudgetEditorProps) {
 
   // ── Print ───────────────────────────────────────────────────────────────────
   const handlePrint = () => {
-    const printContent = document.getElementById('print-area')
-    if (!printContent) return
-    const win = window.open('', '_blank')
-    if (!win) return
-    const styleLinks = Array.from(document.querySelectorAll('link[rel="stylesheet"]')).map((l) => l.outerHTML).join('\n')
-    const styleBlocks = Array.from(document.querySelectorAll('style')).map((s) => s.outerHTML).join('\n')
-    win.document.write(`<!DOCTYPE html><html><head><title>Presupuesto - ${project.number}</title>${styleLinks}${styleBlocks}<style>body{margin:0;font-family:system-ui,sans-serif;background:white}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>${printContent.innerHTML}</body></html>`)
-    win.document.close()
-    setTimeout(() => win.print(), 800)
+    window.print()
   }
 
   const stConfig = STATUS_CONFIG[status] || STATUS_CONFIG.borrador
@@ -828,6 +898,18 @@ export function BudgetEditor({ budgetId }: BudgetEditorProps) {
               <div className="flex items-center justify-between">
                 <h2 className="font-bold text-lg text-foreground">Herramientas Rápidas</h2>
                 <div className="flex items-center gap-2">
+                  <input
+                    ref={pdfInputRef}
+                    type="file"
+                    accept="application/pdf"
+                    className="hidden"
+                    onChange={handleImportPdfFile}
+                  />
+                  <Button onClick={handleImportPdfClick} variant="outline" size="sm"
+                    disabled={importingPdf || readOnly} className="gap-1.5">
+                    {importingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                    {importingPdf ? 'Importando…' : 'Importar desde PDF'}
+                  </Button>
                   <SaveKitDialog equipment={equipment} materials={materials} labor={labor}
                     onSave={() => window.dispatchEvent(new Event('customKitsUpdated'))} />
                   <Button onClick={() => {
@@ -886,11 +968,20 @@ export function BudgetEditor({ budgetId }: BudgetEditorProps) {
             </div>
           </div>
         ) : (
-          <div id="print-area" className="bg-white text-gray-900 max-w-4xl mx-auto rounded-lg">
+          <div className="bg-white text-gray-900 max-w-4xl mx-auto rounded-lg">
             <PrintPreview company={company} project={project} rubro={rubro} equipment={equipment} materials={materials} labor={labor} taxRate={taxRate} conditions={conditions} currency={currency} />
           </div>
         )}
       </div>
+
+      {/* Hidden print target — rendered via portal so it's never clipped by the
+          app shell's overflow-hidden containers when the browser paginates for print. */}
+      {mounted && createPortal(
+        <div id="print-area" style={{ position: 'fixed', top: 0, left: '-99999px' }} className="w-[800px] bg-white text-gray-900">
+          <PrintPreview company={company} project={project} rubro={rubro} equipment={equipment} materials={materials} labor={labor} taxRate={taxRate} conditions={conditions} currency={currency} />
+        </div>,
+        document.body
+      )}
     </>
   )
 }

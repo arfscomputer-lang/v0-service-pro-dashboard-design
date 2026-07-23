@@ -22,16 +22,15 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    const session = await getSessionByToken(token)
+    const sessionData = await getSessionByToken(token) as SessionRow | null
 
-    if (!session || !session.rows || session.rows.length === 0) {
+    if (!sessionData) {
       return NextResponse.json({
         success: true,
         user: null,
       })
     }
 
-    const sessionData = session.rows[0]
     return NextResponse.json({
       success: true,
       user: {

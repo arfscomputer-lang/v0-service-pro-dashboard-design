@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
+import { useTheme } from "next-themes"
 import {
   LayoutDashboard,
   CalendarClock,
@@ -23,6 +24,8 @@ import {
   Zap,
   CalendarCheck,
   MessageSquare,
+  Moon,
+  Sun,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -68,6 +71,9 @@ export function SidebarNav() {
   const pathname = usePathname()
   const router = useRouter()
   const { user, logout } = useAuth()
+  const { resolvedTheme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
 
   useEffect(() => {
     if (!user || (user.role !== 'admin' && user.role !== 'supervisor')) return
@@ -214,6 +220,33 @@ export function SidebarNav() {
               </div>
             )}
           </div>
+          {mounted && (
+            collapsed ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+                    className="flex w-full items-center justify-center rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                  >
+                    {resolvedTheme === "dark" ? <Sun className="h-4 w-4 shrink-0" /> : <Moon className="h-4 w-4 shrink-0" />}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="bg-foreground text-background">
+                  {resolvedTheme === "dark" ? "Modo claro" : "Modo oscuro"}
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+              >
+                {resolvedTheme === "dark" ? <Sun className="h-4 w-4 shrink-0" /> : <Moon className="h-4 w-4 shrink-0" />}
+                <span>{resolvedTheme === "dark" ? "Modo claro" : "Modo oscuro"}</span>
+              </button>
+            )
+          )}
           {collapsed ? (
             <Tooltip>
               <TooltipTrigger asChild>

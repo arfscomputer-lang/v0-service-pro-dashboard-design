@@ -342,11 +342,13 @@ export async function createNotification(data: {
   type: string
   message: string
   budget_id?: string
+  customer_id?: string
 }) {
   try {
+    await query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS customer_id UUID`).catch(() => {})
     const result = await query(
-      `INSERT INTO notifications (type, message, budget_id) VALUES ($1,$2,$3) RETURNING *`,
-      [data.type, data.message, data.budget_id || null]
+      `INSERT INTO notifications (type, message, budget_id, customer_id) VALUES ($1,$2,$3,$4) RETURNING *`,
+      [data.type, data.message, data.budget_id || null, data.customer_id || null]
     )
     return result.rows[0]
   } catch {
@@ -354,8 +356,12 @@ export async function createNotification(data: {
   }
 }
 
-export async function listNotifications(unreadOnly = false) {
+// customer_id omitted => admin/supervisor notifications; provided => that client's notifications
+export async function listNotifications(unreadOnly = false, customer_id?: string) {
   try {
+    await query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS customer_id UUID`).catch(() => {})
+    const conditions: string[] = [customer_id ? 'n.customer_id = $1' : 'n.customer_id IS NULL']
+    if (unreadOnly) conditions.push('n.read = false')
     return getMany<{
       id: string; type: string; message: string; budget_id: string | null
       budget_numero: string | null; read: boolean; created_at: string
@@ -363,20 +369,22 @@ export async function listNotifications(unreadOnly = false) {
       `SELECT n.*, b.numero as budget_numero
        FROM notifications n
        LEFT JOIN budgets b ON b.id = n.budget_id
-       ${unreadOnly ? 'WHERE n.read = false' : ''}
+       WHERE ${conditions.join(' AND ')}
        ORDER BY n.created_at DESC LIMIT 50`,
-      []
+      customer_id ? [customer_id] : []
     )
   } catch {
     return []
   }
 }
 
-export async function countUnreadNotifications(): Promise<number> {
+export async function countUnreadNotifications(customer_id?: string): Promise<number> {
   try {
+    await query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS customer_id UUID`).catch(() => {})
+    const scope = customer_id ? 'customer_id = $1' : 'customer_id IS NULL'
     const result = await query(
-      `SELECT COUNT(*)::int as count FROM notifications WHERE read = false`,
-      []
+      `SELECT COUNT(*)::int as count FROM notifications WHERE read = false AND ${scope}`,
+      customer_id ? [customer_id] : []
     )
     return (result.rows[0] as any)?.count ?? 0
   } catch {
@@ -390,9 +398,11 @@ export async function markNotificationRead(id: string) {
   } catch { /* silent */ }
 }
 
-export async function markAllNotificationsRead() {
+export async function markAllNotificationsRead(customer_id?: string) {
   try {
-    await query(`UPDATE notifications SET read = true WHERE read = false`, [])
+    await query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS customer_id UUID`).catch(() => {})
+    const scope = customer_id ? 'customer_id = $1' : 'customer_id IS NULL'
+    await query(`UPDATE notifications SET read = true WHERE read = false AND ${scope}`, customer_id ? [customer_id] : [])
   } catch { /* silent */ }
 }
 
