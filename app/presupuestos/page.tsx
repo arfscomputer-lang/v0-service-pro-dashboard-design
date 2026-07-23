@@ -63,8 +63,8 @@ export default function PresupuestosPage() {
   const [filterStatus, setFilterStatus] = useState('todos')
   const [deleting, setDeleting] = useState<string | null>(null)
 
-  const load = useCallback(async () => {
-    setLoading(true)
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true)
     const params = new URLSearchParams()
     if (filterRubro !== 'todos') params.set('rubro', filterRubro)
     if (filterStatus !== 'todos') params.set('status', filterStatus)
@@ -73,13 +73,19 @@ export default function PresupuestosPage() {
       const { budgets: data } = await res.json()
       setBudgets(data || [])
     } catch {
-      setBudgets([])
+      if (!opts?.silent) setBudgets([])
     } finally {
-      setLoading(false)
+      if (!opts?.silent) setLoading(false)
     }
   }, [filterRubro, filterStatus])
 
   useEffect(() => { load() }, [load])
+
+  // Refresh in the background so status changes made by the client (e.g. accept/reject) show up without a manual reload
+  useEffect(() => {
+    const interval = setInterval(() => load({ silent: true }), 30_000)
+    return () => clearInterval(interval)
+  }, [load])
 
   const handleDelete = async (id: string, numero: string) => {
     if (!confirm(`¿Eliminar el presupuesto ${numero}? Esta acción no se puede deshacer.`)) return
