@@ -85,13 +85,23 @@ const statusMap: Record<string, { label: string; color: string; icon: typeof Che
 export default function ClientPortalPage() {
   const { user, logout } = useAuth()
   const { customers } = useCustomers()
-  const { workOrders } = useWorkOrders()
+  const { workOrders, addWorkOrder } = useWorkOrders()
   const router = useRouter()
   const [orderOpen, setOrderOpen] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [tab, setTab] = useState<"dashboard" | "ordenes" | "reportes" | "presupuestos">("dashboard")
   const [customerAssets, setCustomerAssets] = useState<{ id: string; name: string; asset_id: string; type: string }[]>([])
   const [selectedAssetId, setSelectedAssetId] = useState("")
+  const [orderForm, setOrderForm] = useState({
+    type: "reparacion",
+    priority: "normal",
+    scheduledDate: new Date().toISOString().split("T")[0],
+    schedule: "manana",
+    address: "",
+    description: "",
+  })
+  const [orderSubmitting, setOrderSubmitting] = useState(false)
+  const [orderError, setOrderError] = useState("")
 
   // presupuestos
   const [budgets, setBudgets] = useState<any[]>([])
@@ -111,6 +121,16 @@ export default function ClientPortalPage() {
       const t = setTimeout(() => setSubmitted(false), 300)
       return () => clearTimeout(t)
     }
+    setOrderForm({
+      type: "reparacion",
+      priority: "normal",
+      scheduledDate: new Date().toISOString().split("T")[0],
+      schedule: "manana",
+      address: customer?.address || "",
+      description: "",
+    })
+    setSelectedAssetId("")
+    setOrderError("")
   }, [orderOpen])
 
   useEffect(() => {
@@ -1008,14 +1028,55 @@ export default function ClientPortalPage() {
             <ScrollArea className="flex-1">
               <form
                 className="p-6 space-y-4"
-                onSubmit={(e) => {
+                onSubmit={async (e) => {
                   e.preventDefault()
-                  setSubmitted(true)
+                  if (!user?.customerId) return
+                  if (!orderForm.address.trim()) {
+                    setOrderError("Ingresá la dirección del servicio")
+                    return
+                  }
+                  setOrderError("")
+                  setOrderSubmitting(true)
+                  try {
+                    const scheduledTime =
+                      orderForm.schedule === "tarde" ? "13:00" : orderForm.schedule === "urgente" ? "00:00" : "08:00"
+                    const selectedAsset =
+                      selectedAssetId && selectedAssetId !== "otro"
+                        ? customerAssets.find((a) => a.id === selectedAssetId)
+                        : null
+                    const description = [
+                      orderForm.description.trim(),
+                      selectedAsset ? `Equipo: ${selectedAsset.name} — ${selectedAsset.asset_id}` : null,
+                    ]
+                      .filter(Boolean)
+                      .join("\n")
+
+                    await addWorkOrder({
+                      orderId: `OT-${Date.now()}`,
+                      type: orderForm.type,
+                      category: "otros",
+                      description,
+                      status: "pendiente",
+                      priority: orderForm.priority as "baja" | "normal" | "alta" | "urgente",
+                      address: orderForm.address.trim(),
+                      city: customer.city || customer.address || "N/A",
+                      scheduledDate: orderForm.scheduledDate,
+                      scheduledTime,
+                      customerId: user.customerId,
+                      technicianId: null,
+                      assetId: selectedAsset?.id ?? null,
+                    })
+                    setSubmitted(true)
+                  } catch {
+                    setOrderError("No se pudo enviar la solicitud. Intente nuevamente.")
+                  } finally {
+                    setOrderSubmitting(false)
+                  }
                 }}
               >
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold text-muted-foreground">Tipo de Servicio</Label>
-                  <Select defaultValue="reparacion">
+                  <Select value={orderForm.type} onValueChange={(v) => setOrderForm((f) => ({ ...f, type: v }))}>
                     <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="reparacion">Reparacion</SelectItem>
@@ -1029,11 +1090,11 @@ export default function ClientPortalPage() {
 
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold text-muted-foreground">Prioridad</Label>
-                  <Select defaultValue="media">
+                  <Select value={orderForm.priority} onValueChange={(v) => setOrderForm((f) => ({ ...f, priority: v }))}>
                     <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="alta">Alta</SelectItem>
-                      <SelectItem value="media">Media</SelectItem>
+                      <SelectItem value="normal">Media</SelectItem>
                       <SelectItem value="baja">Baja</SelectItem>
                     </SelectContent>
                   </Select>
@@ -1042,11 +1103,16 @@ export default function ClientPortalPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label className="text-xs font-semibold text-muted-foreground">Fecha Preferida</Label>
-                    <Input type="date" className="h-9" />
+                    <Input
+                      type="date"
+                      className="h-9"
+                      value={orderForm.scheduledDate}
+                      onChange={(e) => setOrderForm((f) => ({ ...f, scheduledDate: e.target.value }))}
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs font-semibold text-muted-foreground">Horario</Label>
-                    <Select defaultValue="manana">
+                    <Select value={orderForm.schedule} onValueChange={(v) => setOrderForm((f) => ({ ...f, schedule: v }))}>
                       <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="manana">Manana (8-12)</SelectItem>
@@ -1059,7 +1125,11 @@ export default function ClientPortalPage() {
 
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold text-muted-foreground">Direccion del Servicio</Label>
-                  <Input className="h-9" defaultValue={customer.address} />
+                  <Input
+                    className="h-9"
+                    value={orderForm.address}
+                    onChange={(e) => setOrderForm((f) => ({ ...f, address: e.target.value }))}
+                  />
                 </div>
 
                 <div className="space-y-1.5">
@@ -1085,13 +1155,22 @@ export default function ClientPortalPage() {
 
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold text-muted-foreground">Descripcion del Problema</Label>
-                  <Textarea rows={4} placeholder="Describa el problema o necesidad..." />
+                  <Textarea
+                    rows={4}
+                    placeholder="Describa el problema o necesidad..."
+                    value={orderForm.description}
+                    onChange={(e) => setOrderForm((f) => ({ ...f, description: e.target.value }))}
+                  />
                 </div>
 
+                {orderError && (
+                  <p className="text-sm text-destructive">{orderError}</p>
+                )}
+
                 <div className="pt-2">
-                  <Button type="submit" className="w-full gap-2">
+                  <Button type="submit" className="w-full gap-2" disabled={orderSubmitting}>
                     <Plus className="h-4 w-4" />
-                    Enviar Solicitud
+                    {orderSubmitting ? "Enviando…" : "Enviar Solicitud"}
                   </Button>
                 </div>
               </form>
