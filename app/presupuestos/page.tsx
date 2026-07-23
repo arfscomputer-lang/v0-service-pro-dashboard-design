@@ -83,8 +83,15 @@ export default function PresupuestosPage() {
 
   // Refresh in the background so status changes made by the client (e.g. accept/reject) show up without a manual reload
   useEffect(() => {
-    const interval = setInterval(() => load({ silent: true }), 30_000)
+    const interval = setInterval(() => load({ silent: true }), 10_000)
     return () => clearInterval(interval)
+  }, [load])
+
+  // Also refresh immediately when the tab regains focus, instead of waiting for the next poll
+  useEffect(() => {
+    const onFocus = () => load({ silent: true })
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
   }, [load])
 
   const handleDelete = async (id: string, numero: string) => {
