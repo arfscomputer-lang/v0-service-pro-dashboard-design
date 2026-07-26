@@ -21,8 +21,9 @@ import { cn } from "@/lib/utils"
 import type { WorkOrder } from "./dispatch-calendar"
 
 const priorityConfig = {
+  urgente: { label: "Urgente", className: "bg-destructive/10 text-destructive border-destructive/30" },
   alta: { label: "Alta", className: "bg-destructive/10 text-destructive border-destructive/30" },
-  media: { label: "Media", className: "bg-warning/10 text-warning border-warning/30" },
+  normal: { label: "Normal", className: "bg-warning/10 text-warning border-warning/30" },
   baja: { label: "Baja", className: "bg-muted text-muted-foreground border-border" },
 }
 
@@ -93,11 +94,11 @@ export function UnassignedOrders({ orders, onDragStart, onDragEnd }: UnassignedO
                     {/* Header row */}
                     <div className="flex items-center justify-between gap-2">
                       <Link
-                        href={`/orden/${order.id}`}
+                        href={`/ordenes/${order.id}`}
                         className="text-[11px] font-mono text-primary hover:underline"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        {order.id}
+                        {order.orderNumber}
                       </Link>
                       <Badge
                         variant="outline"

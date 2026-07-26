@@ -30,6 +30,7 @@ interface WorkOrdersContextType {
   addWorkOrder: (data: Omit<WorkOrder, 'id' | 'createdAt' | 'updatedAt'>) => Promise<WorkOrder>
   updateWorkOrder: (id: string, data: Partial<WorkOrder>, opts?: { clientReschedule?: boolean }) => Promise<void>
   deleteWorkOrder: (id: string) => Promise<void>
+  refetch: () => Promise<void>
 }
 
 const WorkOrdersContext = createContext<WorkOrdersContextType | undefined>(undefined)
@@ -37,27 +38,22 @@ const WorkOrdersContext = createContext<WorkOrdersContextType | undefined>(undef
 export function WorkOrdersProvider({ children }: { children: React.ReactNode }) {
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([])
 
-  useEffect(() => {
-    const fetchWorkOrders = async () => {
-      try {
-        console.log('[v0] Fetching work orders from API...')
-        const res = await authenticatedFetch('/api/work-orders')
-        console.log('[v0] API response status:', res.status)
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`)
-        }
-        const json = await res.json()
-        console.log('[v0] API response JSON:', json)
-        const list = json.data || json.workOrders || json || []
-        console.log('[v0] Parsed work orders list:', list)
-        setWorkOrders(Array.isArray(list) ? list : [])
-      } catch (error) {
-        console.warn('[v0] Error fetching work orders:', error)
-        setWorkOrders([])
+  const fetchWorkOrders = useCallback(async () => {
+    try {
+      const res = await authenticatedFetch('/api/work-orders')
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`)
       }
+      const json = await res.json()
+      const list = json.data || json.workOrders || json || []
+      setWorkOrders(Array.isArray(list) ? list : [])
+    } catch (error) {
+      console.warn('[v0] Error fetching work orders:', error)
+      setWorkOrders([])
     }
-    fetchWorkOrders()
   }, [])
+
+  useEffect(() => { fetchWorkOrders() }, [fetchWorkOrders])
 
   const addWorkOrder = useCallback(
     async (data: Omit<WorkOrder, 'id' | 'createdAt' | 'updatedAt'>) => {
@@ -172,7 +168,7 @@ export function WorkOrdersProvider({ children }: { children: React.ReactNode }) 
   )
 
   return (
-    <WorkOrdersContext.Provider value={{ workOrders, addWorkOrder, updateWorkOrder, deleteWorkOrder }}>
+    <WorkOrdersContext.Provider value={{ workOrders, addWorkOrder, updateWorkOrder, deleteWorkOrder, refetch: fetchWorkOrders }}>
       {children}
     </WorkOrdersContext.Provider>
   )
